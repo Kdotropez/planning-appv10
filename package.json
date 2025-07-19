@@ -1,4 +1,4 @@
-echo {
+{
   "name": "planning-appv8",
   "private": true,
   "version": "0.0.0",

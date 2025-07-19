@@ -1,4 +1,4 @@
-.step-container {
+.step-container, .planning-container, .employee-selection-container, .shop-selection-container, .week-selection-container {
     background: #fff;
     padding: 20px;
     border-radius: 8px;
@@ -8,22 +8,17 @@
 }
 
 .planning-container {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     max-width: 1000px;
-    margin: 20px auto;
 }
 
-.step-container h2, .planning-container h2 {
+.step-container h2, .planning-container h2, .employee-selection-container h2, .shop-selection-container h2, .week-selection-container h2 {
     font-family: 'Roboto', sans-serif;
     color: #333;
     font-size: 24px;
     margin-bottom: 15px;
 }
 
-.step-container label, .planning-container label {
+.step-container label, .planning-container label, .employee-selection-container label, .shop-selection-container label, .week-selection-container label {
     display: block;
     margin: 8px 0;
     font-family: 'Roboto', sans-serif;
@@ -34,8 +29,15 @@
 .step-container input[type="time"],
 .step-container input[type="text"],
 .step-container input[type="date"],
+.step-container input[type="month"],
 .planning-container select,
-.planning-container input[type="text"] {
+.planning-container input[type="text"],
+.employee-selection-container select,
+.employee-selection-container input[type="text"],
+.shop-selection-container select,
+.shop-selection-container input[type="text"],
+.week-selection-container select,
+.week-selection-container input[type="month"] {
     width: 100%;
     padding: 14px 16px;
     margin-top: 5px;
@@ -46,7 +48,10 @@
     height: 52px;
 }
 
-.step-container input[type="file"] {
+.step-container input[type="file"],
+.employee-selection-container input[type="file"],
+.shop-selection-container input[type="file"],
+.week-selection-container input[type="file"] {
     display: none;
 }
 
@@ -580,6 +585,10 @@
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
+.fixed-col.header {
+    text-align: center;
+}
+
 .fixed-col.employee {
     text-align: left;
 }
@@ -911,244 +920,4 @@
     .month-button,
     .week-button,
     .saved-weeks-select {
-        padding: 16px 18px;
-        font-size: 16px;
-        width: 250px;
-        height: 52px;
-    }
-
-    .button-base {
-        padding: 14px 28px;
-        font-size: 16px;
-    }
-
-    .button-group, .navigation-buttons, .recap-buttons {
-        gap: 15px;
-    }
-
-    .day-buttons {
-        gap: 15px;
-    }
-}
-
-@media (max-width: 768px) {
-    .step-container, .planning-container {
-        padding: 15px;
-        margin: 10px;
-    }
-
-    .step-container h2, .planning-container h2 {
-        font-size: 20px;
-    }
-
-    .step-container label, .planning-container label {
-        font-size: 16px;
-    }
-
-    .step-container select,
-    .step-container input[type="time"],
-    .step-container input[type="text"],
-    .step-container input[type="date"],
-    .planning-container select,
-    .planning-container input[type="text"] {
-        padding: 12px 14px;
-        font-size: 14px;
-        height: 44px;
-    }
-
-    .form-group input[type="time"] {
-        width: 180px;
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .form-group div label {
-        padding: 6px 10px;
-        font-size: 13px;
-    }
-
-    .form-group input[type="text"] {
-        width: 180px;
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .shop-input-field {
-        width: 180px;
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .shop-add-button {
-        width: 180px;
-        padding: 6px;
-        font-size: 13px;
-    }
-
-    .shop-button {
-        width: 180px;
-        padding: 6px 10px;
-        font-size: 13px;
-    }
-
-    .month-button,
-    .week-button,
-    .saved-weeks-select {
-        width: 180px;
-        padding: 12px 14px;
-        font-size: 13px;
-        height: 44px;
-    }
-
-    .button-base {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-
-    .button-validate {
-        width: 180px;
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-
-    .button-reinitialiser {
-        width: 180px;
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-
-    .navigation-buttons .button-base {
-        width: 180px;
-        height: 44px;
-        font-size: 14px;
-        padding: 8px 16px;
-        color: #fff;
-        text-align: center;
-    }
-
-    .button-group, .navigation-buttons, .recap-buttons {
-        gap: 10px;
-    }
-
-    .day-buttons {
-        gap: 10px;
-    }
-
-    .scrollable-col {
-        width: 70px;
-        font-size: 13px;
-        height: 32px;
-    }
-
-    .fixed-col {
-        width: 60px;
-        font-size: 13px;
-    }
-}
-
-@media (max-width: 414px) and (orientation: portrait) {
-    .step-container, .planning-container {
-        display: none;
-    }
-
-    .landscape-prompt {
-        display: block;
-    }
-}
-
-@media (max-width: 414px) and (orientation: landscape) {
-    .step-container, .planning-container {
-        padding: 10px;
-        margin: 5px;
-    }
-
-    .step-container h2, .planning-container h2 {
-        font-size: 18px;
-    }
-
-    .step-container label, .planning-container label {
-        font-size: 14px;
-    }
-
-    .step-container select,
-    .step-container input[type="time"],
-    .step-container input[type="text"],
-    .step-container input[type="date"],
-    .planning-container select,
-    .planning-container input[type="text"] {
-        padding: 10px 12px;
-        font-size: 12px;
-        height: 40px;
-    }
-
-    .form-group input[type="time"] {
-        width: 160px;
-        padding: 5px;
-        font-size: 12px;
-    }
-
-    .form-group div label {
-        padding: 5px 8px;
-        font-size: 12px;
-    }
-
-    .form-group input[type="text"] {
-        width: 160px;
-        padding: 5px;
-        font-size: 12px;
-    }
-
-    .shop-input-field {
-        width: 160px;
-        padding: 5px;
-        font-size: 12px;
-    }
-
-    .shop-add-button {
-        width: 160px;
-        padding: 5px;
-        font-size: 12px;
-    }
-
-    .shop-button {
-        width: 160px;
-        padding: 5px 8px;
-        font-size: 12px;
-    }
-
-    .month-button,
-    .week-button,
-    .saved-weeks-select {
-        width: 160px;
-        padding: 10px 12px;
-        font-size: 12px;
-        height: 40px;
-    }
-
-    .button-base {
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-
-    .button-validate {
-        width: 160px;
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-
-    .button-reinitialiser {
-        width: 160px;
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-
-    .fixed-col {
-        width: 50px;
-        font-size: 10px;
-    }
-
-    .scrollable-col {
-        width: 40px;
-        font-size: 10px;
-    }
-}
+        padding: 16px 18

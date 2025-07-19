@@ -3,12 +3,7 @@
   "builds": [
     {
       "src": "index.html",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist",
-        "buildCommand": "npm run build",
-        "installCommand": "npm ci"
-      }
+      "use": "@vercel/static-build"
     }
   ],
   "routes": [

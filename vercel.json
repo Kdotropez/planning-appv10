@@ -1,9 +1,9 @@
-echo '{
+{
   "version": 2,
   "framework": "vite",
   "builds": [
     {
-      "src": "./index.html",
+      "src": "index.html",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "dist"
@@ -16,4 +16,4 @@ echo '{
       "destination": "/index.html"
     }
   ]
-}' > vercel.json
+}

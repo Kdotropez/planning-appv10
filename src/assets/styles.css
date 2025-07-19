@@ -44,8 +44,8 @@ footer {
 }
 
 .button-base {
-  padding: 10px 20px;
-  font-size: 1rem;
+  padding: 12px 24px;
+  font-size: 1.1rem;
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -105,25 +105,32 @@ footer {
 /* Sélection de boutique et semaine */
 .shop-selection, .week-selection, .employee-selection, .time-slot-config {
   background-color: white;
-  padding: 20px;
+  padding: 30px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+  width: 100%;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 select, input[type="text"], input[type="time"] {
   width: 100%;
-  padding: 10px;
-  margin: 10px 0;
+  padding: 12px;
+  margin: 12px 0;
   border: 1px solid #ddd;
   border-radius: 5px;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  line-height: 1.5;
 }
 
+/* Feedback */
 .feedback {
   color: #4caf50;
   text-align: center;
   margin-top: 10px;
+  font-size: 1.1rem;
 }
 
 /* Tableaux */
@@ -133,10 +140,11 @@ select, input[type="text"], input[type="time"] {
   overflow-x: auto;
   overflow-y: visible;
   margin-bottom: 20px;
+  -webkit-overflow-scrolling: touch; /* Améliore le défilement sur les appareils tactiles */
 }
 
 .planning-table {
-  width: 100%;
+  width: max-content; /* Permet au tableau de s'étendre selon son contenu */
   table-layout: auto;
   border-collapse: collapse;
   background-color: white;
@@ -145,9 +153,10 @@ select, input[type="text"], input[type="time"] {
 
 .planning-table th, .planning-table td {
   border: 1px solid #ddd;
-  padding: 8px;
+  padding: 6px;
   text-align: center;
   vertical-align: middle;
+  font-size: 0.9rem;
 }
 
 .planning-table th {
@@ -169,18 +178,18 @@ select, input[type="text"], input[type="time"] {
   left: 0;
   background: white;
   z-index: 2;
-  min-width: 150px;
-  max-width: 200px;
+  min-width: 120px;
+  max-width: 150px;
   text-align: left;
-  padding: 8px;
+  padding: 6px;
   border-right: 2px solid #ddd;
 }
 
 .time-slot-column {
-  min-width: 100px;
-  max-width: 150px;
+  min-width: 60px;
+  max-width: 80px;
   text-align: center;
-  padding: 8px;
+  padding: 6px;
   white-space: nowrap;
 }
 
@@ -263,19 +272,29 @@ select, input[type="text"], input[type="time"] {
     padding: 10px;
   }
 
+  .shop-selection, .week-selection, .employee-selection, .time-slot-config {
+    padding: 15px;
+    max-width: 100%;
+  }
+
+  select, input[type="text"], input[type="time"] {
+    padding: 10px;
+    font-size: 1rem;
+  }
+
   .planning-table th, .planning-table td {
-    padding: 6px;
-    font-size: 0.9rem;
+    padding: 4px;
+    font-size: 0.8rem;
   }
 
   .employee-column {
-    min-width: 100px;
-    max-width: 150px;
+    min-width: 80px;
+    max-width: 120px;
   }
 
   .time-slot-column {
-    min-width: 80px;
-    max-width: 120px;
+    min-width: 50px;
+    max-width: 70px;
   }
 
   .modal-content {
@@ -291,16 +310,38 @@ select, input[type="text"], input[type="time"] {
   .button-base {
     width: 100%;
     max-width: 200px;
+    padding: 10px;
+    font-size: 1rem;
   }
 }
 
 @media (min-width: 1920px) {
-  .employee-column {
-    min-width: 200px;
-    max-width: 250px;
+  .shop-selection, .week-selection, .employee-selection, .time-slot-config {
+    padding: 40px;
+    max-width: 800px;
   }
+
+  select, input[type="text"], input[type="time"] {
+    padding: 14px;
+    font-size: 1.3rem;
+  }
+
+  .employee-column {
+    min-width: 150px;
+    max-width: 200px;
+  }
+
   .time-slot-column {
-    min-width: 120px;
-    max-width: 180px;
+    min-width: 70px;
+    max-width: 90px;
+  }
+
+  .button-base {
+    padding: 14px 28px;
+    font-size: 1.2rem;
+  }
+
+  .planning-table {
+    zoom: 0.85; /* Réduit légèrement la taille du tableau pour les écrans haute résolution */
   }
 }

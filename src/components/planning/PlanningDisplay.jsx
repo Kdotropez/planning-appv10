@@ -10,7 +10,7 @@ import PlanningTable from './PlanningTable';
 import MonthlyRecapModals from './MonthlyRecapModals';
 import ResetModal from './ResetModal';
 import CopyPasteSection from './CopyPasteSection';
-import '@/assets/styles.css';
+import '../../assets/styles.css';
 
 const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep }) => {
     const [currentDay, setCurrentDay] = useState(0);
@@ -105,13 +105,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
         return storedEmployees.reduce((total, employee) => {
             const slots = planning[employee]?.[dayKey] || [];
-            return total + slots.reduce((sum, slot) => sum + (slot ? 0.5 : 0), 0);
+            return total + slots.reduce((sum, slot) => sum + (slot ? (config.interval || 30) / 60 : 0), 0);
         }, 0);
     };
 
     const calculateEmployeeDailyHours = (employee, dayKey, weekPlanning) => {
         const slots = weekPlanning[employee]?.[dayKey] || [];
-        const hours = slots.reduce((sum, slot) => sum + (slot ? 0.5 : 0), 0);
+        const hours = slots.reduce((sum, slot) => sum + (slot ? (config.interval || 30) / 60 : 0), 0);
         return hours;
     };
 
@@ -157,14 +157,14 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     Une erreur s’est produite : {error.message}
                 </p>
                 <div className="navigation-buttons">
-                    <Button className="button-retour" onClick={onBack}>Retour Employés</Button>
-                    <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
-                    <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
-                    <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-base button-retour" onClick={onBack}>Retour Employés</Button>
+                    <Button className="button-base button-retour" onClick={onBackToShop}>Retour Boutique</Button>
+                    <Button className="button-base button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
+                    <Button className="button-base button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
+                    <Button className="button-base button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                         <FaDownload /> Exporter
                     </Button>
-                    <Button className="button-reinitialiser" onClick={() => {
+                    <Button className="button-base button-reinitialiser" onClick={() => {
                         console.log('Opening ResetModal');
                         setShowResetModal(true);
                     }}>Réinitialiser</Button>
@@ -183,14 +183,14 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     Erreur: Aucune configuration de tranches horaires disponible.
                 </p>
                 <div className="navigation-buttons">
-                    <Button className="button-retour" onClick={onBack}>Retour Employés</Button>
-                    <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
-                    <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
-                    <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-base button-retour" onClick={onBack}>Retour Employés</Button>
+                    <Button className="button-base button-retour" onClick={onBackToShop}>Retour Boutique</Button>
+                    <Button className="button-base button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
+                    <Button className="button-base button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
+                    <Button className="button-base button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                         <FaDownload /> Exporter
                     </Button>
-                    <Button className="button-reinitialiser" onClick={() => {
+                    <Button className="button-base button-reinitialiser" onClick={() => {
                         console.log('Opening ResetModal');
                         setShowResetModal(true);
                     }}>Réinitialiser</Button>
@@ -210,14 +210,14 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 </p>
             )}
             <div className="navigation-buttons">
-                <Button className="button-retour" onClick={onBack}>Retour Employés</Button>
-                <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
-                <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
-                <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
+                <Button className="button-base button-retour" onClick={onBack}>Retour Employés</Button>
+                <Button className="button-base button-retour" onClick={onBackToShop}>Retour Boutique</Button>
+                <Button className="button-base button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
+                <Button className="button-base button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
+                <Button className="button-base button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                     <FaDownload /> Exporter
                 </Button>
-                <Button className="button-reinitialiser" onClick={() => {
+                <Button className="button-base button-reinitialiser" onClick={() => {
                     console.log('Opening ResetModal');
                     setShowResetModal(true);
                 }}>Réinitialiser</Button>
@@ -226,7 +226,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 {days.map((day, index) => (
                     <Button
                         key={day.name}
-                        className={`button-jour ${currentDay === index ? 'selected' : ''}`}
+                        className={`button-base button-jour ${currentDay === index ? 'selected' : ''}`}
                         onClick={() => {
                             console.log('Setting currentDay:', index);
                             setCurrentDay(index);
@@ -277,7 +277,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             <span>{employee}</span>
                         </h4>
                         <Button
-                            className="button-recap"
+                            className="button-base button-recap"
                             onClick={() => {
                                 console.log('Opening RecapModal for employee (day):', employee);
                                 setShowRecapModal(employee);
@@ -298,7 +298,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             JOUR ({calculateEmployeeDailyHours(employee, format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd'), planning).toFixed(1)} h)
                         </Button>
                         <Button
-                            className="button-recap"
+                            className="button-base button-recap"
                             onClick={() => {
                                 console.log('Opening RecapModal for employee (week):', employee + '_week');
                                 setShowRecapModal(employee + '_week');
@@ -319,7 +319,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             SEMAINE ({calculateEmployeeWeeklyHours(employee, selectedWeek, planning).toFixed(1)} h)
                         </Button>
                         <Button
-                            className="button-recap"
+                            className="button-base button-recap"
                             onClick={() => {
                                 console.log('Opening EmployeeMonthlyRecap for:', employee);
                                 setSelectedEmployeeForMonthlyRecap(employee);
@@ -360,7 +360,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         <span>{selectedShop}</span>
                     </h4>
                     <Button
-                        className="button-recap"
+                        className="button-base button-recap"
                         onClick={() => {
                             console.log('Opening RecapModal for week');
                             setShowRecapModal('week');
@@ -381,7 +381,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         PLANNING SEMAINE ({calculateShopWeeklyHours()} h)
                     </Button>
                     <Button
-                        className="button-recap"
+                        className="button-base button-recap"
                         onClick={() => {
                             console.log('Opening MonthlyRecapModal');
                             setShowMonthlyRecapModal(true);
@@ -403,18 +403,20 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     </Button>
                 </div>
             </div>
-            <PlanningTable
-                config={config}
-                selectedWeek={selectedWeek}
-                planning={planning}
-                selectedEmployees={loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || []}
-                toggleSlot={toggleSlot}
-                currentDay={currentDay}
-                calculateEmployeeDailyHours={calculateEmployeeDailyHours}
-            />
+            <div className="table-container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <PlanningTable
+                    config={config}
+                    selectedWeek={selectedWeek}
+                    planning={planning}
+                    selectedEmployees={loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || []}
+                    toggleSlot={toggleSlot}
+                    currentDay={currentDay}
+                    calculateEmployeeDailyHours={calculateEmployeeDailyHours}
+                />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '10px' }}>
                 <Button
-                    className="button-primary"
+                    className="button-base button-primary"
                     onClick={() => {
                         console.log('Toggling CopyPasteSection:', !showCopyPaste);
                         setShowCopyPaste(!showCopyPaste);

@@ -278,11 +278,11 @@
     align-items: center;
 }
 
-/* Nouvelles règles responsive */
+/* Règles responsive */
 .app-container {
     width: 100%;
-    max-width: 100vw; /* Utilise toute la largeur disponible */
-    padding: 2vw; /* Padding relatif */
+    max-width: 100vw;
+    padding: 2vw;
     box-sizing: border-box;
 }
 
@@ -295,39 +295,49 @@
 
 .step-container {
     width: 100%;
-    max-width: 90vw; /* Limite la largeur sur grands écrans */
+    max-width: 90vw;
     margin: 0 auto;
 }
 
 .button-group {
-    flex-wrap: wrap; /* Permet aux boutons de passer à la ligne sur petits écrans */
+    flex-wrap: wrap;
     gap: 1vw;
 }
 
 .button-base {
-    padding: 0.5rem 1rem; /* Unités relatives */
-    font-size: clamp(0.8rem, 2vw, 1rem); /* Taille de police adaptative */
+    padding: 0.5rem 1rem;
+    font-size: clamp(0.8rem, 2vw, 1rem);
     min-width: 80px;
 }
 
 .planning-table {
     width: 100%;
     max-width: 100vw;
-    font-size: clamp(0.7rem, 1.5vw, 0.9rem); /* Taille de texte adaptative */
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
 }
 
 .planning-table th,
 .planning-table td {
     padding: 0.5rem;
-    min-width: clamp(40px, 4vw, 50px); /* Largeur minimale adaptative */
+    min-width: clamp(40px, 4vw, 50px);
 }
 
 .fixed-col {
-    min-width: clamp(100px, 10vw, 120px); /* Ajuste la colonne fixe */
+    min-width: clamp(100px, 10vw, 120px);
 }
 
 .scrollable-col {
-    min-width: clamp(40px, 3vw, 50px); /* Ajuste les colonnes défilantes */
+    min-width: clamp(40px, 3vw, 50px);
+}
+
+/* Ajustement des boutons de navigation */
+.navigation-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: clamp(20px, 3vw, 25px); /* Espacement plus généreux */
+    margin-top: 20px;
+    padding: 10px 15px; /* Plus de padding pour aérer */
 }
 
 /* Media queries pour petits écrans */
@@ -362,6 +372,11 @@
     .scrollable-col {
         min-width: clamp(30px, 4vw, 40px);
     }
+
+    .navigation-buttons {
+        gap: clamp(15px, 2vw, 20px); /* Espacement réduit sur tablette */
+        padding: 5px 10px;
+    }
 }
 
 /* Media queries pour très petits écrans (téléphones) */
@@ -384,6 +399,11 @@
 
     .scrollable-col {
         min-width: clamp(25px, 5vw, 35px);
+    }
+
+    .navigation-buttons {
+        gap: clamp(10px, 1.5vw, 15px); /* Espacement réduit sur téléphone */
+        padding: 5px 5px;
     }
 }
 

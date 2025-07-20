@@ -90,7 +90,7 @@ body {
 /* Tableaux (WeekSelection, PlanningTable) */
 .table-container {
     width: 100%;
-    max-width: 1200px; /* Limite la largeur pour éviter le débordement */
+    max-width: 1200px;
     overflow-x: auto;
     margin: 0 auto;
 }
@@ -151,7 +151,7 @@ body {
 }
 
 .scrollable-col {
-    min-width: 60px;
+    min-width: 50px; /* Réduit pour minimiser le débordement */
     text-align: center;
     border: 1px solid #ccc;
 }
@@ -196,6 +196,50 @@ body {
 
 .week-selector tr:hover, .saved-weeks tr:hover {
     background-color: #e0e0e0;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh; /* Limite la hauteur pour éviter le débordement vertical */
+    overflow-y: auto; /* Défilement vertical si nécessaire */
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.recap-table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto; /* Défilement horizontal pour les tables dans les modals */
 }
 
 /* Boutons */
@@ -265,7 +309,7 @@ body {
 }
 
 .button-jour.selected {
-    background-color: #f28c38 !important; /* Priorité accrue pour éviter les conflits */
+    background-color: #f28c38 !important;
     color: #fff !important;
 }
 
@@ -287,41 +331,6 @@ body {
 
 .button-recap:hover {
     background-color: #1565c0;
-}
-
-/* Modales */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    pointer-events: auto;
-}
-
-.modal-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 500px;
-    position: relative;
-}
-
-.modal-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 18px;
-    color: #dc3545;
-    cursor: pointer;
 }
 
 /* Formulaires et groupes */
@@ -392,7 +401,10 @@ body {
     gap: 16px;
     margin-bottom: 20px;
     width: 100%;
+    max-width: 1200px; /* Ajouté pour aligner avec le tableau */
     overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .recap-buttons {
@@ -402,7 +414,10 @@ body {
     gap: 16px;
     margin-bottom: 20px;
     width: 100%;
+    max-width: 1200px; /* Ajouté pour aligner avec le tableau */
     overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .recap-buttons > div {
@@ -462,7 +477,7 @@ body {
         min-width: 120px;
     }
     .scrollable-col {
-        min-width: 50px;
+        min-width: 40px;
     }
     .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
         padding: 5px;
@@ -483,6 +498,10 @@ body {
         min-width: 100px;
         max-width: 150px;
     }
+    .modal-content {
+        max-width: 90%;
+        padding: 15px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -491,7 +510,7 @@ body {
         min-width: 100px;
     }
     .scrollable-col {
-        min-width: 40px;
+        min-width: 30px;
         font-size: 12px;
     }
     .button-base {
@@ -500,7 +519,8 @@ body {
     }
     .modal-content {
         width: 95%;
-        padding: 15px;
+        padding: 10px;
+        max-height: 70vh;
     }
     .button-jour {
         min-width: 60px;

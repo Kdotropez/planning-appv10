@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, addDays, addMinutes } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import '@/assets/styles.css';
+import '../../assets/styles.css';
 
 const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, toggleSlot, currentDay, calculateEmployeeDailyHours }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -84,40 +84,44 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
     };
 
     return (
-        <div className="table-container" style={{ width: '100%', overflowX: 'auto' }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="table-container" style={{ maxWidth: '1200px', margin: '0 auto' }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
             <table className="planning-table" style={{ width: '100%', tableLayout: 'auto' }}>
                 <thead>
                     <tr>
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>DE</th>
-                        {config.timeSlots.map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '60px' }}>{slot}</th>
+                        {(config.timeSlots || []).map((slot, index) => (
+                            <th key={slot} className="scrollable-col" style={{ minWidth: '50px' }}>
+                                {typeof slot === 'string' ? slot : slot.start}
+                            </th>
                         ))}
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>Total</th>
                     </tr>
                     <tr>
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>À</th>
-                        {config.timeSlots.map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '60px' }}>
+                        {(config.timeSlots || []).map((slot, index) => (
+                            <th key={slot} className="scrollable-col" style={{ minWidth: '50px' }}>
                                 {index < config.timeSlots.length - 1
-                                    ? config.timeSlots[index + 1]
-                                    : getEndTime(config.timeSlots[config.timeSlots.length - 1], config.interval)}
+                                    ? (typeof config.timeSlots[index + 1] === 'string' ? config.timeSlots[index + 1] : config.timeSlots[index + 1].start)
+                                    : getEndTime(typeof slot === 'string' ? slot : slot.start, config.interval || 30)}
                             </th>
                         ))}
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {selectedEmployees.map((employee, employeeIndex) => (
+                    {(selectedEmployees || []).map((employee, employeeIndex) => (
                         <tr key={employee}>
-                            <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`} style={{ width: '150px', minWidth: '150px' }}>{employee}</td>
-                            {config.timeSlots.map((_, slotIndex) => {
+                            <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`} style={{ width: '150px', minWidth: '150px' }}>
+                                {employee}
+                            </td>
+                            {(config.timeSlots || []).map((_, slotIndex) => {
                                 const dayKey = format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd');
                                 const isChecked = planning[employee]?.[dayKey]?.[slotIndex] || false;
                                 return (
                                     <td
                                         key={slotIndex}
                                         className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
-                                        style={{ minWidth: '60px' }}
+                                        style={{ minWidth: '50px' }}
                                         onTouchStart={(e) => handleTouchStart(employee, slotIndex, currentDay, e)}
                                         onMouseDown={(e) => handleMouseDown(employee, slotIndex, currentDay, e)}
                                         onMouseMove={(e) => handleMouseMove(employee, slotIndex, currentDay, e)}

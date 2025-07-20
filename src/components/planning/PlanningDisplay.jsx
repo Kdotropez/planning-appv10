@@ -222,7 +222,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setShowResetModal(true);
                 }}>Réinitialiser</Button>
             </div>
-            <div className="day-buttons" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>
+            <div className="day-buttons" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px', maxWidth: '1200px', marginLeft: 'auto', marginRight: 'auto' }}>
                 {days.map((day, index) => (
                     <Button
                         key={day.name}
@@ -231,7 +231,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             console.log('Setting currentDay:', index);
                             setCurrentDay(index);
                         }}
-                        style={{ padding: '8px 16px', fontSize: '12px', minHeight: '60px' }} // Supprimé backgroundColor pour éviter le conflit
+                        style={{ padding: '8px 16px', fontSize: '12px', minHeight: '60px' }}
                     >
                         <span className="day-button-content">
                             {day.name}
@@ -243,7 +243,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     </Button>
                 ))}
             </div>
-            <div className="recap-buttons" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', justifyContent: 'center', gap: '12px', marginBottom: '15px' }}>
+            <div className="recap-buttons" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', justifyContent: 'center', gap: '12px', marginBottom: '15px', maxWidth: '1200px', marginLeft: 'auto', marginRight: 'auto' }}>
                 {(loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || []).map((employee, index) => (
                     <div
                         key={employee}
@@ -253,7 +253,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             gap: '2px',
                             width: 'fit-content',
                             minWidth: '120px',
-                            maxWidth: '300px',
+                            maxWidth: '200px',
                             alignItems: 'center',
                             backgroundColor: pastelColors[index % pastelColors.length],
                             padding: '8px',
@@ -342,7 +342,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         </Button>
                     </div>
                 ))}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 'fit-content', minWidth: '120px', maxWidth: '300px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 'fit-content', minWidth: '120px', maxWidth: '200px', alignItems: 'center' }}>
                     <h4 style={{
                         fontFamily: 'Roboto, sans-serif',
                         textAlign: 'center',

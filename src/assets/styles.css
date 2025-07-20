@@ -90,7 +90,7 @@ body {
 /* Tableaux (WeekSelection, PlanningTable) */
 .table-container {
     width: 100%;
-    max-width: 1200px; /* Ajouté pour limiter la largeur max, comme dans v7 */
+    max-width: 1200px; /* Limite la largeur pour éviter le débordement */
     overflow-x: auto;
     margin: 0 auto;
 }
@@ -265,11 +265,12 @@ body {
 }
 
 .button-jour.selected {
-    background-color: #f28c38;
+    background-color: #f28c38 !important; /* Priorité accrue pour éviter les conflits */
+    color: #fff !important;
 }
 
 .button-jour.selected:hover {
-    background-color: #d9742f;
+    background-color: #d9742f !important;
 }
 
 .button-recap {

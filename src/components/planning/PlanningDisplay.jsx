@@ -231,7 +231,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             console.log('Setting currentDay:', index);
                             setCurrentDay(index);
                         }}
-                        style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '12px', minHeight: '60px' }}
+                        style={{ padding: '8px 16px', fontSize: '12px', minHeight: '60px' }} // Supprimé backgroundColor pour éviter le conflit
                     >
                         <span className="day-button-content">
                             {day.name}

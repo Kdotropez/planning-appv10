@@ -30,7 +30,7 @@ const MonthlyRecapModals = ({
         let breaks = [];
 
         if (!slots.some(slot => slot)) {
-            return { status: 'Congé', ranges: [], breaks: [], hours: 0, columns: ['ENTRÉE'], values: ['Congé'] };
+            return { status: 'Congé', ranges: [], breaks: [], hours: 0, columns: ['Arrivée'], values: ['Congé'] };
         }
 
         for (let i = 0; i < slots.length && i < timeSlots.length; i++) {
@@ -62,18 +62,16 @@ const MonthlyRecapModals = ({
             ranges.push(currentRange);
         }
 
-        const interruptionCount = breaks.length;
-        const columns = interruptionCount === 0 ? ['ENTRÉE', 'SORTIE'] : interruptionCount === 1 ? ['ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE'] : ['ENTRÉE', 'PAUSE', 'RETOUR', 'PAUSE', 'RETOUR', 'SORTIE'];
+        const columns = ['Arrivée', 'Pause', 'Retour', 'Fin'];
         const values = [];
 
-        if (interruptionCount === 0 && ranges[0]) {
-            values.push(ranges[0].start, ranges[0].end);
-        } else if (ranges[0] && breaks[0]) {
-            values.push(ranges[0].start, breaks[0].start, ranges[1]?.start || '-');
-            if (interruptionCount > 1 && ranges[2]) {
-                values.push(breaks[1].start, ranges[2].start);
-            }
-            values.push(ranges[ranges.length - 1]?.end || '-');
+        if (ranges[0]) {
+            values.push(ranges[0].start); // Arrivée
+            values.push(breaks[0]?.start || '-'); // Première pause
+            values.push(breaks[0] && ranges[1] ? ranges[1].start : '-'); // Retour
+            values.push(ranges[ranges.length - 1]?.end || '-'); // Fin
+        } else {
+            values.push('-', '-', '-', '-');
         }
 
         const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
@@ -149,7 +147,7 @@ const MonthlyRecapModals = ({
                         day: format(addDays(new Date(selectedWeek), i), 'EEEE d MMMM', { locale: fr }),
                         status: 'Congé',
                         hours: 0,
-                        columns: ['ENTRÉE'],
+                        columns: ['Arrivée'],
                         values: ['Congé']
                     }))
                 });
@@ -216,7 +214,7 @@ const MonthlyRecapModals = ({
                         day: format(addDays(new Date(selectedWeek), i), 'EEEE d MMMM', { locale: fr }),
                         status: 'Congé',
                         hours: 0,
-                        columns: ['ENTRÉE'],
+                        columns: ['Arrivée'],
                         values: ['Congé']
                     }))
                 }]
@@ -311,10 +309,9 @@ const MonthlyRecapModals = ({
                                     </p>
                                 );
                             }
-                            const firstSlot = weeklyRecaps[0]?.timeSlots[0];
-                            const columns = firstSlot ? firstSlot.columns : ['ENTRÉE'];
+                            const columns = ['Arrivée', 'Pause', 'Retour', 'Fin'];
                             return (
-                                <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse' }}>
+                                <table className="recap-table" style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ backgroundColor: '#f0f0f0' }}>
                                             <th style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>Employé</th>
@@ -345,9 +342,6 @@ const MonthlyRecapModals = ({
                                                                     <td key={idx} style={{ border: '1px solid #ddd', padding: '8px' }}>{value}</td>
                                                                 ))
                                                             )}
-                                                            {(slot.status ? [] : Array(columns.length - slot.values.length).fill('')).map((_, idx) => (
-                                                                <td key={`empty-${idx}`} style={{ border: '1px solid #ddd', padding: '8px' }}></td>
-                                                            ))}
                                                             <td style={{ border: '1px solid #ddd', padding: '8px' }}>{recap.hours}</td>
                                                         </tr>
                                                     ))
@@ -405,10 +399,9 @@ const MonthlyRecapModals = ({
                                     </p>
                                 );
                             }
-                            const firstSlot = weeklyRecaps[0]?.timeSlots[0];
-                            const columns = firstSlot ? firstSlot.columns : ['ENTRÉE'];
+                            const columns = ['Arrivée', 'Pause', 'Retour', 'Fin'];
                             return (
-                                <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse' }}>
+                                <table className="recap-table" style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ backgroundColor: '#f0f0f0' }}>
                                             <th style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>Semaine</th>
@@ -432,10 +425,7 @@ const MonthlyRecapModals = ({
                                                             <td key={idx} style={{ border: '1px solid #ddd', padding: '8px' }}>{value}</td>
                                                         ))
                                                     )}
-                                                    {(slot.status ? [] : Array(columns.length - slot.values.length).fill('')).map((_, idx) => (
-                                                        <td key={`empty-${idx}`} style={{ border: '1px solid #ddd', padding: '8px' }}></td>
-                                                    ))}
-                                                    <td style={{ border: '1px lwd', padding: '8px' }}>{recap.hours}</td>
+                                                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{recap.hours}</td>
                                                 </tr>
                                             ))
                                         ))}

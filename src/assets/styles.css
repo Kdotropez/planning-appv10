@@ -151,7 +151,7 @@ body {
 }
 
 .scrollable-col {
-    min-width: 50px; /* Réduit pour minimiser le débordement */
+    min-width: 40px; /* Réduit pour minimiser le débordement */
     text-align: center;
     border: 1px solid #ccc;
 }
@@ -330,7 +330,7 @@ body {
 }
 
 .button-recap:hover {
-    background-color: #1565c0;
+    background/ok-color: #1565c0;
 }
 
 /* Formulaires et groupes */
@@ -401,7 +401,7 @@ body {
     gap: 16px;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 1200px; /* Ajouté pour aligner avec le tableau */
+    max-width: 1200px;
     overflow-x: auto;
     margin-left: auto;
     margin-right: auto;
@@ -414,7 +414,7 @@ body {
     gap: 16px;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 1200px; /* Ajouté pour aligner avec le tableau */
+    max-width: 1200px;
     overflow-x: auto;
     margin-left: auto;
     margin-right: auto;
@@ -477,7 +477,7 @@ body {
         min-width: 120px;
     }
     .scrollable-col {
-        min-width: 40px;
+        min-width: 35px; /* Réduit pour écrans plus petits */
     }
     .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
         padding: 5px;
@@ -510,7 +510,7 @@ body {
         min-width: 100px;
     }
     .scrollable-col {
-        min-width: 30px;
+        min-width: 30px; /* Encore plus réduit pour petits écrans */
         font-size: 12px;
     }
     .button-base {

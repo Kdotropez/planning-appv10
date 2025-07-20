@@ -20,7 +20,7 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
         let breaks = [];
 
         if (!slots.some(slot => slot)) {
-            return { status: 'Congé', ranges: [], breaks: [], hours: 0, columns: ['ENTRÉE'], values: ['Congé'] };
+            return { status: 'Congé', ranges: [], breaks: [], hours: 0, columns: ['Arrivée'], values: ['Congé'] };
         }
 
         for (let i = 0; i < slots.length && i < timeSlots.length; i++) {
@@ -52,18 +52,16 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
             ranges.push(currentRange);
         }
 
-        const interruptionCount = breaks.length;
-        const columns = interruptionCount === 0 ? ['ENTRÉE', 'SORTIE'] : interruptionCount === 1 ? ['ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE'] : ['ENTRÉE', 'PAUSE', 'RETOUR', 'PAUSE', 'RETOUR', 'SORTIE'];
+        const columns = ['Arrivée', 'Pause', 'Retour', 'Fin'];
         const values = [];
 
-        if (interruptionCount === 0 && ranges[0]) {
-            values.push(ranges[0].start, ranges[0].end);
-        } else if (ranges[0] && breaks[0]) {
-            values.push(ranges[0].start, breaks[0].start, ranges[1]?.start || '-');
-            if (interruptionCount > 1 && ranges[2]) {
-                values.push(breaks[1].start, ranges[2].start);
-            }
-            values.push(ranges[ranges.length - 1]?.end || '-');
+        if (ranges[0]) {
+            values.push(ranges[0].start); // Arrivée
+            values.push(breaks[0]?.start || '-'); // Première pause
+            values.push(breaks[0] && ranges[1] ? ranges[1].start : '-'); // Retour
+            values.push(ranges[ranges.length - 1]?.end || '-'); // Fin
+        } else {
+            values.push('-', '-', '-', '-');
         }
 
         const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
@@ -86,11 +84,13 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
         setIsExporting(true);
         try {
             const doc = new jsPDF();
-            doc.setFont('Roboto', 'normal');
+            doc.setFont('Helvetica', 'normal');
             doc.setFontSize(12);
 
             const type = showRecapModal === 'week' ? 'week' : showRecapModal.includes('_week') ? 'employee' : 'employee';
             const employee = showRecapModal.includes('_week') ? showRecapModal.replace('_week', '') : showRecapModal;
+
+            console.log('Exporting PDF for:', { type, employee, selectedShop, selectedWeek });
 
             if (type === 'employee') {
                 const isWeekly = showRecapModal.includes('_week');
@@ -102,35 +102,40 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                 if (isWeekly) {
                     const firstDayKey = format(addDays(new Date(selectedWeek), 0), 'yyyy-MM-dd');
                     const { columns } = getTimeSlotsWithBreaks(employeeName, firstDayKey);
+                    console.log('PDF table columns:', columns);
+                    const tableData = days.map((day, index) => {
+                        const dayKey = format(addDays(new Date(selectedWeek), index), 'yyyy-MM-dd');
+                        const { status, hours, values } = getTimeSlotsWithBreaks(employeeName, dayKey);
+                        console.log('Table row data:', { dayKey, status, hours, values });
+                        return [
+                            `${day.name} ${day.date}`,
+                            ...(status ? [status, ...Array(columns.length - 1).fill('')] : values),
+                            hours.toFixed(1)
+                        ];
+                    }).concat([['Total général', ...Array(columns.length).fill(''), employeeWeeklyHours]]);
+                    console.log('PDF table data:', tableData);
                     doc.autoTable({
                         head: [['Jour', ...columns, 'Heures effectives']],
-                        body: days.map((day, index) => {
-                            const dayKey = format(addDays(new Date(selectedWeek), index), 'yyyy-MM-dd');
-                            const { status, hours, values } = getTimeSlotsWithBreaks(employeeName, dayKey);
-                            return [
-                                `${day.name} ${day.date}`,
-                                ...(status ? [status, ...Array(columns.length - 1).fill('')] : values.concat(Array(columns.length - values.length).fill(''))),
-                                hours.toFixed(1)
-                            ];
-                        }).concat([['Total général', ...Array(columns.length).fill(''), employeeWeeklyHours]]),
+                        body: tableData,
                         startY: 40,
                         theme: 'grid',
-                        styles: { font: 'Roboto', fontSize: 10 },
+                        styles: { font: 'Helvetica', fontSize: 10 },
                         headStyles: { fillColor: '#f0f0f0', textColor: '#333' },
                     });
                 } else {
                     const dayKey = format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd');
                     const { status, hours, columns, values } = getTimeSlotsWithBreaks(employeeName, dayKey);
+                    console.log('PDF single day data:', { dayKey, status, hours, values });
                     doc.autoTable({
                         head: [['Jour', ...columns, 'Heures effectives']],
                         body: [[
                             `${days[currentDay].name} ${days[currentDay].date}`,
-                            ...(status ? [status, ...Array(columns.length - 1).fill('')] : values.concat(Array(columns.length - values.length).fill(''))),
+                            ...(status ? [status, ...Array(columns.length - 1).fill('')] : values),
                             hours.toFixed(1)
                         ]],
                         startY: 40,
                         theme: 'grid',
-                        styles: { font: 'Roboto', fontSize: 10 },
+                        styles: { font: 'Helvetica', fontSize: 10 },
                         headStyles: { fillColor: '#f0f0f0', textColor: '#333' },
                     });
                 }
@@ -147,17 +152,18 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                         return [
                             emp,
                             `${day.name} ${day.date}`,
-                            ...(status ? [status, ...Array(columns.length - 1).fill('')] : values.concat(Array(columns.length - values.length).fill(''))),
+                            ...(status ? [status, ...Array(columns.length - 1).fill('')] : values),
                             hours.toFixed(1)
                         ];
                     });
+                    console.log('PDF day data:', { dayKey, employeesData });
                     doc.text(day.name, 14, startY);
                     doc.autoTable({
                         head: [['Employé', 'Jour', ...columns, 'Heures effectives']],
                         body: employeesData.concat([['Total jour', '', ...Array(columns.length).fill(''), employeesData.reduce((sum, emp) => sum + parseFloat(emp[columns.length + 2]), 0).toFixed(1)]]),
                         startY: startY + 5,
                         theme: 'grid',
-                        styles: { font: 'Roboto', fontSize: 10, fillColor: pastelColors[index % pastelColors.length] },
+                        styles: { font: 'Helvetica', fontSize: 10, fillColor: pastelColors[index % pastelColors.length] },
                         headStyles: { fillColor: '#f0f0f0', textColor: '#333' },
                     });
                     startY = doc.lastAutoTable.finalY + 10;
@@ -166,7 +172,7 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                     body: [['Total semaine', '', ...Array(4).fill(''), shopWeeklyHours]],
                     startY: startY,
                     theme: 'grid',
-                    styles: { font: 'Roboto', fontSize: 10, fontStyle: 'bold' },
+                    styles: { font: 'Helvetica', fontSize: 10, fontStyle: 'bold' },
                 });
             }
 
@@ -174,7 +180,7 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
             setIsExporting(false);
             console.log('PDF exported successfully');
         } catch (error) {
-            setError('Erreur lors de l’exportation du PDF.');
+            setError(`Erreur lors de l’exportation du PDF: ${error.message}`);
             setIsExporting(false);
             console.error('PDF export error:', error);
         }
@@ -235,13 +241,9 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                             <tr style={{ backgroundColor: '#f0f0f0' }}>
                                 {type === 'week' && <th style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>Employé</th>}
                                 <th style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>Jour</th>
-                                {type === 'employee' && !showRecapModal.includes('_week')
-                                    ? getTimeSlotsWithBreaks(employee, format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd')).columns.map((col, index) => (
-                                        <th key={index} style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>{col}</th>
-                                    ))
-                                    : getTimeSlotsWithBreaks(selectedEmployees[0] || employee, format(addDays(new Date(selectedWeek), 0), 'yyyy-MM-dd')).columns.map((col, index) => (
-                                        <th key={index} style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>{col}</th>
-                                    ))}
+                                {getTimeSlotsWithBreaks(selectedEmployees[0] || employee, format(addDays(new Date(selectedWeek), 0), 'yyyy-MM-dd')).columns.map((col, index) => (
+                                    <th key={index} style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>{col}</th>
+                                ))}
                                 <th style={{ border: '1px solid #ddd', padding: '8px', fontWeight: '700' }}>Heures effectives</th>
                             </tr>
                         </thead>
@@ -261,9 +263,6 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                                                         <td key={idx} style={{ border: '1px solid #ddd', padding: '8px' }}>{value}</td>
                                                     ))
                                                 )}
-                                                {(status ? [] : Array(columns.length - values.length).fill('')).map((_, idx) => (
-                                                    <td key={`empty-${idx}`} style={{ border: '1px solid #ddd', padding: '8px' }}></td>
-                                                ))}
                                                 <td style={{ border: '1px solid #ddd', padding: '8px' }}>{hours.toFixed(1)} h</td>
                                             </tr>
                                         );
@@ -290,9 +289,6 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                                                         <td key={idx} style={{ border: '1px solid #ddd', padding: '8px' }}>{value}</td>
                                                     ))
                                                 )}
-                                                {(status ? [] : Array(columns.length - values.length).fill('')).map((_, idx) => (
-                                                    <td key={`empty-${idx}`} style={{ border: '1px solid #ddd', padding: '8px' }}></td>
-                                                ))}
                                                 <td style={{ border: '1px solid #ddd', padding: '8px' }}>{hours.toFixed(1)} h</td>
                                             </tr>
                                         ];
@@ -315,9 +311,6 @@ const RecapModal = ({ showRecapModal, setShowRecapModal, config, selectedShop, s
                                                             <td key={idx} style={{ border: '1px solid #ddd', padding: '8px' }}>{value}</td>
                                                         ))
                                                     )}
-                                                    {(status ? [] : Array(columns.length - values.length).fill('')).map((_, idx) => (
-                                                        <td key={`empty-${idx}`} style={{ border: '1px solid #ddd', padding: '8px' }}></td>
-                                                    ))}
                                                     <td style={{ border: '1px solid #ddd', padding: '8px' }}>{hours.toFixed(1)} h</td>
                                                 </tr>
                                             );

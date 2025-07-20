@@ -1,7 +1,9 @@
 import React from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, addDays, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
@@ -27,6 +29,12 @@ const MonthlyRecapModals = ({
     const weeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 })
         .filter(week => isMonday(week))
         .map(week => format(week, 'yyyy-MM-dd'));
+
+    const getEmployeeColorClass = (employee) => {
+        const index = selectedEmployees.indexOf(employee);
+        const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
+        return index >= 0 ? colors[index % colors.length] : '';
+    };
 
     const formatTimeRange = (employee, dayKey, timeSlots) => {
         console.log(`MonthlyRecapModals: Formatting time range for ${employee} on ${dayKey}`);
@@ -166,6 +174,37 @@ const MonthlyRecapModals = ({
 
     console.log('MonthlyRecapModals: Generated recap data:', recapData);
 
+    const exportToPDF = () => {
+        console.log('MonthlyRecapModals: Exporting to PDF');
+        const doc = new jsPDF();
+        doc.setFont('Roboto', 'normal');
+        doc.text(
+            `Récapitulatif mensuel ${showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}`,
+            10,
+            10
+        );
+        doc.autoTable({
+            head: [['Employé', 'Jour', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
+            body: recapData.map(row => [row.employee, row.day, row.start, row.pause, row.resume, row.end, row.hours]),
+            startY: 20,
+            styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+            bodyStyles: { textColor: [51, 51, 51] },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 25 },
+                5: { cellWidth: 25 },
+                6: { cellWidth: 25 }
+            }
+        });
+        doc.save(`recap_monthly_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        console.log('MonthlyRecapModals: PDF exported successfully');
+    };
+
     return (
         <div className="modal-overlay">
             <div className="modal-content">
@@ -186,7 +225,7 @@ const MonthlyRecapModals = ({
                     </thead>
                     <tbody>
                         {recapData.map((row, index) => (
-                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : ''}>
+                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : getEmployeeColorClass(row.employee)}>
                                 <td>{row.employee}</td>
                                 <td>{row.day}</td>
                                 <td>{row.start}</td>
@@ -198,20 +237,25 @@ const MonthlyRecapModals = ({
                         ))}
                     </tbody>
                 </table>
-                <Button
-                    className="modal-close"
-                    onClick={() => {
-                        console.log('MonthlyRecapModals: Closing modal');
-                        if (showMonthlyRecapModal) {
-                            setShowMonthlyRecapModal(false);
-                        } else {
-                            setShowEmployeeMonthlyRecap(false);
-                            setSelectedEmployeeForMonthlyRecap('');
-                        }
-                    }}
-                >
-                    ✕
-                </Button>
+                <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                    <Button className="button-primary" onClick={exportToPDF}>
+                        Exporter en PDF
+                    </Button>
+                    <Button
+                        className="modal-close"
+                        onClick={() => {
+                            console.log('MonthlyRecapModals: Closing modal');
+                            if (showMonthlyRecapModal) {
+                                setShowMonthlyRecapModal(false);
+                            } else {
+                                setShowEmployeeMonthlyRecap(false);
+                                setSelectedEmployeeForMonthlyRecap('');
+                            }
+                        }}
+                    >
+                        ✕
+                    </Button>
+                </div>
             </div>
         </div>
     );

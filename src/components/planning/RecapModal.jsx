@@ -1,6 +1,8 @@
 import React from 'react';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
@@ -23,6 +25,12 @@ const RecapModal = ({
     const isWeekRecap = showRecapModal === 'week';
     const isEmployeeWeekRecap = showRecapModal.includes('_week');
     const employee = isEmployeeWeekRecap ? showRecapModal.replace('_week', '') : showRecapModal;
+
+    const getEmployeeColorClass = (employee) => {
+        const index = selectedEmployees.indexOf(employee);
+        const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
+        return index >= 0 ? colors[index % colors.length] : '';
+    };
 
     const formatTimeRange = (employee, dayKey, timeSlots) => {
         console.log(`RecapModal: Formatting time range for ${employee} on ${dayKey}`);
@@ -146,6 +154,37 @@ const RecapModal = ({
 
     console.log('RecapModal: Generated recap data:', recapData);
 
+    const exportToPDF = () => {
+        console.log('RecapModal: Exporting to PDF');
+        const doc = new jsPDF();
+        doc.setFont('Roboto', 'normal');
+        doc.text(
+            `Récapitulatif ${isWeekRecap ? 'hebdomadaire' : isEmployeeWeekRecap ? `semaine de ${employee}` : `de ${employee}`}${isWeekRecap ? ` - ${selectedShop}` : ''}`,
+            10,
+            10
+        );
+        doc.autoTable({
+            head: [['Employé', 'Jour', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
+            body: recapData.map(row => [row.employee, row.day, row.start, row.pause, row.resume, row.end, row.hours]),
+            startY: 20,
+            styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+            bodyStyles: { textColor: [51, 51, 51] },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 25 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 25 },
+                5: { cellWidth: 25 },
+                6: { cellWidth: 25 }
+            }
+        });
+        doc.save(`recap_${isWeekRecap ? 'weekly' : isEmployeeWeekRecap ? `employee_week_${employee}` : `employee_day_${employee}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        console.log('RecapModal: PDF exported successfully');
+    };
+
     return (
         <div className="modal-overlay">
             <div className="modal-content">
@@ -167,7 +206,7 @@ const RecapModal = ({
                     </thead>
                     <tbody>
                         {recapData.map((row, index) => (
-                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : ''}>
+                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : getEmployeeColorClass(row.employee)}>
                                 <td>{row.employee}</td>
                                 <td>{row.day}</td>
                                 <td>{row.start}</td>
@@ -179,15 +218,20 @@ const RecapModal = ({
                         ))}
                     </tbody>
                 </table>
-                <Button
-                    className="modal-close"
-                    onClick={() => {
-                        console.log('RecapModal: Closing modal');
-                        setShowRecapModal(null);
-                    }}
-                >
-                    ✕
-                </Button>
+                <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                    <Button className="button-primary" onClick={exportToPDF}>
+                        Exporter en PDF
+                    </Button>
+                    <Button
+                        className="modal-close"
+                        onClick={() => {
+                            console.log('RecapModal: Closing modal');
+                            setShowRecapModal(null);
+                        }}
+                    >
+                        ✕
+                    </Button>
+                </div>
             </div>
         </div>
     );

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { loadFromLocalStorage, saveToLocalStorage } from '../../utils/localStorage';
 import Button from '../common/Button';
+import { FaTrash } from 'react-icons/fa';
 import '@/assets/styles.css';
 
 const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback }) => {
@@ -52,16 +53,35 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
         setFeedback('Succès: Boutique sélectionnée.');
     };
 
+    const handleReset = () => {
+        setLocalShops([]);
+        setShops([]);
+        saveToLocalStorage('shops', []);
+        localStorage.clear();
+        setFeedback('Succès: Liste des boutiques réinitialisée.');
+    };
+
     const handleBack = () => {
         console.log('ShopSelection: Retour button clicked');
         setStep(1);
     };
 
-    console.log('ShopSelection: Rendering ShopSelection with shops:', localShops, 'selectedShop:', selectedShop);
+    const handleValidate = () => {
+        if (localShops.length === 0) {
+            setFeedback('Erreur: Aucune boutique sélectionnée.');
+            return;
+        }
+        setSelectedShop(localShops[0]);
+        setStep(3);
+        setFeedback('Succès: Validation effectuée.');
+    };
+
+    console.log('ShopSelection: Rendering ShopSelection with shops:', localShops);
 
     return (
         <div className="step-container">
-            <h2>Choix de la boutique</h2>
+            <h2>Sélection de la boutique</h2>
+            <h3>Ajouter une boutique</h3>
             <div className="shop-input">
                 <input
                     type="text"
@@ -74,6 +94,7 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
                     Ajouter
                 </Button>
             </div>
+            <h3>Boutiques disponibles</h3>
             <div className="shop-list">
                 {localShops.map((shop, index) => (
                     <div key={index} className="shop-item">
@@ -82,7 +103,7 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
                             className="delete-icon"
                             onClick={() => handleDeleteShop(shop)}
                         >
-                            ✕
+                            <FaTrash />
                         </span>
                         <Button
                             className="button-primary"
@@ -97,7 +118,16 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
                 <Button className="button-retour" onClick={handleBack}>
                     Retour
                 </Button>
+                <Button className="button-validate" onClick={handleValidate}>
+                    Valider
+                </Button>
+                <Button className="button-reinitialiser" onClick={handleReset}>
+                    Réinitialiser
+                </Button>
             </div>
+            <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#333' }}>
+                Klick-Planning - copyright © Nicolas Lefevre
+            </p>
         </div>
     );
 };

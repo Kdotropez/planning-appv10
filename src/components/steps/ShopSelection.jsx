@@ -102,14 +102,28 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
                         <span
                             className={`button-jour ${selected === shop ? 'selected' : ''}`}
                             onClick={() => handleSelectShop(shop)}
-                            style={{ cursor: 'pointer', padding: '10px 20px', display: 'inline-block', fontSize: '16px', fontWeight: '500' }}
+                            style={{
+                                cursor: 'pointer',
+                                padding: '10px 20px',
+                                display: 'inline-block',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                borderRadius: '4px',
+                                border: selected === shop ? '2px solid #c62828' : '1px solid #d6e6ff'
+                            }}
                         >
                             {shop}
                         </span>
                         <span
                             className="delete-icon"
                             onClick={() => handleDeleteShop(shop)}
-                            style={{ fontSize: '20px', marginLeft: '15px', color: '#e53935', cursor: 'pointer' }}
+                            style={{
+                                fontSize: '22px',
+                                marginLeft: '15px',
+                                color: '#e53935',
+                                cursor: 'pointer',
+                                transition: 'color 0.2s'
+                            }}
                             onMouseOver={(e) => e.currentTarget.style.color = '#c62828'}
                             onMouseOut={(e) => e.currentTarget.style.color = '#e53935'}
                         >

@@ -122,7 +122,7 @@ const App = () => {
                         onBackToConfig={() => setStep(1)}
                         onReset={handleReset}
                         setStep={setStep}
-                        setPlanning={setPlanning}
+                        setGlobalPlanning={setPlanning}
                         setFeedback={setFeedback}
                     />
                 )}

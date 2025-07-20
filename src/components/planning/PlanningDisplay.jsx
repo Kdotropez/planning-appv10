@@ -12,7 +12,7 @@ import ResetModal from './ResetModal';
 import CopyPasteSection from './CopyPasteSection';
 import '@/assets/styles.css';
 
-const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep, setPlanning, setFeedback }) => {
+const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep, setGlobalPlanning, setFeedback }) => {
     const [currentDay, setCurrentDay] = useState(0);
     const [planning, setPlanning] = useState(loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, initialPlanning || {}) || {});
     const [showCopyPaste, setShowCopyPaste] = useState(false);
@@ -76,6 +76,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     useEffect(() => {
         if (Object.keys(planning).length && config?.timeSlots?.length) {
             saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, planning);
+            setGlobalPlanning(planning); // Synchroniser avec l'état global
             const currentWeekKey = format(new Date(selectedWeek), 'yyyy-MM-dd');
             if (isMonday(new Date(selectedWeek))) {
                 saveToLocalStorage(`planning_${selectedShop}_${currentWeekKey}`, planning);
@@ -94,7 +95,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             }
             saveToLocalStorage(`lastPlanning_${selectedShop}`, { week: selectedWeek, planning });
         }
-    }, [planning, selectedShop, selectedWeek, config]);
+    }, [planning, selectedShop, selectedWeek, config, setGlobalPlanning]);
 
     useEffect(() => {
         setLocalFeedback('');
@@ -137,15 +138,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         }
         setPlanning(prev => {
             const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
-            return {
+            const updatedPlanning = {
                 ...prev,
                 [employee]: {
                     ...prev[employee],
                     [dayKey]: prev[employee]?.[dayKey]?.map((val, idx) => idx === slotIndex ? (forceValue !== null ? forceValue : !val) : val) || Array(config.timeSlots.length).fill(false)
                 }
             };
+            setGlobalPlanning(updatedPlanning); // Synchroniser avec l'état global
+            return updatedPlanning;
         });
-    }, [config, selectedWeek]);
+    }, [config, selectedWeek, setGlobalPlanning]);
 
     if (error) {
         return (

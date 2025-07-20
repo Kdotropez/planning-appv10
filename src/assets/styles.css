@@ -1151,4 +1151,10 @@
         width: 40px;
         font-size: 10px;
     }
+	.planning-table td.hovered {
+    background-color: rgba(0, 128, 255, 0.2);
 }
+	
+	
+	
+	

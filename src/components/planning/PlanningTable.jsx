@@ -90,29 +90,27 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
                     <tr>
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>DE</th>
                         {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '50px' }}>
+                            <th key={slot} className="scrollable-col" style={{ minWidth: '40px' }}>
                                 {typeof slot === 'string' ? slot : slot.start}
                             </th>
                         ))}
-                        <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>Total</th>
                     </tr>
                     <tr>
                         <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>À</th>
                         {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '50px' }}>
+                            <th key={slot} className="scrollable-col" style={{ minWidth: '40px' }}>
                                 {index < config.timeSlots.length - 1
                                     ? (typeof config.timeSlots[index + 1] === 'string' ? config.timeSlots[index + 1] : config.timeSlots[index + 1].start)
                                     : getEndTime(typeof slot === 'string' ? slot : slot.start, config.interval || 30)}
                             </th>
                         ))}
-                        <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}></th>
                     </tr>
                 </thead>
                 <tbody>
                     {(selectedEmployees || []).map((employee, employeeIndex) => (
                         <tr key={employee}>
                             <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`} style={{ width: '150px', minWidth: '150px' }}>
-                                {employee}
+                                {employee} ({calculateEmployeeDailyHours(employee, format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd'), planning).toFixed(1)} h)
                             </td>
                             {(config.timeSlots || []).map((_, slotIndex) => {
                                 const dayKey = format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd');
@@ -121,7 +119,7 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
                                     <td
                                         key={slotIndex}
                                         className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
-                                        style={{ minWidth: '50px' }}
+                                        style={{ minWidth: '40px' }}
                                         onTouchStart={(e) => handleTouchStart(employee, slotIndex, currentDay, e)}
                                         onMouseDown={(e) => handleMouseDown(employee, slotIndex, currentDay, e)}
                                         onMouseMove={(e) => handleMouseMove(employee, slotIndex, currentDay, e)}
@@ -130,9 +128,6 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
                                     </td>
                                 );
                             })}
-                            <td className="scrollable-col" style={{ minWidth: '150px' }}>
-                                {calculateEmployeeDailyHours(employee, format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd'), planning).toFixed(1)} h
-                            </td>
                         </tr>
                     ))}
                 </tbody>

@@ -95,7 +95,7 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
 
     return (
         <div className="planning-container">
-            <h2>Planning - {selectedShop}</h2>
+            <h2>Planning - {selectedShop || 'Aucune boutique sélectionnée'}</h2>
             <div className="week-selection-container">
                 <select
                     value={selectedWeek}
@@ -104,16 +104,18 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
                         saveToLocalStorage('lastPlanning', { shop: selectedShop, week: e.target.value });
                     }}
                 >
-                    {shops
-                        .filter(shop => shop && typeof shop === 'string')
-                        .flatMap(shop => {
-                            const weeks = Object.keys(loadFromLocalStorage(`lastPlanning_${shop}`, {}).weeks || {});
-                            return weeks.map(week => (
-                                <option key={`${shop}-${week}`} value={week}>
-                                    Semaine du {format(new Date(week), 'd MMMM yyyy', { locale: fr })}
-                                </option>
-                            ));
-                        })}
+                    {shops && Array.isArray(shops)
+                        ? shops
+                              .filter(shop => shop && typeof shop === 'string')
+                              .flatMap(shop => {
+                                  const weeks = Object.keys(loadFromLocalStorage(`lastPlanning_${shop}`, {}).weeks || {});
+                                  return weeks.map(week => (
+                                      <option key={`${shop}-${week}`} value={week}>
+                                          Semaine du {format(new Date(week), 'd MMMM yyyy', { locale: fr })}
+                                      </option>
+                                  ));
+                              })
+                        : <option value="">Aucune semaine disponible</option>}
                 </select>
             </div>
             <div className="button-group">

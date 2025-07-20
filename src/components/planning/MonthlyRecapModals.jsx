@@ -1,27 +1,5 @@
 import React from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, addDays, startOfWeek } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { loadFromLocalStorage } from '../../utils/localStorage';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import Button from '../common/Button';
-import '@/assets/styles.css';
-
-const MonthlyRecapModals = ({
-    config,
-    selectedShop,
-    selectedWeek,
-    selectedEmployees
-System: Je n'ai pas accès à la fin du fichier `MonthlyRecapModals.jsx` que tu souhaites modifier, car le message semble être coupé. Cependant, je peux te fournir une version complète et corrigée de `MonthlyRecapModals.jsx` en me basant sur la version précédente que tu as partagée, en intégrant les corrections nécessaires pour résoudre l'erreur `ReferenceError: addDays is not defined`, ajouter les couleurs pastel, et implémenter l'exportation PDF, tout en utilisant ta version préférée de `styles.css`.
-
-### Modifications proposées (suite)
-
-#### 2. `src/components/planning/MonthlyRecapModals.jsx` (complet)
-Voici le code corrigé et complet pour `MonthlyRecapModals.jsx`, incluant l'importation manquante de `addDays`, les couleurs pastel, et l'exportation PDF :
-
-<xaiArtifact artifact_id="a69ec92d-c197-4f5e-8fd8-4ca1c671da5e" artifact_version_id="f6eb1930-1c01-42e8-aada-0d6d4bc4f707" title="MonthlyRecapModals.jsx" contentType="text/javascript">
-import React from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, addDays, startOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
@@ -41,7 +19,6 @@ const MonthlyRecapModals = ({
     setShowEmployeeMonthlyRecap,
     selectedEmployeeForMonthlyRecap,
     setSelectedEmployeeForMonthlyRecap,
-    calculateEmployeeDailyHours,
     calculateEmployeeWeeklyHours
 }) => {
     if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) return null;
@@ -58,141 +35,28 @@ const MonthlyRecapModals = ({
         return index >= 0 ? colors[index % colors.length] : '';
     };
 
-    const formatTimeRange = (employee, dayKey, timeSlots) => {
-        console.log(`MonthlyRecapModals: Formatting time range for ${employee} on ${dayKey}`);
-        const weekKey = format(startOfWeek(new Date(dayKey), { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, planning);
-        if (!weekPlanning[employee]?.[dayKey] || weekPlanning[employee][dayKey].every(slot => !slot)) {
-            return { start: 'Congé', pause: '', resume: '', end: '', hours: '0.0 h' };
-        }
-
-        let start = null, pause = null, resume = null, end = null;
-        let inShift = false;
-
-        timeSlots.forEach((slot, index) => {
-            const isChecked = weekPlanning[employee][dayKey][index];
-            if (isChecked && !inShift) {
-                start = slot;
-                inShift = true;
-            } else if (!isChecked && inShift && !pause) {
-                pause = slot;
-                inShift = false;
-            } else if (isChecked && !inShift && pause) {
-                resume = slot;
-                inShift = true;
-            } else if (!isChecked && inShift && resume) {
-                end = slot;
-                inShift = false;
-            } else if (isChecked && index === timeSlots.length - 1) {
-                end = timeSlots[index];
-            }
-        });
-
-        if (inShift && !end) {
-            end = timeSlots[timeSlots.length - 1];
-        }
-
-        const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-        console.log(`MonthlyRecapModals: Time range for ${employee} on ${dayKey}:`, { start, pause, resume, end, hours });
-        return {
-            start: start || '-',
-            pause: pause || '-',
-            resume: resume || '-',
-            end: end || '-',
-            hours: `${hours.toFixed(1)} h`
-        };
-    };
-
     const recapData = [];
-    let totalMonthHours = 0;
+    const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
+    let totalMonthHoursByEmployee = {};
 
-    if (showMonthlyRecapModal) {
+    employees.forEach(employee => {
+        totalMonthHoursByEmployee[employee] = 0;
         weeks.forEach(week => {
             const weekStart = new Date(week);
-            const days = Array.from({ length: 7 }, (_, i) => ({
-                name: format(addDays(weekStart, i), 'EEEE', { locale: fr }),
-                date: format(addDays(weekStart, i), 'd MMMM', { locale: fr }),
-                key: format(addDays(weekStart, i), 'yyyy-MM-dd')
-            }));
-
-            selectedEmployees.forEach(employee => {
-                days.forEach(day => {
-                    const { start, pause, resume, end, hours } = formatTimeRange(employee, day.key, config.timeSlots);
-                    recapData.push({
-                        employee,
-                        day: `${day.name} ${day.date}`,
-                        start,
-                        pause,
-                        resume,
-                        end,
-                        hours
-                    });
-                });
-                const weeklyHours = calculateEmployeeWeeklyHours(employee, week, loadFromLocalStorage(`planning_${selectedShop}_${week}`, planning));
-                recapData.push({
-                    employee: `Total semaine ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`,
-                    day: '',
-                    start: '',
-                    pause: '',
-                    resume: '',
-                    end: '',
-                    hours: `${weeklyHours.toFixed(1)} h`
-                });
-                totalMonthHours += weeklyHours;
-            });
-        });
-        recapData.push({
-            employee: 'Total mois',
-            day: '',
-            start: '',
-            pause: '',
-            resume: '',
-            end: '',
-            hours: `${totalMonthHours.toFixed(1)} h`
-        });
-    } else if (showEmployeeMonthlyRecap) {
-        weeks.forEach(week => {
-            const weekStart = new Date(week);
-            const days = Array.from({ length: 7 }, (_, i) => ({
-                name: format(addDays(weekStart, i), 'EEEE', { locale: fr }),
-                date: format(addDays(weekStart, i), 'd MMMM', { locale: fr }),
-                key: format(addDays(weekStart, i), 'yyyy-MM-dd')
-            }));
-
-            days.forEach(day => {
-                const { start, pause, resume, end, hours } = formatTimeRange(selectedEmployeeForMonthlyRecap, day.key, config.timeSlots);
-                recapData.push({
-                    employee: selectedEmployeeForMonthlyRecap,
-                    day: `${day.name} ${day.date}`,
-                    start,
-                    pause,
-                    resume,
-                    end,
-                    hours
-                });
-            });
-            const weeklyHours = calculateEmployeeWeeklyHours(selectedEmployeeForMonthlyRecap, week, loadFromLocalStorage(`planning_${selectedShop}_${week}`, planning));
+            const weeklyHours = calculateEmployeeWeeklyHours(employee, week, loadFromLocalStorage(`planning_${selectedShop}_${week}`, planning));
             recapData.push({
-                employee: `Total semaine ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`,
-                day: '',
-                start: '',
-                pause: '',
-                resume: '',
-                end: '',
+                employee,
+                week: `Semaine du ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`,
                 hours: `${weeklyHours.toFixed(1)} h`
             });
-            totalMonthHours += weeklyHours;
+            totalMonthHoursByEmployee[employee] += weeklyHours;
         });
         recapData.push({
-            employee: 'Total mois',
-            day: '',
-            start: '',
-            pause: '',
-            resume: '',
-            end: '',
-            hours: `${totalMonthHours.toFixed(1)} h`
+            employee,
+            week: `Total mois pour ${employee}`,
+            hours: `${totalMonthHoursByEmployee[employee].toFixed(1)} h`
         });
-    }
+    });
 
     console.log('MonthlyRecapModals: Generated recap data:', recapData);
 
@@ -206,21 +70,17 @@ const MonthlyRecapModals = ({
             10
         );
         doc.autoTable({
-            head: [['Employé', 'Jour', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
-            body: recapData.map(row => [row.employee, row.day, row.start, row.pause, row.resume, row.end, row.hours]),
+            head: [['Employé', 'Semaine', 'Heures']],
+            body: recapData.map(row => [row.employee, row.week, row.hours]),
             startY: 20,
             styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
             headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
             bodyStyles: { textColor: [51, 51, 51] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
             columnStyles: {
-                0: { cellWidth: 30 },
-                1: { cellWidth: 40 },
-                2: { cellWidth: 25 },
-                3: { cellWidth: 25 },
-                4: { cellWidth: 25 },
-                5: { cellWidth: 25 },
-                6: { cellWidth: 25 }
+                0: { cellWidth: 40 },
+                1: { cellWidth: 80 },
+                2: { cellWidth: 30 }
             }
         });
         doc.save(`recap_monthly_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -237,23 +97,15 @@ const MonthlyRecapModals = ({
                     <thead>
                         <tr>
                             <th>Employé</th>
-                            <th>Jour</th>
-                            <th>ENTRÉE</th>
-                            <th>PAUSE</th>
-                            <th>RETOUR</th>
-                            <th>SORTIE</th>
-                            <th>Heures effectives</th>
+                            <th>Semaine</th>
+                            <th>Heures</th>
                         </tr>
                     </thead>
                     <tbody>
                         {recapData.map((row, index) => (
-                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : getEmployeeColorClass(row.employee)}>
+                            <tr key={index} className={row.week.includes('Total mois') ? 'total-row' : getEmployeeColorClass(row.employee)}>
                                 <td>{row.employee}</td>
-                                <td>{row.day}</td>
-                                <td>{row.start}</td>
-                                <td>{row.pause}</td>
-                                <td>{row.resume}</td>
-                                <td>{row.end}</td>
+                                <td>{row.week}</td>
                                 <td>{row.hours}</td>
                             </tr>
                         ))}

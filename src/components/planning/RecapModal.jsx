@@ -81,74 +81,68 @@ const RecapModal = ({
     if (isWeekRecap) {
         days.forEach((day, index) => {
             const dayKey = format(addDays(new Date(selectedWeek), index), 'yyyy-MM-dd');
+            const dayData = {
+                day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
+                employees: [],
+                totalHours: 0
+            };
             selectedEmployees.forEach(employee => {
                 const { start, pause, resume, end, hours } = formatTimeRange(employee, dayKey, config.timeSlots);
-                recapData.push({
+                dayData.employees.push({
                     employee,
-                    day: `${day.name} ${day.date}`,
                     start,
                     pause,
                     resume,
                     end,
                     hours
                 });
+                dayData.totalHours += parseFloat(hours);
             });
-            const dailyHours = selectedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, planning), 0);
-            recapData.push({
-                employee: 'Total jour',
-                day: '',
-                start: '',
-                pause: '',
-                resume: '',
-                end: '',
-                hours: `${dailyHours.toFixed(1)} h`
-            });
-            totalWeekHours += dailyHours;
+            recapData.push(dayData);
+            totalWeekHours += dayData.totalHours;
         });
         recapData.push({
-            employee: 'Total semaine',
-            day: '',
-            start: '',
-            pause: '',
-            resume: '',
-            end: '',
-            hours: `${totalWeekHours.toFixed(1)} h`
+            day: 'Total semaine',
+            employees: [],
+            totalHours: totalWeekHours
         });
     } else if (isEmployeeWeekRecap) {
         days.forEach((day, index) => {
             const dayKey = format(addDays(new Date(selectedWeek), index), 'yyyy-MM-dd');
             const { start, pause, resume, end, hours } = formatTimeRange(employee, dayKey, config.timeSlots);
             recapData.push({
-                employee,
-                day: `${day.name} ${day.date}`,
-                start,
-                pause,
-                resume,
-                end,
-                hours
+                day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
+                employees: [{
+                    employee,
+                    start,
+                    pause,
+                    resume,
+                    end,
+                    hours
+                }],
+                totalHours: parseFloat(hours)
             });
+            totalWeekHours += parseFloat(hours);
         });
-        const weeklyHours = calculateEmployeeWeeklyHours(employee, selectedWeek, planning);
         recapData.push({
-            employee: 'Total semaine',
-            day: '',
-            start: '',
-            pause: '',
-            resume: '',
-            end: '',
-            hours: `${weeklyHours.toFixed(1)} h`
+            day: 'Total semaine',
+            employees: [],
+            totalHours: totalWeekHours
         });
     } else {
         const dayKey = format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd');
         const { start, pause, resume, end, hours } = formatTimeRange(employee, dayKey, config.timeSlots);
         recapData.push({
-            employee,
-            day: `${days[currentDay].name} ${days[currentDay].date}`,
-            start,
-            pause,
-            resume,
-            end,
-            hours
+            day: `${days[currentDay].name} ${format(addDays(new Date(selectedWeek), currentDay), 'dd/MM', { locale: fr })}`,
+            employees: [{
+                employee,
+                start,
+                pause,
+                resume,
+                end,
+                hours
+            }],
+            totalHours: parseFloat(hours)
         });
     }
 
@@ -163,17 +157,30 @@ const RecapModal = ({
             10,
             10
         );
+        const body = [];
+        recapData.forEach(dayData => {
+            dayData.employees.forEach(emp => {
+                body.push([dayData.day, emp.employee, emp.start, emp.pause, emp.resume, emp.end, emp.hours]);
+                dayData.day = ''; // Effacer le jour pour les lignes suivantes du même jour
+            });
+            if (dayData.employees.length > 0) {
+                body.push(['Total ' + dayData.day.toLowerCase(), '', '', '', '', '', `${dayData.totalHours.toFixed(1)} h`]);
+            }
+        });
+        if (isWeekRecap) {
+            body.push(['Total semaine', '', '', '', '', '', `${totalWeekHours.toFixed(1)} h`]);
+        }
         doc.autoTable({
-            head: [['Employé', 'Jour', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
-            body: recapData.map(row => [row.employee, row.day, row.start, row.pause, row.resume, row.end, row.hours]),
+            head: [['Jour', 'Employé', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
+            body,
             startY: 20,
             styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
             headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
             bodyStyles: { textColor: [51, 51, 51] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
             columnStyles: {
-                0: { cellWidth: 30 },
-                1: { cellWidth: 40 },
+                0: { cellWidth: 40 },
+                1: { cellWidth: 30 },
                 2: { cellWidth: 25 },
                 3: { cellWidth: 25 },
                 4: { cellWidth: 25 },
@@ -195,8 +202,8 @@ const RecapModal = ({
                 <table className="recap-table">
                     <thead>
                         <tr>
-                            <th>Employé</th>
                             <th>Jour</th>
+                            <th>Employé</th>
                             <th>ENTRÉE</th>
                             <th>PAUSE</th>
                             <th>RETOUR</th>
@@ -205,17 +212,35 @@ const RecapModal = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {recapData.map((row, index) => (
-                            <tr key={index} className={row.employee.includes('Total') ? 'total-row' : getEmployeeColorClass(row.employee)}>
-                                <td>{row.employee}</td>
-                                <td>{row.day}</td>
-                                <td>{row.start}</td>
-                                <td>{row.pause}</td>
-                                <td>{row.resume}</td>
-                                <td>{row.end}</td>
-                                <td>{row.hours}</td>
-                            </tr>
+                        {recapData.map((dayData, index) => (
+                            <React.Fragment key={index}>
+                                {dayData.employees.map((emp, empIndex) => (
+                                    <tr key={`${index}-${empIndex}`} className={getEmployeeColorClass(emp.employee)}>
+                                        <td>{empIndex === 0 ? dayData.day : ''}</td>
+                                        <td>{emp.employee}</td>
+                                        <td>{emp.start}</td>
+                                        <td>{emp.pause}</td>
+                                        <td>{emp.resume}</td>
+                                        <td>{emp.end}</td>
+                                        <td>{emp.hours}</td>
+                                    </tr>
+                                ))}
+                                {dayData.employees.length > 0 && (
+                                    <tr className="total-row">
+                                        <td>Total {dayData.day.charAt(0).toUpperCase() + dayData.day.slice(1).toLowerCase()}</td>
+                                        <td colSpan="5"></td>
+                                        <td>{`${dayData.totalHours.toFixed(1)} h`}</td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
+                        {isWeekRecap && (
+                            <tr className="total-row">
+                                <td>Total semaine</td>
+                                <td colSpan="5"></td>
+                                <td>{`${totalWeekHours.toFixed(1)} h`}</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>

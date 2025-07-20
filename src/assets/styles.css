@@ -233,6 +233,19 @@
     min-width: 100px;
 }
 
+.recap-table th:nth-child(1),
+.recap-table td:nth-child(1) {
+    min-width: 120px;
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+    overflow: visible;
+    white-space: normal;
+}
+
+.recap-table th:nth-child(2),
+.recap-table td:nth-child(2) {
+    min-width: 100px;
+}
+
 .recap-table th {
     background-color: #f0f0f0;
     font-weight: 700;
@@ -398,6 +411,12 @@
         min-width: 80px;
         font-size: clamp(0.6rem, 2.5vw, 0.8rem);
     }
+
+    .recap-table th:nth-child(1),
+    .recap-table td:nth-child(1) {
+        min-width: 100px;
+        font-size: clamp(0.6rem, 2vw, 0.8rem);
+    }
 }
 
 /* Media queries pour très petits écrans (téléphones) */
@@ -431,6 +450,12 @@
     .recap-table td {
         min-width: 60px;
         font-size: clamp(0.5rem, 3vw, 0.7rem);
+    }
+
+    .recap-table th:nth-child(1),
+    .recap-table td:nth-child(1) {
+        min-width: 80px;
+        font-size: clamp(0.5rem, 2.5vw, 0.7rem);
     }
 }
 

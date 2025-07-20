@@ -122,14 +122,12 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
                 localStorage.clear();
                 console.log('Cleared localStorage before import');
 
-                const shopNames = [];
                 importData.shops.forEach(shopData => {
                     const shop = shopData.shop ? shopData.shop.trim().toUpperCase() : null;
                     if (!shop || shop === 'DEFAULT') {
                         console.log(`Skipping invalid shop: ${shop}`);
                         return;
                     }
-                    shopNames.push(shop);
 
                     saveToLocalStorage(`employees_${shop}`, shopData.employees || []);
                     console.log(`Restored employees for ${shop}:`, shopData.employees);
@@ -150,23 +148,28 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
                     }
                 });
 
-                console.log('Restored shops:', shopNames);
-                saveToLocalStorage('shops', shopNames);
-                setShops(shopNames);
+                setShops(importData.shops); // Passer l'objet complet shops
+                saveToLocalStorage('shops', importData.shops);
+                console.log('Restored shops:', importData.shops);
 
-                if (shopNames.length > 0) {
-                    setSelectedShop(shopNames[0]);
-                    saveToLocalStorage('lastPlanning', { shop: shopNames[0] });
-                    console.log('Selected first shop:', shopNames[0]);
+                if (importData.shops.length > 0) {
+                    setSelectedShop(importData.shops[0].shop);
+                    saveToLocalStorage('lastPlanning', { shop: importData.shops[0].shop });
+                    console.log('Selected first shop:', importData.shops[0].shop);
                 } else {
                     setSelectedShop('');
                     saveToLocalStorage('lastPlanning', {});
                     console.log('No shops to select');
                 }
 
-                setConfig(importData.timeSlotConfig || {});
-                saveToLocalStorage('timeSlotConfig', importData.timeSlotConfig || {});
-                console.log('Restored timeSlotConfig:', importData.timeSlotConfig);
+                if (importData.timeSlotConfig) {
+                    setConfig(importData.timeSlotConfig);
+                    saveToLocalStorage('timeSlotConfig', importData.timeSlotConfig);
+                    console.log('Restored timeSlotConfig:', importData.timeSlotConfig);
+                } else {
+                    setFeedback('Erreur: timeSlotConfig manquant dans le fichier JSON.');
+                    console.log('Import failed: Missing timeSlotConfig');
+                }
 
                 setFeedback('Succès: Sauvegarde de toutes les boutiques restaurée avec succès.');
                 console.log('Import completed successfully');

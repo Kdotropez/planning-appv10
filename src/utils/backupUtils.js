@@ -150,14 +150,18 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
                     }
                 });
 
-                setShops(shopNames); // Passer un tableau de noms de boutiques
+                setShops(shopNames);
                 saveToLocalStorage('shops', shopNames);
                 console.log('Restored shops:', shopNames);
 
                 if (shopNames.length > 0) {
-                    setSelectedShop(shopNames[0]);
-                    saveToLocalStorage('lastPlanning', { shop: shopNames[0] });
-                    console.log('Selected first shop:', shopNames[0]);
+                    const firstShop = shopNames[0];
+                    const firstWeek = importData.shops.find(s => s.shop === firstShop)?.weeks
+                        ? Object.keys(importData.shops.find(s => s.shop === firstShop).weeks).sort().pop()
+                        : null;
+                    setSelectedShop(firstShop);
+                    saveToLocalStorage('lastPlanning', { shop: firstShop, week: firstWeek });
+                    console.log('Selected first shop:', firstShop, 'week:', firstWeek);
                 } else {
                     setSelectedShop('');
                     saveToLocalStorage('lastPlanning', {});

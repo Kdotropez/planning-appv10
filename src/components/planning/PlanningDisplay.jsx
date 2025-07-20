@@ -11,7 +11,9 @@ import CopyPasteSection from './CopyPasteSection';
 import '@/assets/styles.css';
 
 const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep, setFeedback }) => {
-    const [selectedWeek, setSelectedWeek] = useState(format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+    const [selectedWeek, setSelectedWeek] = useState(
+        loadFromLocalStorage('lastPlanning', {}).week || format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
+    );
     const [selectedEmployees, setSelectedEmployees] = useState([]);
     const [planning, setPlanning] = useState({});
     const [currentDay, setCurrentDay] = useState(0);
@@ -22,13 +24,26 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
 
     useEffect(() => {
         if (selectedShop) {
-            const shopData = loadFromLocalStorage('shops', []).find(s => s.shop === selectedShop) || { employees: [], weeks: {} };
-            setSelectedEmployees(loadFromLocalStorage(`employees_${selectedShop}`, []));
+            const employees = loadFromLocalStorage(`employees_${selectedShop}`, []);
+            setSelectedEmployees(employees);
             const weekData = loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
             setPlanning(weekData);
             console.log(`PlanningDisplay: Loaded planning for ${selectedShop}, week ${selectedWeek}:`, weekData);
+            console.log(`PlanningDisplay: Loaded employees for ${selectedShop}:`, employees);
+            console.log(`PlanningDisplay: Config timeSlots:`, config.timeSlots);
+
+            // Vérifier si selectedWeek est valide, sinon sélectionner une semaine disponible
+            const availableWeeks = Object.keys(loadFromLocalStorage(`lastPlanning_${selectedShop}`, {}).weeks || {});
+            if (!weekData || Object.keys(weekData).length === 0) {
+                const latestWeek = availableWeeks.sort().pop();
+                if (latestWeek) {
+                    setSelectedWeek(latestWeek);
+                    saveToLocalStorage('lastPlanning', { shop: selectedShop, week: latestWeek });
+                    console.log(`PlanningDisplay: Switched to latest week for ${selectedShop}:`, latestWeek);
+                }
+            }
         }
-    }, [selectedShop, selectedWeek]);
+    }, [selectedShop, selectedWeek, config]);
 
     const days = Array.from({ length: 7 }, (_, i) => ({
         name: format(addDays(new Date(selectedWeek), i), 'EEEE', { locale: fr }),
@@ -63,22 +78,42 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
         exportAllData(setFeedback);
     };
 
+    const toggleSlot = (employee, slotIndex, dayIndex, value) => {
+        const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
+        const updatedPlanning = { ...planning };
+        if (!updatedPlanning[employee]) {
+            updatedPlanning[employee] = {};
+        }
+        if (!updatedPlanning[employee][dayKey]) {
+            updatedPlanning[employee][dayKey] = new Array(config.timeSlots.length).fill(false);
+        }
+        updatedPlanning[employee][dayKey][slotIndex] = value;
+        setPlanning(updatedPlanning);
+        saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, updatedPlanning);
+        console.log(`PlanningDisplay: Toggled slot for ${employee}, day ${dayKey}, slot ${slotIndex}:`, value);
+    };
+
     return (
         <div className="planning-container">
             <h2>Planning - {selectedShop}</h2>
             <div className="week-selection-container">
                 <select
                     value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedWeek(e.target.value);
+                        saveToLocalStorage('lastPlanning', { shop: selectedShop, week: e.target.value });
+                    }}
                 >
-                    {loadFromLocalStorage('shops', [])
-                        .find(s => s.shop === selectedShop)?.weeks &&
-                        Object.keys(loadFromLocalStorage('shops', []).find(s => s.shop === selectedShop).weeks).map(week => (
-                            <option key={week} value={week}>
-                                Semaine du {format(new Date(week), 'd MMMM yyyy', { locale: fr })}
-                            </option>
-                        ))
-                    }
+                    {shops
+                        .filter(shop => shop && typeof shop === 'string')
+                        .flatMap(shop => {
+                            const weeks = Object.keys(loadFromLocalStorage(`lastPlanning_${shop}`, {}).weeks || {});
+                            return weeks.map(week => (
+                                <option key={`${shop}-${week}`} value={week}>
+                                    Semaine du {format(new Date(week), 'd MMMM yyyy', { locale: fr })}
+                                </option>
+                            ));
+                        })}
                 </select>
             </div>
             <div className="button-group">
@@ -99,10 +134,10 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
                 config={config}
                 selectedEmployees={selectedEmployees}
                 planning={planning}
-                setPlanning={setPlanning}
-                selectedShop={selectedShop}
+                toggleSlot={toggleSlot}
                 selectedWeek={selectedWeek}
                 currentDay={currentDay}
+                calculateEmployeeDailyHours={calculateEmployeeDailyHours}
             />
             <div className="navigation-buttons">
                 <Button className="button-retour" onClick={() => setStep(2)}>

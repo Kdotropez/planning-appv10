@@ -122,12 +122,14 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
                 localStorage.clear();
                 console.log('Cleared localStorage before import');
 
+                const shopNames = [];
                 importData.shops.forEach(shopData => {
                     const shop = shopData.shop ? shopData.shop.trim().toUpperCase() : null;
                     if (!shop || shop === 'DEFAULT') {
                         console.log(`Skipping invalid shop: ${shop}`);
                         return;
                     }
+                    shopNames.push(shop);
 
                     saveToLocalStorage(`employees_${shop}`, shopData.employees || []);
                     console.log(`Restored employees for ${shop}:`, shopData.employees);
@@ -148,14 +150,14 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
                     }
                 });
 
-                setShops(importData.shops); // Passer l'objet complet shops
-                saveToLocalStorage('shops', importData.shops);
-                console.log('Restored shops:', importData.shops);
+                setShops(shopNames); // Passer un tableau de noms de boutiques
+                saveToLocalStorage('shops', shopNames);
+                console.log('Restored shops:', shopNames);
 
-                if (importData.shops.length > 0) {
-                    setSelectedShop(importData.shops[0].shop);
-                    saveToLocalStorage('lastPlanning', { shop: importData.shops[0].shop });
-                    console.log('Selected first shop:', importData.shops[0].shop);
+                if (shopNames.length > 0) {
+                    setSelectedShop(shopNames[0]);
+                    saveToLocalStorage('lastPlanning', { shop: shopNames[0] });
+                    console.log('Selected first shop:', shopNames[0]);
                 } else {
                     setSelectedShop('');
                     saveToLocalStorage('lastPlanning', {});

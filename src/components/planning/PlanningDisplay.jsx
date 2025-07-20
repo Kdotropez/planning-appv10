@@ -22,15 +22,13 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
 
     useEffect(() => {
         if (selectedShop) {
-            const shopData = shops.find(s => s.shop === selectedShop);
-            if (shopData) {
-                setSelectedEmployees(shopData.employees || []);
-                const weekData = loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
-                setPlanning(weekData);
-                console.log(`PlanningDisplay: Loaded planning for ${selectedShop}, week ${selectedWeek}:`, weekData);
-            }
+            const shopData = loadFromLocalStorage('shops', []).find(s => s.shop === selectedShop) || { employees: [], weeks: {} };
+            setSelectedEmployees(loadFromLocalStorage(`employees_${selectedShop}`, []));
+            const weekData = loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
+            setPlanning(weekData);
+            console.log(`PlanningDisplay: Loaded planning for ${selectedShop}, week ${selectedWeek}:`, weekData);
         }
-    }, [selectedShop, selectedWeek, shops]);
+    }, [selectedShop, selectedWeek]);
 
     const days = Array.from({ length: 7 }, (_, i) => ({
         name: format(addDays(new Date(selectedWeek), i), 'EEEE', { locale: fr }),
@@ -73,8 +71,9 @@ const PlanningDisplay = ({ config, shops, selectedShop, setSelectedShop, setStep
                     value={selectedWeek}
                     onChange={(e) => setSelectedWeek(e.target.value)}
                 >
-                    {shops.find(s => s.shop === selectedShop)?.weeks &&
-                        Object.keys(shops.find(s => s.shop === selectedShop).weeks).map(week => (
+                    {loadFromLocalStorage('shops', [])
+                        .find(s => s.shop === selectedShop)?.weeks &&
+                        Object.keys(loadFromLocalStorage('shops', []).find(s => s.shop === selectedShop).weeks).map(week => (
                             <option key={week} value={week}>
                                 Semaine du {format(new Date(week), 'd MMMM yyyy', { locale: fr })}
                             </option>

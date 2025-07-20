@@ -12,6 +12,7 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
     const [targetDays, setTargetDays] = useState([]);
     const [targetWeek, setTargetWeek] = useState('');
     const [availableWeeks, setLocalAvailableWeeks] = useState([]);
+    const [confirmationMessage, setConfirmationMessage] = useState('');
 
     useEffect(() => {
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
@@ -38,6 +39,31 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
         setLocalAvailableWeeks(weeks);
         console.log('CopyPasteSection: Available weeks:', weeks);
     }, [selectedShop]);
+
+    useEffect(() => {
+        // Générer un message de confirmation dynamique
+        let message = '';
+        if (sourceType === 'day' && sourceDay) {
+            message = `Copier ${sourceDay} vers `;
+            if (targetDays.length) {
+                message += targetDays.join(', ');
+            }
+            if (targetWeek) {
+                message += `${targetDays.length ? ' et ' : ''}la semaine du ${format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })}`;
+            }
+        } else if (sourceType === 'week' && sourceWeek) {
+            message = `Copier la semaine du ${format(new Date(sourceWeek), 'd MMMM yyyy', { locale: fr })} vers `;
+            if (targetDays.length) {
+                message += targetDays.join(', ');
+            }
+            if (targetWeek) {
+                message += `${targetDays.length ? ' et ' : ''}la semaine du ${format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })}`;
+            }
+        } else if (sourceType === 'week' && targetWeek) {
+            message = `Copier la semaine actuelle vers la semaine du ${format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })}`;
+        }
+        setConfirmationMessage(message || 'Veuillez sélectionner une source et une cible.');
+    }, [sourceType, sourceDay, sourceWeek, targetDays, targetWeek]);
 
     const handleCopy = () => {
         console.log('handleCopy called with:', { sourceType, sourceDay, sourceWeek, targetDays, targetWeek });
@@ -200,82 +226,118 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
         console.log('CopyPasteSection: Copy current week successful');
     };
 
+    const handleClearSelection = () => {
+        console.log('handleClearSelection called');
+        setSourceType('day');
+        setSourceDay('');
+        setSourceWeek('');
+        setTargetDays([]);
+        setTargetWeek('');
+        setConfirmationMessage('Veuillez sélectionner une source et une cible.');
+        setFeedback('Succès: Sélection réinitialisée.');
+    };
+
     return (
         <div className="copy-paste-section">
             <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
                 Copier/Coller
             </h3>
+            <p className="confirmation-message" style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', color: '#333' }}>
+                {confirmationMessage}
+            </p>
             <div className="copy-paste-container">
                 <div className="form-group">
                     <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px' }}>
                         Type de source
                     </label>
-                    <select value={sourceType} onChange={(e) => {
-                        console.log('Source type changed:', e.target.value);
-                        setSourceType(e.target.value);
-                        setSourceDay('');
-                        setSourceWeek('');
-                    }}>
-                        <option value="day">Jour actuel</option>
-                        <option value="week">Semaine sauvegardée</option>
-                    </select>
+                    <div className="source-type-buttons">
+                        <Button
+                            className={`button-base ${sourceType === 'day' ? 'selected-source' : ''}`}
+                            onClick={() => {
+                                console.log('Source type set to day');
+                                setSourceType('day');
+                                setSourceDay('');
+                                setSourceWeek('');
+                            }}
+                        >
+                            Jour actuel
+                        </Button>
+                        <Button
+                            className={`button-base ${sourceType === 'week' ? 'selected-source' : ''}`}
+                            onClick={() => {
+                                console.log('Source type set to week');
+                                setSourceType('week');
+                                setSourceDay('');
+                                setSourceWeek('');
+                            }}
+                        >
+                            Semaine sauvegardée
+                        </Button>
+                    </div>
                 </div>
                 {sourceType === 'day' ? (
                     <div className="form-group">
                         <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px' }}>
                             Jour source
                         </label>
-                        <select value={sourceDay} onChange={(e) => {
-                            console.log('Source day changed:', e.target.value);
-                            setSourceDay(e.target.value);
-                        }}>
-                            <option value="">Choisir un jour</option>
+                        <div className="source-day-buttons">
                             {days.map(day => (
-                                <option key={`${day.name} ${day.date}`} value={`${day.name} ${day.date}`}>
+                                <Button
+                                    key={`${day.name} ${day.date}`}
+                                    className={`button-base ${sourceDay === `${day.name} ${day.date}` ? 'selected-source' : ''}`}
+                                    onClick={() => {
+                                        console.log('Source day set to:', `${day.name} ${day.date}`);
+                                        setSourceDay(`${day.name} ${day.date}`);
+                                    }}
+                                >
                                     {day.name} {day.date}
-                                </option>
+                                </Button>
                             ))}
-                        </select>
+                        </div>
                     </div>
                 ) : (
                     <div className="form-group">
                         <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px' }}>
                             Semaine source
                         </label>
-                        <select value={sourceWeek} onChange={(e) => {
-                            console.log('Source week changed:', e.target.value);
-                            setSourceWeek(e.target.value);
-                        }}>
-                            <option value="">Choisir une semaine</option>
+                        <div className="source-week-buttons">
                             {availableWeeks.map(week => (
-                                <option key={week.key} value={week.key}>{week.display}</option>
+                                <Button
+                                    key={week.key}
+                                    className={`button-base ${sourceWeek === week.key ? 'selected-source' : ''}`}
+                                    onClick={() => {
+                                        console.log('Source week set to:', week.key);
+                                        setSourceWeek(week.key);
+                                    }}
+                                >
+                                    {week.display}
+                                </Button>
                             ))}
-                        </select>
+                        </div>
                     </div>
                 )}
                 <div className="form-group">
                     <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px' }}>
                         Jours cibles
                     </label>
-                    <div className="target-days-grid">
+                    <div className="target-days-buttons">
                         {days.map(day => {
                             const dayValue = `${day.name} ${day.date}`;
                             return (
-                                <div key={dayValue} className="target-day-item">
-                                    <input
-                                        type="checkbox"
-                                        checked={targetDays.includes(dayValue)}
-                                        onChange={() => {
-                                            console.log('Target day toggled:', dayValue);
-                                            setTargetDays(prev =>
-                                                prev.includes(dayValue)
-                                                    ? prev.filter(d => d !== dayValue)
-                                                    : [...prev, dayValue]
-                                            );
-                                        }}
-                                    />
-                                    <label style={{ fontFamily: 'Roboto, sans-serif' }}>{dayValue}</label>
-                                </div>
+                                <Button
+                                    key={dayValue}
+                                    className={`button-base ${targetDays.includes(dayValue) ? 'selected-target' : ''}`}
+                                    onClick={() => {
+                                        console.log('Target day toggled:', dayValue);
+                                        setTargetDays(prev =>
+                                            prev.includes(dayValue)
+                                                ? prev.filter(d => d !== dayValue)
+                                                : [...prev, dayValue]
+                                        );
+                                    }}
+                                >
+                                    {dayValue}
+                                </Button>
                             );
                         })}
                     </div>
@@ -284,15 +346,20 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
                     <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px' }}>
                         Semaine cible
                     </label>
-                    <select value={targetWeek} onChange={(e) => {
-                        console.log('Target week changed:', e.target.value);
-                        setTargetWeek(e.target.value);
-                    }}>
-                        <option value="">Choisir une semaine</option>
+                    <div className="target-week-buttons">
                         {availableWeeks.map(week => (
-                            <option key={week.key} value={week.key}>{week.display}</option>
+                            <Button
+                                key={week.key}
+                                className={`button-base ${targetWeek === week.key ? 'selected-target' : ''}`}
+                                onClick={() => {
+                                    console.log('Target week set to:', week.key);
+                                    setTargetWeek(week.key);
+                                }}
+                            >
+                                {week.display}
+                            </Button>
                         ))}
-                    </select>
+                    </div>
                 </div>
                 <div className="button-group">
                     <Button className="button-primary" onClick={handleCopy}>
@@ -300,6 +367,9 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
                     </Button>
                     <Button className="button-primary" onClick={handleCopyCurrentWeek}>
                         Copier Semaine Actuelle
+                    </Button>
+                    <Button className="button-reinitialiser" onClick={handleClearSelection}>
+                        Effacer Sélection
                     </Button>
                 </div>
             </div>

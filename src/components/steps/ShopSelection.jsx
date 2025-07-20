@@ -7,6 +7,7 @@ import '@/assets/styles.css';
 const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback }) => {
     const [shopInput, setShopInput] = useState('');
     const [localShops, setLocalShops] = useState(loadFromLocalStorage('shops', []));
+    const [selected, setSelected] = useState(null);
 
     useEffect(() => {
         console.log('ShopSelection: Initial shops from localStorage:', localShops, 'propsShops:', shops);
@@ -45,9 +46,13 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
             .filter(key => key.startsWith(`planning_${shop}_`))
             .forEach(key => localStorage.removeItem(key));
         setFeedback('Succès: Boutique supprimée.');
+        if (selected === shop) {
+            setSelected(null);
+        }
     };
 
     const handleSelectShop = (shop) => {
+        setSelected(shop);
         setSelectedShop(shop);
         setStep(3);
         setFeedback('Succès: Boutique sélectionnée.');
@@ -58,20 +63,16 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
         setShops([]);
         saveToLocalStorage('shops', []);
         localStorage.clear();
+        setSelected(null);
         setFeedback('Succès: Liste des boutiques réinitialisée.');
     };
 
-    const handleBack = () => {
-        console.log('ShopSelection: Retour button clicked');
-        setStep(1);
-    };
-
     const handleValidate = () => {
-        if (localShops.length === 0) {
+        if (!selected) {
             setFeedback('Erreur: Aucune boutique sélectionnée.');
             return;
         }
-        setSelectedShop(localShops[0]);
+        setSelectedShop(selected);
         setStep(3);
         setFeedback('Succès: Validation effectuée.');
     };
@@ -98,24 +99,25 @@ const ShopSelection = ({ shops, setShops, setSelectedShop, setStep, setFeedback 
             <div className="shop-list">
                 {localShops.map((shop, index) => (
                     <div key={index} className="shop-item">
-                        <span>{shop}</span>
+                        <span
+                            className={`button-jour ${selected === shop ? 'selected' : ''}`}
+                            onClick={() => handleSelectShop(shop)}
+                            style={{ cursor: 'pointer', padding: '8px 16px', display: 'inline-block', fontSize: '16px' }}
+                        >
+                            {shop}
+                        </span>
                         <span
                             className="delete-icon"
                             onClick={() => handleDeleteShop(shop)}
+                            style={{ fontSize: '18px', marginLeft: '10px', color: '#e53935' }}
                         >
                             <FaTrash />
                         </span>
-                        <Button
-                            className="button-primary"
-                            onClick={() => handleSelectShop(shop)}
-                        >
-                            Sélectionner
-                        </Button>
                     </div>
                 ))}
             </div>
             <div className="button-group">
-                <Button className="button-retour" onClick={handleBack}>
+                <Button className="button-retour" onClick={() => setStep(1)}>
                     Retour
                 </Button>
                 <Button className="button-validate" onClick={handleValidate}>

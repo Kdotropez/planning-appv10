@@ -15,7 +15,7 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
 
     useEffect(() => {
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-        console.log('Storage keys for CopyPasteSection:', storageKeys);
+        console.log('CopyPasteSection: Storage keys:', storageKeys);
         const weeks = storageKeys
             .map(key => {
                 const weekKey = key.replace(`planning_${selectedShop}_`, '');
@@ -36,7 +36,7 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
             .filter(week => week !== null)
             .sort((a, b) => new Date(a.key) - new Date(b.key));
         setLocalAvailableWeeks(weeks);
-        console.log('Available weeks:', weeks);
+        console.log('CopyPasteSection: Available weeks:', weeks);
     }, [selectedShop]);
 
     const handleCopy = () => {
@@ -70,8 +70,8 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
             : loadFromLocalStorage(`planning_${selectedShop}_${sourceWeek}`, {});
 
         if (!sourceData || !Object.keys(sourceData).length) {
-            setFeedback('Erreur: Aucune donnée à copier.');
-            console.log('Copy failed: No source data found');
+            setFeedback('Erreur: Aucune donnée à copier pour la source sélectionnée.');
+            console.log('Copy failed: No source data found', { sourceData });
             return;
         }
 
@@ -80,7 +80,13 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
             const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
 
             if (sourceType === 'day') {
-                const sourceDayKey = format(addDays(new Date(selectedWeek), days.findIndex(d => `${d.name} ${d.date}` === sourceDay)), 'yyyy-MM-dd');
+                const sourceDayIndex = days.findIndex(d => `${d.name} ${d.date}` === sourceDay);
+                if (sourceDayIndex === -1) {
+                    setFeedback('Erreur: Jour source invalide.');
+                    console.log('Copy failed: Invalid source day', { sourceDay });
+                    return prev;
+                }
+                const sourceDayKey = format(addDays(new Date(selectedWeek), sourceDayIndex), 'yyyy-MM-dd');
                 storedEmployees.forEach(employee => {
                     if (!sourceData[employee]?.[sourceDayKey]) {
                         console.log(`No data for employee ${employee} on ${sourceDayKey}`);
@@ -121,9 +127,10 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
                 });
             }
 
-            console.log('Updated planning:', updatedPlanning);
+            console.log('CopyPasteSection: Updated planning:', updatedPlanning);
             if (targetWeek && isMonday(new Date(targetWeek))) {
                 saveToLocalStorage(`planning_${selectedShop}_${targetWeek}`, updatedPlanning);
+                console.log(`CopyPasteSection: Saved planning to localStorage: planning_${selectedShop}_${targetWeek}`);
                 setAvailableWeeks(prev => {
                     const weeks = prev.slice();
                     const weekExists = weeks.some(week => week.key === targetWeek);
@@ -135,18 +142,62 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
                         });
                     }
                     weeks.sort((a, b) => a.date - b.date);
-                    console.log('Updated available weeks:', weeks);
+                    console.log('CopyPasteSection: Updated available weeks:', weeks);
                     return weeks;
                 });
             } else {
                 saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, updatedPlanning);
+                console.log(`CopyPasteSection: Saved planning to localStorage: planning_${selectedShop}_${selectedWeek}`);
             }
 
             return updatedPlanning;
         });
 
         setFeedback('Succès: Données copiées avec succès.');
-        console.log('Copy successful');
+        console.log('CopyPasteSection: Copy successful');
+    };
+
+    const handleCopyCurrentWeek = () => {
+        console.log('handleCopyCurrentWeek called with:', { selectedWeek, targetWeek });
+        if (!config?.timeSlots?.length) {
+            setFeedback('Erreur: Configuration des tranches horaires non valide.');
+            console.log('Copy failed: Invalid time slots configuration');
+            return;
+        }
+        if (!targetWeek) {
+            setFeedback('Erreur: Veuillez sélectionner une semaine cible.');
+            console.log('Copy failed: No target week selected');
+            return;
+        }
+        if (!Object.keys(planning).length) {
+            setFeedback('Erreur: Aucune donnée à copier dans la semaine actuelle.');
+            console.log('Copy failed: No data in current week');
+            return;
+        }
+
+        setPlanning(prev => {
+            const updatedPlanning = { ...prev };
+            saveToLocalStorage(`planning_${selectedShop}_${targetWeek}`, updatedPlanning);
+            console.log(`CopyPasteSection: Saved planning to localStorage: planning_${selectedShop}_${targetWeek}`);
+            setAvailableWeeks(prev => {
+                const weeks = prev.slice();
+                const weekExists = weeks.some(week => week.key === targetWeek);
+                if (!weekExists) {
+                    weeks.push({
+                        key: targetWeek,
+                        date: new Date(targetWeek),
+                        display: `Semaine du ${format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })}`
+                    });
+                }
+                weeks.sort((a, b) => a.date - b.date);
+                console.log('CopyPasteSection: Updated available weeks:', weeks);
+                return weeks;
+            });
+            return updatedPlanning;
+        });
+
+        setFeedback('Succès: Semaine actuelle copiée avec succès.');
+        console.log('CopyPasteSection: Copy current week successful');
     };
 
     return (
@@ -246,6 +297,9 @@ const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployee
                 <div className="button-group">
                     <Button className="button-primary" onClick={handleCopy}>
                         Copier
+                    </Button>
+                    <Button className="button-primary" onClick={handleCopyCurrentWeek}>
+                        Copier Semaine Actuelle
                     </Button>
                 </div>
             </div>

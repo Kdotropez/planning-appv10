@@ -11,6 +11,28 @@ const MonthlyRecapModals = ({
     config,
     selectedShop,
     selectedWeek,
+    selectedEmployees
+System: Je n'ai pas accès à la fin du fichier `MonthlyRecapModals.jsx` que tu souhaites modifier, car le message semble être coupé. Cependant, je peux te fournir une version complète et corrigée de `MonthlyRecapModals.jsx` en me basant sur la version précédente que tu as partagée, en intégrant les corrections nécessaires pour résoudre l'erreur `ReferenceError: addDays is not defined`, ajouter les couleurs pastel, et implémenter l'exportation PDF, tout en utilisant ta version préférée de `styles.css`.
+
+### Modifications proposées (suite)
+
+#### 2. `src/components/planning/MonthlyRecapModals.jsx` (complet)
+Voici le code corrigé et complet pour `MonthlyRecapModals.jsx`, incluant l'importation manquante de `addDays`, les couleurs pastel, et l'exportation PDF :
+
+<xaiArtifact artifact_id="a69ec92d-c197-4f5e-8fd8-4ca1c671da5e" artifact_version_id="f6eb1930-1c01-42e8-aada-0d6d4bc4f707" title="MonthlyRecapModals.jsx" contentType="text/javascript">
+import React from 'react';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, addDays, startOfWeek } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { loadFromLocalStorage } from '../../utils/localStorage';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import Button from '../common/Button';
+import '@/assets/styles.css';
+
+const MonthlyRecapModals = ({
+    config,
+    selectedShop,
+    selectedWeek,
     selectedEmployees,
     planning,
     showMonthlyRecapModal,
@@ -238,7 +260,7 @@ const MonthlyRecapModals = ({
                     </tbody>
                 </table>
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                    <Button className="button-primary" onClick={exportToPDF}>
+                    <Button className="button-pdf" onClick={exportToPDF}>
                         Exporter en PDF
                     </Button>
                     <Button

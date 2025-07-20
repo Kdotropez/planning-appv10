@@ -225,12 +225,12 @@
 .recap-table th,
 .recap-table td {
     border: 1px solid #ddd;
-    padding: 10px;
+    padding: 8px;
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 14.28%;
+    min-width: 100px;
 }
 
 .recap-table th {
@@ -239,7 +239,7 @@
 }
 
 .recap-table td {
-    vertical-align: middle;
+    min-width: 100px;
 }
 
 .recap-table .total-row {
@@ -264,7 +264,7 @@
     background-color: #fff;
     padding: 20px;
     border-radius: 5px;
-    max-width: 90%;
+    max-width: 80%;
     max-height: 80%;
     overflow-y: auto;
     position: relative;
@@ -293,52 +293,66 @@
     align-items: center;
 }
 
-.source-type-buttons,
-.source-day-buttons,
-.source-week-buttons,
-.target-days-buttons,
-.target-week-buttons {
+/* Règles responsive */
+.app-container {
+    width: 100%;
+    max-width: 100vw;
+    padding: 2vw;
+    box-sizing: border-box;
+}
+
+.planning-container {
+    width: 100%;
+    max-width: 100vw;
+    padding: 1vw;
+    box-sizing: border-box;
+}
+
+.step-container {
+    width: 100%;
+    max-width: 90vw;
+    margin: 0 auto;
+}
+
+.button-group {
+    flex-wrap: wrap;
+    gap: 1vw;
+}
+
+.button-base {
+    padding: 0.5rem 1rem;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    min-width: 80px;
+}
+
+.planning-table {
+    width: 100%;
+    max-width: 100vw;
+    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+}
+
+.planning-table th,
+.planning-table td {
+    padding: 0.5rem;
+    min-width: clamp(40px, 4vw, 50px);
+}
+
+.fixed-col {
+    min-width: clamp(100px, 10vw, 120px);
+}
+
+.scrollable-col {
+    min-width: clamp(40px, 3vw, 50px);
+}
+
+/* Ajustement des boutons de navigation */
+.navigation-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
     justify-content: center;
-    margin-bottom: 10px;
-}
-
-.selected-source {
-    background-color: #4caf50 !important;
-    color: #fff !important;
-}
-
-.selected-source:hover {
-    background-color: #388e3c !important;
-}
-
-.selected-target {
-    background-color: #f28c38 !important;
-    color: #fff !important;
-}
-
-.selected-target:hover {
-    background-color: #d9742f !important;
-}
-
-.confirmation-message {
-    font-family: 'Roboto', sans-serif;
-    text-align: center;
-    margin-bottom: 15px;
-    color: #333;
-    font-size: clamp(0.9rem, 2vw, 1.1rem);
-}
-
-/* Style pour le bouton PDF */
-.button-pdf {
-    background-color: #673ab7;
-    color: #fff;
-}
-
-.button-pdf:hover {
-    background-color: #5e35b1;
+    gap: clamp(20px, 3vw, 25px);
+    margin-top: 20px;
+    padding: 10px 15px;
 }
 
 /* Media queries pour petits écrans */
@@ -381,21 +395,8 @@
 
     .recap-table th,
     .recap-table td {
-        padding: 8px;
+        min-width: 80px;
         font-size: clamp(0.6rem, 2.5vw, 0.8rem);
-        width: 14.28%;
-    }
-
-    .source-type-buttons,
-    .source-day-buttons,
-    .source-week-buttons,
-    .target-days-buttons,
-    .target-week-buttons {
-        gap: 8px;
-    }
-
-    .confirmation-message {
-        font-size: clamp(0.8rem, 2.5vw, 1rem);
     }
 }
 
@@ -428,25 +429,22 @@
 
     .recap-table th,
     .recap-table td {
-        padding: 6px;
+        min-width: 60px;
         font-size: clamp(0.5rem, 3vw, 0.7rem);
-        width: 14.28%;
-    }
-
-    .source-type-buttons,
-    .source-day-buttons,
-    .source-week-buttons,
-    .target-days-buttons,
-    .target-week-buttons {
-        gap: 6px;
-    }
-
-    .confirmation-message {
-        font-size: clamp(0.7rem, 3vw, 0.9rem);
     }
 }
 
 /* Style pour le feedback visuel du drag-and-drop */
 .planning-table td.hovered {
     background-color: rgba(0, 128, 255, 0.2);
+}
+
+/* Style pour le bouton PDF */
+.button-pdf {
+    background-color: #673ab7;
+    color: #fff;
+}
+
+.button-pdf:hover {
+    background-color: #5e35b1;
 }

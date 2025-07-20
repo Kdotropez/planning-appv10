@@ -219,7 +219,7 @@ const RecapModal = ({
                     </tbody>
                 </table>
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                    <Button className="button-primary" onClick={exportToPDF}>
+                    <Button className="button-pdf" onClick={exportToPDF}>
                         Exporter en PDF
                     </Button>
                     <Button

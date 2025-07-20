@@ -1,8 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
-import { importAllData } from '../../utils/backupUtils';
-import { FaUpload } from 'react-icons/fa';
 import '@/assets/styles.css';
 
 const ShopSelection = ({ shops: propsShops, setShops: setPropsShops, selectedShop, setSelectedShop, onNext, onReset, setFeedback, setStep }) => {
@@ -68,11 +66,6 @@ const ShopSelection = ({ shops: propsShops, setShops: setPropsShops, selectedSho
             setFeedback('Erreur: Veuillez sélectionner une boutique.');
             return;
         }
-        if (typeof setStep !== 'function') {
-            console.error('setStep is not a function:', setStep);
-            setFeedback('Erreur: Action Valider non disponible.');
-            return;
-        }
         console.log('Calling onNext with shop:', selectedShop);
         onNext(selectedShop);
         setStep(3);
@@ -80,11 +73,6 @@ const ShopSelection = ({ shops: propsShops, setShops: setPropsShops, selectedSho
 
     const handleReset = () => {
         console.log('handleReset called in ShopSelection');
-        if (typeof onReset !== 'function') {
-            console.error('onReset is not a function:', onReset);
-            setFeedback('Erreur: Action Réinitialiser non disponible.');
-            return;
-        }
         setNewShop('');
         setSelectedShop('');
         saveToLocalStorage('shops', []);
@@ -171,11 +159,6 @@ const ShopSelection = ({ shops: propsShops, setShops: setPropsShops, selectedSho
                     text="Retour"
                     onClick={() => {
                         console.log('Retour button clicked');
-                        if (typeof setStep !== 'function') {
-                            console.error('setStep is not a function:', setStep);
-                            setFeedback('Erreur: Action Retour non disponible.');
-                            return;
-                        }
                         setStep(1);
                     }}
                     style={{ backgroundColor: '#000000', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
@@ -196,15 +179,6 @@ const ShopSelection = ({ shops: propsShops, setShops: setPropsShops, selectedSho
                     onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
                     onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
                 />
-                <Button
-                    text="Importer"
-                    onClick={() => importAllData(setFeedback, setShops, setSelectedShop, () => {})}
-                    style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                >
-                    <FaUpload /> Importer
-                </Button>
             </div>
             <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#ccc' }}>
                 Klick-Planning - copyright © Nicolas Lefevre

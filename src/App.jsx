@@ -1,160 +1,105 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { loadFromLocalStorage, saveToLocalStorage } from './utils/localStorage';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import TimeSlotConfig from './components/steps/TimeSlotConfig';
+import ShopSelection from './components/steps/ShopSelection';
 import WeekSelection from './components/steps/WeekSelection';
 import EmployeeSelection from './components/steps/EmployeeSelection';
 import PlanningDisplay from './components/planning/PlanningDisplay';
-import ShopSelection from './components/steps/ShopSelection';
-import TimeSlotConfig from './components/steps/TimeSlotConfig';
-import ResetModal from './components/planning/ResetModal';
-import { loadFromLocalStorage, saveToLocalStorage } from './utils/localStorage';
-import '@/assets/styles.css';
+import './App.css';
 
 const App = () => {
     const [step, setStep] = useState(1);
+    const [config, setConfig] = useState(loadFromLocalStorage('timeSlotConfig', { interval: 30, startTime: '09:00', endTime: '01:00', timeSlots: [] }));
+    const [shops, setShops] = useState(loadFromLocalStorage('shops', []));
     const [selectedShop, setSelectedShop] = useState('');
     const [selectedWeek, setSelectedWeek] = useState('');
     const [selectedEmployees, setSelectedEmployees] = useState([]);
-    const [config, setConfig] = useState({
-        timeSlots: [],
-        interval: 30,
-        startTime: '09:00',
-        endTime: '01:00',
-        startTimeCustom: '',
-        endTimeCustom: ''
-    });
+    const [planning, setPlanning] = useState({});
     const [feedback, setFeedback] = useState('');
-    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-    const [resetSource, setResetSource] = useState('');
 
-    // Vider localStorage au démarrage initial
     useEffect(() => {
-        console.log('Clearing localStorage on initial load');
-        localStorage.clear();
-    }, []);
+        console.log('App.jsx: Current state:', { step, config, shops, selectedShop, selectedWeek, selectedEmployees, planning });
+        if (feedback) {
+            const timer = setTimeout(() => setFeedback(''), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [step, config, shops, selectedShop, selectedWeek, selectedEmployees, planning, feedback]);
 
-    // Réinitialiser le feedback lors du changement d'étape
-    useEffect(() => {
-        console.log('Resetting feedback on step change:', step);
-        setFeedback('');
-    }, [step]);
-
-    const shops = loadFromLocalStorage('shops', []);
-
-    const handleNextConfig = (newConfig) => {
-        console.log('App: Setting config:', newConfig);
-        setConfig(newConfig);
-        setStep(2);
-    };
-
-    const handleNextShop = (shop) => {
-        console.log('App: Setting selectedShop:', shop);
-        setSelectedShop(shop);
+    const handleNext = (newShop) => {
+        setSelectedShop(newShop);
         setStep(3);
     };
 
-    const handleNextWeek = (week) => {
-        console.log('App: Setting selectedWeek:', week);
+    const handleWeekSelect = (week) => {
         setSelectedWeek(week);
         setStep(4);
     };
 
-    const handleBackWeek = () => {
-        console.log('App: Going back to shop selection');
-        setStep(2);
-    };
-
-    const handleBackEmployee = () => {
-        console.log('App: Going back to week selection');
-        setStep(3);
-    };
-
-    const handleReset = (data) => {
-        console.log('App: handleReset called with:', data);
-        if (data.source === 'shops') {
-            console.log('App: Resetting shops only');
+    const handleReset = ({ source, feedback, selectedWeek }) => {
+        console.log('Reset called with source:', source);
+        if (source === 'shops') {
+            setShops([]);
+            setSelectedShop('');
             saveToLocalStorage('shops', []);
             saveToLocalStorage('lastPlanning', {});
-            setSelectedShop('');
-            setFeedback(data.feedback);
-            setStep(2);
-        } else if (data.source === 'week') {
-            console.log('App: Resetting week');
-            if (data.resetOption === 'week' && data.selectedWeek) {
-                saveToLocalStorage(`planning_${selectedShop}_${data.selectedWeek}`, {});
-                saveToLocalStorage(`selected_employees_${selectedShop}_${data.selectedWeek}`, []);
-                setFeedback(data.feedback);
-                setStep(3);
-            } else if (data.resetOption === 'all_weeks' && selectedShop) {
-                const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`) || key.startsWith(`selected_employees_${selectedShop}_`));
-                storageKeys.forEach(key => localStorage.removeItem(key));
-                setFeedback(data.feedback);
-                setStep(3);
-            }
-        } else {
-            console.log('App: Full reset');
-            setSelectedShop('');
+            setFeedback(feedback || 'Succès: Liste des boutiques réinitialisée.');
+        } else if (source === 'employees') {
+            setSelectedEmployees([]);
+            saveToLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, []);
+            setFeedback(feedback || 'Succès: Liste des employés réinitialisée.');
+        } else if (source === 'week') {
             setSelectedWeek('');
             setSelectedEmployees([]);
-            setConfig({
-                timeSlots: [],
-                interval: 30,
-                startTime: '09:00',
-                endTime: '01:00',
-                startTimeCustom: '',
-                endTimeCustom: ''
-            });
-            localStorage.clear();
-            setFeedback(data.feedback || 'Succès: Toutes les données réinitialisées.');
-            setStep(1);
+            saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
+            saveToLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, []);
+            setFeedback(feedback || `Succès: Semaine du ${selectedWeek} réinitialisée.`);
+        } else if (source === 'all_weeks') {
+            const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`) || key.startsWith(`selected_employees_${selectedShop}_`));
+            storageKeys.forEach(key => localStorage.removeItem(key));
+            setFeedback(feedback || 'Succès: Toutes les semaines de la boutique réinitialisées.');
         }
-        setIsResetModalOpen(false);
     };
 
-    const renderStep = () => {
-        switch (step) {
-            case 1:
-                return (
+    return (
+        <ErrorBoundary>
+            <div className="app-container">
+                {feedback && (
+                    <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', color: feedback.includes('Succès') ? '#4caf50' : '#e53935', marginBottom: '10px' }}>
+                        {feedback}
+                    </p>
+                )}
+                {step === 1 && (
                     <TimeSlotConfig
                         config={config}
                         setConfig={setConfig}
                         setStep={setStep}
                         setFeedback={setFeedback}
-                        onNext={handleNextConfig}
-                        onReset={() => {
-                            setResetSource('config');
-                            setIsResetModalOpen(true);
-                        }}
+                        selectedShop={selectedShop}
                     />
-                );
-            case 2:
-                return (
+                )}
+                {step === 2 && (
                     <ShopSelection
                         shops={shops}
+                        setShops={setShops}
                         selectedShop={selectedShop}
                         setSelectedShop={setSelectedShop}
-                        onNext={handleNextShop}
-                        onReset={() => {
-                            setResetSource('shops');
-                            setIsResetModalOpen(true);
-                        }}
+                        onNext={handleNext}
+                        onReset={handleReset}
                         setFeedback={setFeedback}
                         setStep={setStep}
                     />
-                );
-            case 3:
-                return (
+                )}
+                {step === 3 && (
                     <WeekSelection
-                        onNext={handleNextWeek}
-                        onBack={handleBackWeek}
-                        onReset={() => {
-                            setResetSource('week');
-                            setIsResetModalOpen(true);
-                        }}
+                        onNext={handleWeekSelect}
+                        onBack={() => setStep(2)}
+                        onReset={handleReset}
                         selectedWeek={selectedWeek}
                         selectedShop={selectedShop}
                     />
-                );
-            case 4:
-                return (
+                )}
+                {step === 4 && (
                     <EmployeeSelection
                         selectedEmployees={selectedEmployees}
                         setSelectedEmployees={setSelectedEmployees}
@@ -162,57 +107,27 @@ const App = () => {
                         selectedWeek={selectedWeek}
                         setStep={setStep}
                         setFeedback={setFeedback}
-                        onReset={() => {
-                            setResetSource('employees');
-                            setIsResetModalOpen(true);
-                        }}
                     />
-                );
-            case 5:
-                return (
+                )}
+                {step === 5 && (
                     <PlanningDisplay
                         config={config}
                         selectedShop={selectedShop}
                         selectedWeek={selectedWeek}
                         selectedEmployees={selectedEmployees}
-                        planning={{}}
-                        onBack={handleBackEmployee}
+                        planning={planning}
+                        onBack={() => setStep(4)}
                         onBackToShop={() => setStep(2)}
                         onBackToWeek={() => setStep(3)}
                         onBackToConfig={() => setStep(1)}
-                        onReset={() => {
-                            setResetSource('planning');
-                            setIsResetModalOpen(true);
-                        }}
+                        onReset={handleReset}
+                        setStep={setStep}
+                        setPlanning={setPlanning}
+                        setFeedback={setFeedback}
                     />
-                );
-            default:
-                return <div>Étape inconnue</div>;
-        }
-    };
-
-    return (
-        <div>
-            {renderStep()}
-            <ResetModal
-                showResetModal={isResetModalOpen}
-                setShowResetModal={setIsResetModalOpen}
-                config={config}
-                selectedShop={selectedShop}
-                selectedWeek={selectedWeek}
-                selectedEmployees={selectedEmployees}
-                planning={{}}
-                setPlanning={() => {}}
-                setFeedback={setFeedback}
-                setAvailableWeeks={() => {}}
-                resetSource={resetSource}
-            />
-            {feedback && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', color: feedback.includes('Succès') ? '#4caf50' : '#e53935' }}>
-                    {feedback}
-                </p>
-            )}
-        </div>
+                )}
+            </div>
+        </ErrorBoundary>
     );
 };
 

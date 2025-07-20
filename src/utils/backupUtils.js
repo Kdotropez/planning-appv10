@@ -8,24 +8,23 @@ export const exportAllData = async (setFeedback) => {
         console.log('Raw shops data from localStorage:', shopsRaw);
         const shops = loadFromLocalStorage('shops', []);
         console.log('Parsed shops from localStorage:', shops);
+        const timeSlotConfig = loadFromLocalStorage('timeSlotConfig', {});
+        console.log('TimeSlotConfig retrieved:', timeSlotConfig);
 
+        // Vérifier si des boutiques existent
         if (!shops || !Array.isArray(shops) || shops.length === 0) {
-            setFeedback('Erreur: Aucune boutique disponible pour l’exportation.');
-            console.log('Export failed: No shops found or invalid shops data');
+            setFeedback('Erreur: Aucune boutique créée. Veuillez créer une boutique avant d’exporter.');
+            console.log('Export failed: No shops found');
             return;
         }
 
-        const handle = await window.showSaveFilePicker({
-            suggestedName: `planning_all_shops_${format(new Date(), 'yyyy-MM-dd_HHmm')}.json`,
-            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
-        });
-        const writable = await handle.createWritable();
+        // Préparer les données à exporter
         const exportData = {
             shops: [],
-            timeSlotConfig: loadFromLocalStorage('timeSlotConfig', {})
+            timeSlotConfig
         };
-        console.log('TimeSlotConfig retrieved:', exportData.timeSlotConfig);
 
+        // Remplir les données des boutiques
         shops.forEach(shop => {
             if (!shop || shop === 'DEFAULT') {
                 console.log(`Skipping invalid shop: ${shop}`);
@@ -65,20 +64,28 @@ export const exportAllData = async (setFeedback) => {
             console.log(`Added shop to exportData: ${shop}`);
         });
 
-        if (!exportData.shops.length) {
-            setFeedback('Erreur: Aucune boutique valide à exporter.');
-            console.log('Export failed: No valid shop data');
-            await writable.close();
-            return;
-        }
+        const exportString = JSON.stringify(exportData, null, 2);
+        const fileName = `planning_all_shops_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
 
-        console.log('Final exportData:', JSON.stringify(exportData, null, 2));
-        await writable.write(JSON.stringify(exportData, null, 2));
-        await writable.close();
-        setFeedback('Succès: Sauvegarde de toutes les boutiques exportée avec succès.');
-        console.log('Exported planning successfully');
+        // Téléchargement direct
+        try {
+            const blob = new Blob([exportString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${fileName}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            console.log('Exported to local file via download link');
+            setFeedback('Succès: Données exportées avec succès.');
+        } catch (error) {
+            console.error('Export error:', error);
+            setFeedback('Erreur: Échec de l’exportation : ' + error.message);
+        }
     } catch (error) {
-        setFeedback('Erreur lors de l’exportation: ' + error.message);
+        setFeedback('Erreur lors de l’exportation : ' + error.message);
         console.error('Export error:', error);
     }
 };
@@ -86,81 +93,94 @@ export const exportAllData = async (setFeedback) => {
 export const importAllData = async (setFeedback, setShops, setSelectedShop, setConfig) => {
     try {
         console.log('importAllData called');
-        const [handle] = await window.showOpenFilePicker({
-            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }],
-        });
-        const file = await handle.getFile();
-        const text = await file.text();
-        const importData = JSON.parse(text);
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (event) => {
+            try {
+                const file = event.target.files[0];
+                if (!file) {
+                    setFeedback('Erreur: Aucun fichier sélectionné.');
+                    console.log('Import failed: No file selected');
+                    return;
+                }
+                const text = await file.text();
+                const importData = JSON.parse(text);
 
-        // Vérifier le format du fichier JSON
-        if (!importData.shops || !Array.isArray(importData.shops) || !importData.timeSlotConfig) {
-            setFeedback('Erreur: Format de fichier JSON invalide. Attendu un tableau "shops" et "timeSlotConfig".');
-            console.log('Import failed: Invalid JSON format', importData);
-            return;
-        }
+                // Vérifier le format du fichier JSON
+                if (!importData.shops || !Array.isArray(importData.shops)) {
+                    setFeedback('Erreur: Format de fichier JSON invalide. Attendu un tableau "shops".');
+                    console.log('Import failed: Invalid JSON format', importData);
+                    return;
+                }
 
-        // Effacer toutes les données existantes dans localStorage
-        localStorage.clear();
-        console.log('Cleared localStorage before import');
+                // Effacer toutes les données existantes dans localStorage
+                localStorage.clear();
+                console.log('Cleared localStorage before import');
 
-        // Restaurer toutes les boutiques
-        const shopNames = [];
-        importData.shops.forEach(shopData => {
-            const shop = shopData.shop ? shopData.shop.trim().toUpperCase() : null;
-            if (!shop || shop === 'DEFAULT') {
-                console.log(`Skipping invalid shop: ${shop}`);
-                return;
-            }
-            shopNames.push(shop);
+                // Restaurer toutes les boutiques
+                const shopNames = [];
+                importData.shops.forEach(shopData => {
+                    const shop = shopData.shop ? shopData.shop.trim().toUpperCase() : null;
+                    if (!shop || shop === 'DEFAULT') {
+                        console.log(`Skipping invalid shop: ${shop}`);
+                        return;
+                    }
+                    shopNames.push(shop);
 
-            // Restaurer les employés
-            saveToLocalStorage(`employees_${shop}`, shopData.employees || []);
-            console.log(`Restored employees for ${shop}:`, shopData.employees);
+                    // Restaurer les employés
+                    saveToLocalStorage(`employees_${shop}`, shopData.employees || []);
+                    console.log(`Restored employees for ${shop}:`, shopData.employees);
 
-            // Restaurer les semaines
-            Object.keys(shopData.weeks || {}).forEach(weekKey => {
-                saveToLocalStorage(`planning_${shop}_${weekKey}`, shopData.weeks[weekKey].planning || {});
-                saveToLocalStorage(`selected_employees_${shop}_${weekKey}`, shopData.weeks[weekKey].selectedEmployees || []);
-                console.log(`Restored week ${weekKey} for ${shop}: planning=`, shopData.weeks[weekKey].planning, 'selectedEmployees=', shopData.weeks[weekKey].selectedEmployees);
-            });
+                    // Restaurer les semaines
+                    Object.keys(shopData.weeks || {}).forEach(weekKey => {
+                        saveToLocalStorage(`planning_${shop}_${weekKey}`, shopData.weeks[weekKey].planning || {});
+                        saveToLocalStorage(`selected_employees_${shop}_${weekKey}`, shopData.weeks[weekKey].selectedEmployees || []);
+                        console.log(`Restored week ${weekKey} for ${shop}: planning=`, shopData.weeks[weekKey].planning, 'selectedEmployees=', shopData.weeks[weekKey].selectedEmployees);
+                    });
 
-            // Mettre à jour le dernier planning pour chaque boutique
-            const latestWeek = Object.keys(shopData.weeks || {}).sort().pop();
-            if (latestWeek) {
-                saveToLocalStorage(`lastPlanning_${shop}`, {
-                    week: latestWeek,
-                    planning: shopData.weeks[latestWeek].planning || {}
+                    // Mettre à jour le dernier planning pour chaque boutique
+                    const latestWeek = Object.keys(shopData.weeks || {}).sort().pop();
+                    if (latestWeek) {
+                        saveToLocalStorage(`lastPlanning_${shop}`, {
+                            week: latestWeek,
+                            planning: shopData.weeks[latestWeek].planning || {}
+                        });
+                        console.log(`Restored lastPlanning for ${shop}:`, { week: latestWeek });
+                    }
                 });
-                console.log(`Restored lastPlanning for ${shop}:`, { week: latestWeek });
+
+                // Restaurer la liste des boutiques
+                console.log('Adding shops to localStorage:', shopNames);
+                saveToLocalStorage('shops', shopNames);
+                setShops(shopNames);
+
+                // Sélectionner la première boutique par défaut
+                if (shopNames.length > 0) {
+                    setSelectedShop(shopNames[0]);
+                    saveToLocalStorage('lastPlanning', { shop: shopNames[0] });
+                    console.log('Selected first shop:', shopNames[0]);
+                } else {
+                    setSelectedShop('');
+                    saveToLocalStorage('lastPlanning', {});
+                    console.log('No shops to select');
+                }
+
+                // Restaurer la configuration des tranches horaires
+                setConfig(importData.timeSlotConfig || {});
+                saveToLocalStorage('timeSlotConfig', importData.timeSlotConfig || {});
+                console.log('Restored timeSlotConfig:', importData.timeSlotConfig);
+
+                setFeedback('Succès: Sauvegarde de toutes les boutiques restaurée avec succès.');
+                console.log('Imported data via file input:', importData);
+            } catch (fileError) {
+                setFeedback('Erreur lors de l’importation : ' + fileError.message);
+                console.error('File input import error:', fileError);
             }
-        });
-
-        // Restaurer la liste des boutiques
-        console.log('Adding shops to localStorage:', shopNames);
-        saveToLocalStorage('shops', shopNames);
-        setShops(shopNames);
-
-        // Sélectionner la première boutique par défaut
-        if (shopNames.length > 0) {
-            setSelectedShop(shopNames[0]);
-            saveToLocalStorage('lastPlanning', { shop: shopNames[0] });
-            console.log('Selected first shop:', shopNames[0]);
-        } else {
-            setSelectedShop('');
-            saveToLocalStorage('lastPlanning', {});
-            console.log('No shops to select');
-        }
-
-        // Restaurer la configuration des tranches horaires
-        setConfig(importData.timeSlotConfig || {});
-        saveToLocalStorage('timeSlotConfig', importData.timeSlotConfig || {});
-        console.log('Restored timeSlotConfig:', importData.timeSlotConfig);
-
-        setFeedback('Succès: Sauvegarde de toutes les boutiques restaurée avec succès.');
-        console.log('Imported data:', importData);
+        };
+        input.click();
     } catch (error) {
-        setFeedback('Erreur lors de l’importation: ' + error.message);
+        setFeedback('Erreur lors de l’importation : ' + error.message);
         console.error('Import error:', error);
     }
 };

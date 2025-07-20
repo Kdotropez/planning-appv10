@@ -12,11 +12,11 @@ import ResetModal from './ResetModal';
 import CopyPasteSection from './CopyPasteSection';
 import '@/assets/styles.css';
 
-const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep }) => {
+const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep, setPlanning, setFeedback }) => {
     const [currentDay, setCurrentDay] = useState(0);
     const [planning, setPlanning] = useState(loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, initialPlanning || {}) || {});
     const [showCopyPaste, setShowCopyPaste] = useState(false);
-    const [feedback, setFeedback] = useState('');
+    const [feedback, setLocalFeedback] = useState('');
     const [showResetModal, setShowResetModal] = useState(false);
     const [showRecapModal, setShowRecapModal] = useState(null);
     const [showMonthlyRecapModal, setShowMonthlyRecapModal] = useState(false);
@@ -44,18 +44,18 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     });
 
     useEffect(() => {
-        setFeedback('');
+        setLocalFeedback('');
         if (!selectedWeek || isNaN(new Date(selectedWeek).getTime())) {
-            setFeedback('Erreur: Date de semaine non valide.');
+            setLocalFeedback('Erreur: Date de semaine non valide.');
             return;
         }
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
         if (!storedEmployees.length) {
-            setFeedback('Erreur: Aucun employé sélectionné.');
+            setLocalFeedback('Erreur: Aucun employé sélectionné.');
             return;
         }
         if (!config?.timeSlots?.length) {
-            setFeedback('Erreur: Configuration des tranches horaires non valide.');
+            setLocalFeedback('Erreur: Configuration des tranches horaires non valide.');
             return;
         }
         setPlanning(prev => {
@@ -97,7 +97,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     }, [planning, selectedShop, selectedWeek, config]);
 
     useEffect(() => {
-        setFeedback('');
+        setLocalFeedback('');
     }, [showCopyPaste]);
 
     const calculateDailyHours = (dayIndex) => {
@@ -132,7 +132,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     const toggleSlot = useCallback((employee, slotIndex, dayIndex, forceValue = null) => {
         if (!config?.timeSlots?.length) {
-            setFeedback('Erreur: Configuration des tranches horaires non valide.');
+            setLocalFeedback('Erreur: Configuration des tranches horaires non valide.');
             return;
         }
         setPlanning(prev => {
@@ -418,7 +418,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     onClick={() => {
                         console.log('Toggling CopyPasteSection:', !showCopyPaste);
                         setShowCopyPaste(!showCopyPaste);
-                        setFeedback('');
+                        setLocalFeedback('');
                     }}
                 >
                     <FaToggleOn /> {showCopyPaste ? 'Masquer Copier/Coller' : 'Afficher Copier/Coller'}
@@ -434,7 +434,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setPlanning={setPlanning}
                     days={days}
                     setAvailableWeeks={setAvailableWeeks}
-                    setFeedback={setFeedback}
+                    setFeedback={setLocalFeedback}
                 />
             )}
             {showResetModal && (
@@ -447,7 +447,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     selectedEmployees={selectedEmployees}
                     planning={planning}
                     setPlanning={setPlanning}
-                    setFeedback={setFeedback}
+                    setFeedback={setLocalFeedback}
                     setAvailableWeeks={setAvailableWeeks}
                     setStep={setStep}
                     onBack={onBack}

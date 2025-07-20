@@ -2,7 +2,7 @@
 import { format, isAfter, parse } from 'date-fns';
 import Button from '../common/Button';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
-import { importAllData, exportAllData } from '../../utils/backupUtils';
+import { importAllData } from '../../utils/backupUtils';
 import { FaUpload } from 'react-icons/fa';
 import '@/assets/styles.css';
 
@@ -85,9 +85,6 @@ const TimeSlotConfig = ({ config, setConfig, setStep, setFeedback, selectedShop 
                 Configuration des tranches horaires
             </h2>
             <div className="button-group" style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
-                <Button className="button-validate" onClick={() => exportAllData(setFeedback)}>
-                    Exporter
-                </Button>
                 <Button className="button-validate" onClick={() => importAllData(setFeedback, () => {}, () => {}, setConfig)}>
                     <FaUpload /> Importer
                 </Button>

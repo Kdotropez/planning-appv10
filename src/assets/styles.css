@@ -20,12 +20,13 @@ body {
 /* Conteneur principal pour toutes les étapes */
 .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
     width: 100%;
-    max-width: none;
-    padding: 10px;
+    max-width: 95vw; /* Utilise presque toute la largeur disponible */
+    padding: 20px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    transition: width 0.3s ease; /* Transition fluide */
 }
 
 /* Configuration des tranches horaires */
@@ -33,7 +34,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-width: 400px;
+    width: 100%;
+    max-width: 95vw;
     margin: 0 auto;
 }
 
@@ -65,12 +67,6 @@ body {
     padding: 5px 0;
 }
 
-.time-separator {
-    font-size: 18px;
-    font-family: 'Roboto', sans-serif;
-    padding: 0 5px;
-}
-
 .time-picker-button {
     background-color: #1e88e5;
     color: #fff;
@@ -90,7 +86,7 @@ body {
 /* Tableaux (WeekSelection, PlanningTable) */
 .table-container {
     width: 100%;
-    max-width: 1600px; /* Augmenté pour grands écrans */
+    max-width: 95vw; /* Adaptatif */
     overflow-x: auto;
     margin: 0 auto;
 }
@@ -99,7 +95,7 @@ body {
     width: 100%;
     max-width: none;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed; /* Répartit uniformément les colonnes */
     background-color: #fff;
 }
 
@@ -107,11 +103,11 @@ body {
     position: sticky;
     left: 0;
     background-color: #f0f0f0;
-    width: 150px;
-    min-width: 150px;
+    width: 140px;
+    min-width: 140px;
     text-align: center;
     border: 1px solid #ccc;
-    z-index: 1;
+    z-index: 2;
 }
 
 .fixed-col.header {
@@ -151,9 +147,11 @@ body {
 }
 
 .scrollable-col {
-    min-width: 30px; /* Réduit pour afficher plus de tranches */
+    width: calc((100% - 140px) / 28); /* Répartit l’espace après fixed-col sur 28 tranches */
+    min-width: 18px; /* Minimum pour lisibilité */
     text-align: center;
     border: 1px solid #ccc;
+    transition: width 0.3s ease;
 }
 
 .scrollable-col.clicked-0 { background-color: #e6f0fa; }
@@ -175,7 +173,7 @@ body {
 
 .week-selector table, .saved-weeks table {
     width: 100%;
-    max-width: 600px;
+    max-width: 95vw;
     border-collapse: collapse;
     margin: 0 auto;
 }
@@ -218,7 +216,7 @@ body {
     padding: 20px;
     border-radius: 8px;
     width: 90%;
-    max-width: 500px;
+    max-width: 95vw;
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
@@ -293,8 +291,8 @@ body {
 
 .button-jour {
     flex: 1;
-    min-width: 100px;
-    max-width: 150px;
+    min-width: 80px;
+    max-width: 120px;
     background-color: #1e88e5;
     color: #fff;
     padding: 8px 12px;
@@ -337,7 +335,7 @@ body {
 .form-group {
     margin-bottom: 15px;
     width: 100%;
-    max-width: 400px;
+    max-width: 95vw;
     text-align: center;
 }
 
@@ -362,13 +360,13 @@ body {
     align-items: center;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 600px;
+    max-width: 95vw;
 }
 
 .shop-list, .employee-list {
     width: 100%;
-    max-width: 400px;
-    max-height: 200px;
+    max-width: 95vw;
+    max-height: 500px; /* Plus grand pour grands écrans */
     overflow-y: auto;
     margin-bottom: 15px;
 }
@@ -390,7 +388,7 @@ body {
     margin-top: 20px;
     margin-bottom: 30px;
     width: 100%;
-    max-width: none;
+    max-width: 95vw;
     flex-wrap: wrap;
 }
 
@@ -398,10 +396,10 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 1600px; /* Augmenté pour grands écrans */
+    max-width: 95vw;
     overflow-x: auto;
     margin-left: auto;
     margin-right: auto;
@@ -411,10 +409,10 @@ body {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 20px;
     width: 100%;
-    max-width: 1600px; /* Augmenté pour grands écrans */
+    max-width: 95vw;
     overflow-x: auto;
     margin-left: auto;
     margin-right: auto;
@@ -422,8 +420,8 @@ body {
 
 .recap-buttons > div {
     flex: 1;
-    min-width: 140px;
-    max-width: 200px;
+    min-width: 120px;
+    max-width: 180px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -434,7 +432,7 @@ body {
 /* Copy/Paste section */
 .copy-paste-section, .copy-paste-container {
     width: 100%;
-    max-width: 600px;
+    max-width: 95vw;
     margin: 20px auto;
     background: #f9f9f9;
     padding: 20px;
@@ -471,26 +469,33 @@ body {
 }
 
 /* Responsive design */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 98vw;
+        padding: 15px;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 98vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 98vw;
+        max-height: 300px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 98vw;
+        gap: 10px;
+    }
     .fixed-col {
         width: 120px;
         min-width: 120px;
     }
     .scrollable-col {
-        min-width: 25px; /* Réduit pour écrans plus petits */
-    }
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        padding: 5px;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input {
-        max-width: 100%;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        gap: 12px;
+        width: calc((100% - 120px) / 28);
+        min-width: 16px;
     }
     .button-jour {
-        min-width: 80px;
-        max-width: 120px;
+        min-width: 70px;
+        max-width: 110px;
         padding: 6px 10px;
         font-size: 11px;
     }
@@ -499,28 +504,34 @@ body {
         max-width: 150px;
     }
     .modal-content {
-        max-width: 90%;
+        max-width: 98vw;
         padding: 15px;
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 100%;
+        padding: 10px;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 100%;
+    }
+    .shop-list, .employee-list {
+        max-width: 100%;
+        max-height: 200px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        gap: 8px;
+    }
     .fixed-col {
         width: 100px;
         min-width: 100px;
     }
     .scrollable-col {
-        min-width: 20px; /* Encore plus réduit pour petits écrans */
+        width: calc((100% - 100px) / 28);
+        min-width: 14px;
         font-size: 12px;
-    }
-    .button-base {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-    .modal-content {
-        width: 95%;
-        padding: 10px;
-        max-height: 70vh;
     }
     .button-jour {
         min-width: 60px;
@@ -532,14 +543,88 @@ body {
         min-width: 80px;
         max-width: 120px;
     }
+    .modal-content {
+        max-width: 100%;
+        padding: 10px;
+        max-height: 70vh;
+    }
 }
 
-/* Optimisation pour grands écrans (32" ou plus, ≥ 2560px) */
-@media (min-width: 2560px) {
-    .table-container, .day-buttons, .recap-buttons {
-        max-width: 2000px; /* Plus large pour écrans 32" */
+/* Optimisation pour grands écrans */
+@media (min-width: 1920px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 90vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 90vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 90vw;
+        max-height: 400px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 90vw;
+    }
+    .table-container {
+        max-width: 90vw;
     }
     .scrollable-col {
-        min-width: 28px; /* Optimisé pour afficher ~28 tranches */
+        width: calc((100% - 140px) / 28);
+        min-width: 20px;
+    }
+    .modal-content {
+        max-width: 90vw;
+    }
+}
+
+@media (min-width: 2560px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 85vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 85vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 85vw;
+        max-height: 500px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 85vw;
+    }
+    .table-container {
+        max-width: 85vw;
+    }
+    .scrollable-col {
+        width: calc((100% - 140px) / 28);
+        min-width: 22px;
+    }
+    .modal-content {
+        max-width: 85vw;
+    }
+}
+
+@media (min-width: 3840px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 80vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 80vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 80vw;
+        max-height: 600px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 80vw;
+    }
+    .table-container {
+        max-width: 80vw;
+    }
+    .scrollable-col {
+        width: calc((100% - 140px) / 28);
+        min-width: 25px; /* Plus large pour lisibilité en 4K */
+    }
+    .modal-content {
+        max-width: 80vw;
     }
 }

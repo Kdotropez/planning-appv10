@@ -1,58 +1,248 @@
-.app-container {
-    font-family: 'Roboto', sans-serif;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+/* Réinitialisation des styles par défaut */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.step-container {
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+/* Conteneur principal pour toutes les étapes */
+.step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+    width: 100%;
+    max-width: none;
+    padding: 10px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 465px;
 }
 
-.employee-input,
-.shop-input {
-    margin-bottom: 15px;
-    width: 100%;
+/* Configuration des tranches horaires */
+.time-slot-config {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     max-width: 400px;
+    margin: 0 auto;
 }
 
-.employee-input-field,
-.shop-input-field {
-    padding: 10px;
-    font-size: 16px;
+.time-slot-label {
+    margin: 5px 0;
+}
+
+.time-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.time-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+}
+
+.time-value {
+    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    width: 50px;
+    text-align: center;
+    padding: 5px 0;
+}
+
+.time-separator {
+    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    padding: 0 5px;
+}
+
+.time-picker-button {
+    background-color: #1e88e5;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    font-size: 14px;
+}
+
+.time-picker-button:hover {
+    background-color: #1565c0;
+    transform: scale(1.05);
+}
+
+/* Tableaux (WeekSelection, PlanningTable) */
+.table-container {
     width: 100%;
+    max-width: 1600px; /* Augmenté pour grands écrans */
+    overflow-x: auto;
+    margin: 0 auto;
 }
 
-.employee-list,
-.shop-list {
-    margin-bottom: 15px;
+.planning-table {
     width: 100%;
-    max-width: 400px;
-    max-height: 200px;
-    overflow-y: auto;
+    max-width: none;
+    border-collapse: collapse;
+    table-layout: auto;
+    background-color: #fff;
 }
 
-.employee-item,
-.shop-item {
-    margin-bottom: 5px;
+.fixed-col {
+    position: sticky;
+    left: 0;
+    background-color: #f0f0f0;
+    width: 150px;
+    min-width: 150px;
+    text-align: center;
+    border: 1px solid #ccc;
+    z-index: 1;
 }
 
-.delete-icon {
+.fixed-col.header {
+    font-weight: 700;
+}
+
+.fixed-col.employee {
+    text-align: left;
+}
+
+.fixed-col.employee-0 {
+    background-color: #e6f0fa;
+}
+
+.fixed-col.employee-1 {
+    background-color: #e6ffed;
+}
+
+.fixed-col.employee-2 {
+    background-color: #ffe6e6;
+}
+
+.fixed-col.employee-3 {
+    background-color: #d0f0fa;
+}
+
+.fixed-col.employee-4 {
+    background-color: #f0e6fa;
+}
+
+.fixed-col.employee-5 {
+    background-color: #fffde6;
+}
+
+.fixed-col.employee-6 {
+    background-color: #d6e6ff;
+}
+
+.scrollable-col {
+    min-width: 30px; /* Réduit pour afficher plus de tranches */
+    text-align: center;
+    border: 1px solid #ccc;
+}
+
+.scrollable-col.clicked-0 { background-color: #e6f0fa; }
+.scrollable-col.clicked-1 { background-color: #e6ffed; }
+.scrollable-col.clicked-2 { background-color: #ffe6e6; }
+.scrollable-col.clicked-3 { background-color: #d0f0fa; }
+.scrollable-col.clicked-4 { background-color: #f0e6fa; }
+.scrollable-col.clicked-5 { background-color: #fffde6; }
+.scrollable-col.clicked-6 { background-color: #d6e6ff; }
+
+.planning-table th, .planning-table td {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.planning-table tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.week-selector table, .saved-weeks table {
+    width: 100%;
+    max-width: 600px;
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+
+.week-selector th, .saved-weeks th {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 8px;
+    font-weight: 700;
+}
+
+.week-selector td, .saved-weeks td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
     cursor: pointer;
 }
 
-.button-group {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: auto;
-    width: 100%;
-    max-width: 400px;
+.week-selector tr:hover, .saved-weeks tr:hover {
+    background-color: #e0e0e0;
 }
 
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #dc3545;
+    cursor: pointer;
+}
+
+.recap-table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto;
+}
+
+/* Boutons */
 .button-base {
     padding: 8px 16px;
     font-size: 14px;
@@ -60,6 +250,9 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .button-primary {
@@ -99,11 +292,16 @@
 }
 
 .button-jour {
+    flex: 1;
+    min-width: 100px;
+    max-width: 150px;
     background-color: #1e88e5;
     color: #fff;
-    padding: 8px 16px;
+    padding: 8px 12px;
     font-size: 12px;
     min-height: 60px;
+    border-radius: 4px;
+    text-align: center;
 }
 
 .button-jour:hover {
@@ -111,41 +309,151 @@
 }
 
 .button-jour.selected {
-    background-color: #f28c38;
+    background-color: #f28c38 !important;
+    color: #fff !important;
 }
 
-.day-button-content {
+.button-jour.selected:hover {
+    background-color: #d9742f !important;
+}
+
+.button-recap {
+    width: 100%;
+    background-color: #1e88e5;
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.button-recap:hover {
+    background-color: #1565c0;
+}
+
+/* Formulaires et groupes */
+.form-group {
+    margin-bottom: 15px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.form-group label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.form-group select, .form-group input[type="text"], .form-group input[type="time"], .form-group input[type="month"], .form-group input[type="file"] {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input {
     display: flex;
     flex-direction: column;
     align-items: center;
-}
-
-.copy-paste-section {
-    margin-top: 20px;
-    width: 100%;
-    max-width: 800px;
-}
-
-.copy-paste-container {
     margin-bottom: 20px;
+    width: 100%;
+    max-width: 600px;
 }
 
-.copy-paste-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.shop-list, .employee-list {
+    width: 100%;
+    max-width: 400px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 15px;
 }
 
-.form-group {
+.shop-item, .employee-item {
+    margin-bottom: 5px;
+}
+
+.delete-icon {
+    cursor: pointer;
+    color: #e53935;
+}
+
+/* Boutons de navigation */
+.navigation-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: none;
+    flex-wrap: wrap;
+}
+
+.day-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 1600px; /* Augmenté pour grands écrans */
+    overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.recap-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 1600px; /* Augmenté pour grands écrans */
+    overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.recap-buttons > div {
+    flex: 1;
+    min-width: 140px;
+    max-width: 200px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+/* Copy/Paste section */
+.copy-paste-section, .copy-paste-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.copy-paste-container h3 {
+    font-family: 'Roboto', sans-serif;
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 20px;
 }
 
 .target-days-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 5px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
 }
 
 .target-day-item {
@@ -154,322 +462,84 @@
     gap: 5px;
 }
 
+/* Feedback */
 .feedback {
     font-family: 'Roboto', sans-serif;
     text-align: center;
     margin-bottom: 10px;
-    color: #4caf50;
+    font-size: 14px;
 }
 
-.feedback.error {
-    color: #e53935;
-}
-
-.table-container {
-    width: 100%;
-    overflow-x: auto;
-}
-
-.planning-table {
-    width: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
-}
-
-.planning-table th,
-.planning-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-}
-
-.fixed-col {
-    position: sticky;
-    left: 0;
-    background-color: #fff;
-    z-index: 1;
-}
-
-.scrollable-col {
-    min-width: 60px;
-}
-
-.planning-table th.header {
-    background-color: #f0f0f0;
-    font-weight: 700;
-}
-
-.employee-0 { background-color: #e6f0fa; }
-.employee-1 { background-color: #e6ffed; }
-.employee-2 { background-color: #ffe6e6; }
-.employee-3 { background-color: #d0f0fa; }
-.employee-4 { background-color: #f0e6fa; }
-.employee-5 { background-color: #fffde6; }
-.employee-6 { background-color: #d6e6ff; }
-
-.clicked-0 { background-color: #b3d9ff; }
-.clicked-1 { background-color: #b3ffcc; }
-.clicked-2 { background-color: #ffcccc; }
-.clicked-3 { background-color: #99e6ff; }
-.clicked-4 { background-color: #e6ccff; }
-.clicked-5 { background-color: #fff5cc; }
-.clicked-6 { background-color: #b3ccff; }
-
-.recap-table {
-    font-family: 'Roboto', sans-serif;
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-}
-
-.recap-table th,
-.recap-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 100px;
-}
-
-.recap-table th:nth-child(1),
-.recap-table td:nth-child(1) {
-    min-width: 120px;
-    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
-    overflow: visible;
-    white-space: normal;
-}
-
-.recap-table th:nth-child(2),
-.recap-table td:nth-child(2) {
-    min-width: 100px;
-}
-
-.recap-table th {
-    background-color: #f0f0f0;
-    font-weight: 700;
-}
-
-.recap-table td {
-    min-width: 100px;
-}
-
-.recap-table .total-row {
-    font-weight: 700;
-    background-color: #e0e0e0;
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    max-width: 80%;
-    max-height: 80%;
-    overflow-y: auto;
-    position: relative;
-}
-
-.modal-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    color: #dc3545;
-}
-
-.error-container {
-    text-align: center;
-    padding: 20px;
-    color: #e53935;
-}
-
-.week-selection-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Règles responsive */
-.app-container {
-    width: 100%;
-    max-width: 100vw;
-    padding: 2vw;
-    box-sizing: border-box;
-}
-
-.planning-container {
-    width: 100%;
-    max-width: 100vw;
-    padding: 1vw;
-    box-sizing: border-box;
-}
-
-.step-container {
-    width: 100%;
-    max-width: 90vw;
-    margin: 0 auto;
-}
-
-.button-group {
-    flex-wrap: wrap;
-    gap: 1vw;
-}
-
-.button-base {
-    padding: 0.5rem 1rem;
-    font-size: clamp(0.8rem, 2vw, 1rem);
-    min-width: 80px;
-}
-
-.planning-table {
-    width: 100%;
-    max-width: 100vw;
-    font-size: clamp(0.7rem, 1.5vw, 0.9rem);
-}
-
-.planning-table th,
-.planning-table td {
-    padding: 0.5rem;
-    min-width: clamp(40px, 4vw, 50px);
-}
-
-.fixed-col {
-    min-width: clamp(100px, 10vw, 120px);
-}
-
-.scrollable-col {
-    min-width: clamp(40px, 3vw, 50px);
-}
-
-/* Ajustement des boutons de navigation */
-.navigation-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: clamp(20px, 3vw, 25px);
-    margin-top: 20px;
-    padding: 10px 15px;
-}
-
-/* Media queries pour petits écrans */
+/* Responsive design */
 @media (max-width: 768px) {
-    .app-container {
-        padding: 10px;
+    .fixed-col {
+        width: 120px;
+        min-width: 120px;
     }
-
-    .planning-container {
+    .scrollable-col {
+        min-width: 25px; /* Réduit pour écrans plus petits */
+    }
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
         padding: 5px;
     }
-
-    .step-container {
-        max-width: 95vw;
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input {
+        max-width: 100%;
     }
-
-    .button-base {
-        padding: 0.4rem 0.8rem;
-        font-size: clamp(0.7rem, 3vw, 0.9rem);
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        gap: 12px;
     }
-
-    .planning-table th,
-    .planning-table td {
-        padding: 0.3rem;
-        font-size: clamp(0.6rem, 2.5vw, 0.8rem);
-    }
-
-    .fixed-col {
-        min-width: clamp(80px, 15vw, 100px);
-    }
-
-    .scrollable-col {
-        min-width: clamp(30px, 4vw, 40px);
-    }
-
-    .navigation-buttons {
-        gap: clamp(15px, 2vw, 20px);
-        padding: 5px 10px;
-    }
-
-    .recap-table th,
-    .recap-table td {
+    .button-jour {
         min-width: 80px;
-        font-size: clamp(0.6rem, 2.5vw, 0.8rem);
+        max-width: 120px;
+        padding: 6px 10px;
+        font-size: 11px;
     }
-
-    .recap-table th:nth-child(1),
-    .recap-table td:nth-child(1) {
+    .recap-buttons > div {
         min-width: 100px;
-        font-size: clamp(0.6rem, 2vw, 0.8rem);
+        max-width: 150px;
+    }
+    .modal-content {
+        max-width: 90%;
+        padding: 15px;
     }
 }
 
-/* Media queries pour très petits écrans (téléphones) */
 @media (max-width: 480px) {
-    .button-base {
-        padding: 0.3rem 0.6rem;
-        font-size: clamp(0.6rem, 4vw, 0.8rem);
-        min-width: 60px;
-    }
-
-    .planning-table th,
-    .planning-table td {
-        padding: 0.2rem;
-        font-size: clamp(0.5rem, 3vw, 0.7rem);
-    }
-
     .fixed-col {
-        min-width: clamp(60px, 20vw, 80px);
+        width: 100px;
+        min-width: 100px;
     }
-
     .scrollable-col {
-        min-width: clamp(25px, 5vw, 35px);
+        min-width: 20px; /* Encore plus réduit pour petits écrans */
+        font-size: 12px;
     }
-
-    .navigation-buttons {
-        gap: clamp(10px, 1.5vw, 15px);
-        padding: 5px 5px;
+    .button-base {
+        padding: 6px 12px;
+        font-size: 12px;
     }
-
-    .recap-table th,
-    .recap-table td {
+    .modal-content {
+        width: 95%;
+        padding: 10px;
+        max-height: 70vh;
+    }
+    .button-jour {
         min-width: 60px;
-        font-size: clamp(0.5rem, 3vw, 0.7rem);
+        max-width: 100px;
+        padding: 5px 8px;
+        font-size: 10px;
     }
-
-    .recap-table th:nth-child(1),
-    .recap-table td:nth-child(1) {
+    .recap-buttons > div {
         min-width: 80px;
-        font-size: clamp(0.5rem, 2.5vw, 0.7rem);
+        max-width: 120px;
     }
 }
 
-/* Style pour le feedback visuel du drag-and-drop */
-.planning-table td.hovered {
-    background-color: rgba(0, 128, 255, 0.2);
-}
-
-/* Style pour le bouton PDF */
-.button-pdf {
-    background-color: #673ab7;
-    color: #fff;
-}
-
-.button-pdf:hover {
-    background-color: #5e35b1;
+/* Optimisation pour grands écrans (32" ou plus, ≥ 2560px) */
+@media (min-width: 2560px) {
+    .table-container, .day-buttons, .recap-buttons {
+        max-width: 2000px; /* Plus large pour écrans 32" */
+    }
+    .scrollable-col {
+        min-width: 28px; /* Optimisé pour afficher ~28 tranches */
+    }
 }

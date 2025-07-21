@@ -86,21 +86,21 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
     console.log('PlanningTable props:', { config, selectedWeek, planning, selectedEmployees, currentDay });
 
     return (
-        <div className="table-container" style={{ maxWidth: '1600px', margin: '0 auto' }} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-            <table className="planning-table" style={{ width: '100%', tableLayout: 'auto' }}>
+        <div className="table-container" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+            <table className="planning-table">
                 <thead>
                     <tr>
-                        <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>DE</th>
+                        <th className="fixed-col header">DE</th>
                         {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '30px' }}>
+                            <th key={slot} className="scrollable-col header">
                                 {typeof slot === 'string' ? slot : slot.start}
                             </th>
                         ))}
                     </tr>
                     <tr>
-                        <th className="fixed-col header" style={{ width: '150px', minWidth: '150px' }}>À</th>
+                        <th className="fixed-col header">À</th>
                         {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col" style={{ minWidth: '30px' }}>
+                            <th key={slot} className="scrollable-col header">
                                 {index < config.timeSlots.length - 1
                                     ? (typeof config.timeSlots[index + 1] === 'string' ? config.timeSlots[index + 1] : config.timeSlots[index + 1].start)
                                     : getEndTime(typeof slot === 'string' ? slot : slot.start, config.interval || 30)}
@@ -115,7 +115,7 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
                         console.log('Employee hours:', { employee, dayKey, hours });
                         return (
                             <tr key={employee}>
-                                <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`} style={{ width: '150px', minWidth: '150px' }}>
+                                <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`}>
                                     {employee} {hours !== undefined && hours !== null ? `(${hours.toFixed(1)} h)` : '(0.0 h)'}
                                 </td>
                                 {(config.timeSlots || []).map((_, slotIndex) => {
@@ -124,7 +124,6 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, togg
                                         <td
                                             key={slotIndex}
                                             className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
-                                            style={{ minWidth: '30px' }}
                                             onTouchStart={(e) => handleTouchStart(employee, slotIndex, currentDay, e)}
                                             onMouseDown={(e) => handleMouseDown(employee, slotIndex, currentDay, e)}
                                             onMouseMove={(e) => handleMouseMove(employee, slotIndex, currentDay, e)}

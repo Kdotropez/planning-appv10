@@ -39,7 +39,7 @@ const GlobalDayViewModal = ({
         const count = employees.length;
         return {
             count,
-            display: slotIndex === 0 && count === 0 ? '' : count === 0 ? '⚠️ 0' : count >= 3 ? '3+' : count.toString(),
+            display: slotIndex === 0 && count === 0 ? '' : count === 0 ? '⚠️ 0' : count >= 3 ? '3' : count.toString(),
             className: count === 0 ? 'no-employee' : 
                       count === 1 ? 'single-employee' : 
                       count === 2 ? 'two-employees' : 'multiple-employees'
@@ -70,7 +70,7 @@ const GlobalDayViewModal = ({
         };
     });
 
-    const legend = 'Légende : 0 = ⚠️ Aucun employé, 1 = 1 employé, 2 = 2 employés, 3+ = 3 employés ou plus';
+    const legend = 'Légende : 0 = ⚠️ Aucun employé, 1 = 1 employé, 2 = 2 employés, 3 = 3 employés ou plus';
 
     const exportToPDF = () => {
         console.log('GlobalDayViewModal: Exporting to PDF');
@@ -89,7 +89,7 @@ const GlobalDayViewModal = ({
                     row: [
                         slotIndex === 0 ? dayData.day : '',
                         slotIndex === 0 ? dayData.openClose : '',
-                        `${timeSlots[slotIndex]}-${format(addMinutes(parse(timeSlots[slotIndex], 'HH:mm', new Date()), 30), 'HH:mm')}`,
+                        `${timeSlots[slotIndex]}`,
                         slot.display
                     ],
                     backgroundColor: slot.count === 0 ? [255, 230, 230] :
@@ -100,7 +100,10 @@ const GlobalDayViewModal = ({
         });
 
         doc.autoTable({
-            head: [['Jour', 'Ouverture/Fermeture', 'Tranche horaire', 'Employés']],
+            head: [
+                ['Jour', 'Ouverture/Fermeture', 'Tranche horaire', 'Employés'],
+                ['', '', 'À', '']
+            ],
             body: body.map(item => item.row),
             startY: 40,
             styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
@@ -121,9 +124,15 @@ const GlobalDayViewModal = ({
                         data.cell.styles.lineColor = [200, 200, 200];
                     }
                 }
+                if (data.section === 'head' && data.row.index === 1) {
+                    data.cell.styles.textColor = [0, 0, 0];
+                    data.cell.styles.fillColor = [240, 240, 240];
+                    if (data.column.index === 2) {
+                        data.cell.text = timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'));
+                    }
+                }
             },
             didDrawPage: (data) => {
-                // Ajouter des lignes de séparation entre les jours
                 const tableStartY = data.table.startY;
                 const tableBody = data.table.body;
                 let currentY = tableStartY + data.table.headHeight;
@@ -161,11 +170,14 @@ const GlobalDayViewModal = ({
                     <table className="global-day-table">
                         <thead>
                             <tr>
-                                <th className="fixed-col header">Jour</th>
-                                <th className="fixed-col header">Ouverture/Fermeture</th>
+                                <th className="fixed-col header" rowSpan="2">Jour</th>
+                                <th className="fixed-col header" rowSpan="2">Ouverture/Fermeture</th>
                                 {timeSlots.map((slot, index) => (
                                     <th key={index} className="scrollable-col header">
-                                        {`${slot}-${format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}`}
+                                        <div className="time-slot-header">
+                                            <span>{slot}</span>
+                                            <span>{format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}</span>
+                                        </div>
                                     </th>
                                 ))}
                             </tr>

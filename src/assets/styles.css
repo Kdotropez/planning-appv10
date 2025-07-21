@@ -161,11 +161,12 @@ body {
 }
 
 .scrollable-col.header {
-    font-size: 12px; /* Reduced font size */
+    font-size: 10px;
     transform: rotate(-45deg);
     transform-origin: center;
     white-space: nowrap;
     padding: 10px 2px;
+    height: 80px;
 }
 
 .scrollable-col.no-employee {
@@ -549,8 +550,9 @@ body {
         font-size: 12px;
     }
     .scrollable-col.header {
-        font-size: 8px;
+        font-size: 7px;
         padding: 8px 1px;
+        height: 60px;
     }
     .button-jour {
         min-width: 50px;
@@ -608,8 +610,9 @@ body {
         min-width: 30px;
     }
     .scrollable-col.header {
-        font-size: 12px;
+        font-size: 9px;
         padding: 8px 2px;
+        height: 70px;
     }
     .button-jour {
         min-width: 60px;
@@ -666,8 +669,9 @@ body {
         font-size: 12px;
     }
     .scrollable-col.header {
-        font-size: 10px;
+        font-size: 8px;
         padding: 6px 2px;
+        height: 60px;
     }
     .button-jour {
         min-width: 50px;
@@ -723,8 +727,9 @@ body {
         min-width: 50px;
     }
     .scrollable-col.header {
-        font-size: 15px;
+        font-size: 12px;
         padding: 10px 2px;
+        height: 80px;
     }
     .modal-content {
         max-width: 98vw;
@@ -768,8 +773,9 @@ body {
         min-width: 60px;
     }
     .scrollable-col.header {
-        font-size: 16px;
+        font-size: 14px;
         padding: 10px 2px;
+        height: 90px;
     }
     .modal-content {
         max-width: 96vw;
@@ -813,8 +819,9 @@ body {
         min-width: 70px;
     }
     .scrollable-col.header {
-        font-size: 16px;
+        font-size: 14px;
         padding: 12px 2px;
+        height: 100px;
     }
     .modal-content {
         max-width: 95vw;

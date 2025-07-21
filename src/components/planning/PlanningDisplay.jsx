@@ -10,6 +10,7 @@ import PlanningTable from './PlanningTable';
 import MonthlyRecapModals from './MonthlyRecapModals';
 import ResetModal from './ResetModal';
 import CopyPasteSection from './CopyPasteSection';
+import WeekCopySection from './WeekCopySection';
 import '@/assets/styles.css';
 
 const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep, setGlobalPlanning, setFeedback }) => {
@@ -208,8 +209,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 Planning pour {selectedShop} - Semaine du {format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })}
             </h2>
             {feedback && (
-                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', color: feedback.includes('Erreur') ? '#e53935' : '#4caf50', marginBottom: '10px' }}>
-                    {feedback}
+                <p style={{
+                    fontFamily: 'Roboto, sans-serif',
+                    textAlign: 'center',
+                    color: (typeof feedback === 'string' ? feedback.includes('Erreur') : feedback.message?.includes('Erreur')) ? '#e53935' : '#4caf50',
+                    marginBottom: '10px'
+                }}>
+                    {typeof feedback === 'string' ? feedback : feedback.message}
                 </p>
             )}
             <div className="navigation-buttons">
@@ -440,6 +446,15 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setFeedback={setLocalFeedback}
                 />
             )}
+            <WeekCopySection
+                config={config}
+                selectedShop={selectedShop}
+                selectedWeek={selectedWeek}
+                selectedEmployees={selectedEmployees}
+                planning={planning}
+                setGlobalPlanning={setGlobalPlanning}
+                setFeedback={setLocalFeedback}
+            />
             {showResetModal && (
                 <ResetModal
                     showResetModal={showResetModal}

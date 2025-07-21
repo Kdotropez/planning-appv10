@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, isMonday } from 'date-fns';
+import { format, addDays, isMonday, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { FaToggleOn, FaDownload } from 'react-icons/fa';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
@@ -17,6 +17,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const [currentDay, setCurrentDay] = useState(0);
     const [planning, setPlanning] = useState(loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, initialPlanning || {}) || {});
     const [showCopyPaste, setShowCopyPaste] = useState(false);
+    const [showWeekCopy, setShowWeekCopy] = useState(false);
     const [feedback, setLocalFeedback] = useState('');
     const [showResetModal, setShowResetModal] = useState(false);
     const [showRecapModal, setShowRecapModal] = useState(null);
@@ -100,7 +101,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     useEffect(() => {
         setLocalFeedback('');
-    }, [showCopyPaste]);
+    }, [showCopyPaste, showWeekCopy]);
 
     const calculateDailyHours = (dayIndex) => {
         const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
@@ -126,9 +127,40 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         return totalHours;
     };
 
+    const calculateEmployeeMonthlyHours = (employee, week) => {
+        let totalHours = 0;
+        const monthStart = startOfMonth(new Date(week));
+        const monthEnd = endOfMonth(new Date(week));
+        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
+        storageKeys.forEach(key => {
+            const weekKey = key.replace(`planning_${selectedShop}_`, '');
+            const weekDate = new Date(weekKey);
+            if (weekDate >= monthStart && weekDate <= monthEnd) {
+                totalHours += calculateEmployeeWeeklyHours(employee, weekKey, loadFromLocalStorage(key, {}));
+            }
+        });
+        return totalHours;
+    };
+
     const calculateShopWeeklyHours = () => {
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
         const totalHours = storedEmployees.reduce((sum, employee) => sum + calculateEmployeeWeeklyHours(employee, selectedWeek, planning), 0);
+        return totalHours.toFixed(1);
+    };
+
+    const calculateShopMonthlyHours = () => {
+        const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
+        let totalHours = 0;
+        const monthStart = startOfMonth(new Date(selectedWeek));
+        const monthEnd = endOfMonth(new Date(selectedWeek));
+        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
+        storageKeys.forEach(key => {
+            const weekKey = key.replace(`planning_${selectedShop}_`, '');
+            const weekDate = new Date(weekKey);
+            if (weekDate >= monthStart && weekDate <= monthEnd) {
+                totalHours += storedEmployees.reduce((sum, employee) => sum + calculateEmployeeWeeklyHours(employee, weekKey, loadFromLocalStorage(key, {})), 0);
+            }
+        });
         return totalHours.toFixed(1);
     };
 
@@ -347,7 +379,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS
+                            MOIS ({calculateEmployeeMonthlyHours(employee, selectedWeek).toFixed(1)} h)
                         </Button>
                     </div>
                 ))}
@@ -408,7 +440,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        PLANNING MENSUEL
+                        PLANNING MENSUEL ({calculateShopMonthlyHours()} h)
                     </Button>
                 </div>
             </div>
@@ -430,7 +462,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         setLocalFeedback('');
                     }}
                 >
-                    <FaToggleOn /> {showCopyPaste ? 'Masquer Copier/Coller' : 'Afficher Copier/Coller'}
+                    <FaToggleOn /> {showCopyPaste ? 'Masquer Copier/Coller sur la semaine en cours' : 'Afficher Copier/Coller sur la semaine en cours'}
+                </Button>
+                <Button
+                    className="button-primary"
+                    onClick={() => {
+                        console.log('Toggling WeekCopySection:', !showWeekCopy);
+                        setShowWeekCopy(!showWeekCopy);
+                        setLocalFeedback('');
+                    }}
+                >
+                    <FaToggleOn /> {showWeekCopy ? 'Masquer Copier semaine sur une autre' : 'Afficher Copier semaine sur une autre'}
                 </Button>
             </div>
             {showCopyPaste && (
@@ -446,15 +488,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setFeedback={setLocalFeedback}
                 />
             )}
-            <WeekCopySection
-                config={config}
-                selectedShop={selectedShop}
-                selectedWeek={selectedWeek}
-                selectedEmployees={selectedEmployees}
-                planning={planning}
-                setGlobalPlanning={setGlobalPlanning}
-                setFeedback={setLocalFeedback}
-            />
+            {showWeekCopy && (
+                <WeekCopySection
+                    config={config}
+                    selectedShop={selectedShop}
+                    selectedWeek={selectedWeek}
+                    selectedEmployees={selectedEmployees}
+                    planning={planning}
+                    setGlobalPlanning={setGlobalPlanning}
+                    setFeedback={setLocalFeedback}
+                />
+            )}
             {showResetModal && (
                 <ResetModal
                     showResetModal={showResetModal}

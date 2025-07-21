@@ -157,7 +157,7 @@ body {
 }
 
 .scrollable-col.header {
-    font-size: 16px;
+    font-size: 14px; /* Réduit pour éviter le débordement */
     transform: rotate(-45deg);
     transform-origin: center;
     white-space: nowrap;
@@ -230,6 +230,14 @@ body {
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
+}
+
+.copy-paste-modal {
+    max-width: 500px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .modal-close {
@@ -356,7 +364,7 @@ body {
     display: block;
 }
 
-.form-group select, .form-group input[type="text"], .form-group input[type="time"], .form-group input[type="month"], .form-group input[type="file"], .form-group input[type="week"] {
+.form-group select, .form-group input[type="text"], .form-group input[type="time"], .form-group input[type="month"], .form-group input[type="week"] {
     width: 100%;
     padding: 8px;
     font-size: 14px;
@@ -477,14 +485,6 @@ body {
     outline: none;
 }
 
-/* Feedback */
-.feedback {
-    font-family: 'Roboto', sans-serif;
-    text-align: center;
-    margin-bottom: 10px;
-    font-size: 14px;
-}
-
 /* Responsive design */
 @media (max-width: 1200px) {
     .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
@@ -511,7 +511,7 @@ body {
         min-width: 30px;
     }
     .scrollable-col.header {
-        font-size: 14px;
+        font-size: 12px;
         padding: 8px 2px;
     }
     .button-jour {
@@ -529,6 +529,9 @@ body {
         padding: 10px;
     }
     .copy-paste-container {
+        max-width: 90vw;
+    }
+    .copy-paste-modal {
         max-width: 90vw;
     }
 }
@@ -559,7 +562,7 @@ body {
         font-size: 12px;
     }
     .scrollable-col.header {
-        font-size: 12px;
+        font-size: 10px;
         padding: 6px 2px;
     }
     .button-jour {
@@ -578,6 +581,9 @@ body {
         max-height: 70vh;
     }
     .copy-paste-container {
+        max-width: 95vw;
+    }
+    .copy-paste-modal {
         max-width: 95vw;
     }
 }
@@ -605,7 +611,7 @@ body {
         min-width: 50px;
     }
     .scrollable-col.header {
-        font-size: 16px;
+        font-size: 15px;
         padding: 10px 2px;
     }
     .modal-content {
@@ -613,6 +619,9 @@ body {
     }
     .copy-paste-container {
         max-width: 1000px;
+    }
+    .copy-paste-modal {
+        max-width: 600px;
     }
 }
 
@@ -647,6 +656,9 @@ body {
     .copy-paste-container {
         max-width: 1200px;
     }
+    .copy-paste-modal {
+        max-width: 700px;
+    }
 }
 
 @media (min-width: 3840px) {
@@ -671,7 +683,7 @@ body {
         min-width: 70px;
     }
     .scrollable-col.header {
-        font-size: 18px;
+        font-size: 16px; /* Réduit pour éviter le débordement */
         padding: 12px 2px;
     }
     .modal-content {
@@ -679,5 +691,8 @@ body {
     }
     .copy-paste-container {
         max-width: 1400px;
+    }
+    .copy-paste-modal {
+        max-width: 800px;
     }
 }

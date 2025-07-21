@@ -31,24 +31,23 @@ const RecapModal = ({
 
     console.log('RecapModal: Rendering modal', { showRecapModal, isWeekRecap, isEmployeeWeekRecap, employee, selectedWeek });
 
-    const getEmployeeColorClass = (employee) => {
-        const index = selectedEmployees.indexOf(employee);
-        const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
-        return index >= 0 ? colors[index % colors.length] : '';
+    const pastelColors = [
+        [230, 240, 250], // #e6f0fa (Lundi)
+        [230, 255, 237], // #e6ffed (Mardi)
+        [255, 230, 230], // #ffe6e6 (Mercredi)
+        [208, 240, 250], // #d0f0fa (Jeudi)
+        [240, 230, 250], // #f0e6fa (Vendredi)
+        [255, 253, 230], // #fffde6 (Samedi)
+        [214, 230, 255]  // #d6e6ff (Dimanche)
+    ];
+
+    const getDayColorClass = (dayIndex) => {
+        const colors = ['day-0', 'day-1', 'day-2', 'day-3', 'day-4', 'day-5', 'day-6'];
+        return colors[dayIndex % colors.length];
     };
 
-    const getEmployeeBackgroundColor = (employee) => {
-        const index = selectedEmployees.indexOf(employee);
-        const backgroundColors = [
-            [230, 240, 250], // #e6f0fa
-            [230, 255, 237], // #e6ffed
-            [255, 230, 230], // #ffe6e6
-            [208, 240, 250], // #d0f0fa
-            [240, 230, 250], // #f0e6fa
-            [255, 253, 230], // #fffde6
-            [214, 230, 255]  // #d6e6ff
-        ];
-        return index >= 0 ? backgroundColors[index % backgroundColors.length] : [200, 200, 200];
+    const getDayBackgroundColor = (dayIndex) => {
+        return pastelColors[dayIndex % pastelColors.length];
     };
 
     const formatTimeRange = (employee, dayKey, timeSlots) => {
@@ -107,7 +106,8 @@ const RecapModal = ({
             const dayData = {
                 day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
                 employees: [],
-                totalHours: 0
+                totalHours: 0,
+                dayIndex: index
             };
             selectedEmployees.forEach(employee => {
                 const { start, pause, resume, end, hours } = formatTimeRange(employee, dayKey, config.timeSlots);
@@ -143,7 +143,8 @@ const RecapModal = ({
                     resume,
                     end,
                     hours
-                }]
+                }],
+                dayIndex: index
             });
             totalWeekHours += parseFloat(hours);
         });
@@ -161,7 +162,7 @@ const RecapModal = ({
                 end,
                 hours
             }],
-            totalHours: parseFloat(hours)
+            dayIndex: currentDay
         });
     }
 
@@ -188,7 +189,7 @@ const RecapModal = ({
                 dayData.employees.forEach(emp => {
                     body.push({
                         row: [dayData.day, emp.employee, emp.start, emp.pause, emp.resume, emp.end, emp.hours],
-                        backgroundColor: getEmployeeBackgroundColor(emp.employee)
+                        backgroundColor: getDayBackgroundColor(dayData.dayIndex)
                     });
                     dayData.day = ''; // Effacer le jour pour les lignes suivantes du même jour
                 });
@@ -261,7 +262,7 @@ const RecapModal = ({
                                 {dayData.employees.map((emp, empIndex) => (
                                     <tr
                                         key={`${index}-${empIndex}`}
-                                        className={getEmployeeColorClass(emp.employee)}
+                                        className={getDayColorClass(dayData.dayIndex)}
                                     >
                                         <td>{empIndex === 0 ? dayData.day : ''}</td>
                                         <td>{emp.employee}</td>

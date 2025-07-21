@@ -53,7 +53,7 @@ const RecapModal = ({
     const formatTimeRange = (employee, dayKey, timeSlots) => {
         console.log(`RecapModal: Formatting time range for ${employee} on ${dayKey}`, { timeSlots, planning: planning[employee]?.[dayKey] });
         if (!planning[employee]?.[dayKey] || planning[employee][dayKey].every(slot => !slot)) {
-            return { start: 'Congé', pause: '', resume: '', end: '', hours: '0.0 h' };
+            return { start: 'Congé ☀️', pause: '', resume: '', end: '', hours: '0.0 h' };
         }
 
         let start = null, pause = null, resume = null, end = null;
@@ -173,16 +173,14 @@ const RecapModal = ({
         const doc = new jsPDF();
         doc.setFont('Roboto', 'normal');
         const title = isWeekRecap
-            ? `Récapitulatif hebdomadaire - ${selectedShop}`
+            ? `Récapitulatif hebdomadaire - ${selectedShop} (${calculateShopWeeklyHours()} h)`
             : isEmployeeWeekRecap
             ? `Récapitulatif de ${employee} ${totalWeekHours.toFixed(1)} h`
             : `Récapitulatif de ${employee}`;
         doc.text(title, 10, 10);
-        if (isEmployeeWeekRecap) {
-            const weekStart = format(new Date(selectedWeek), 'dd/MM', { locale: fr });
-            const weekEnd = format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr });
-            doc.text(`Semaine du Lundi ${weekStart} au Dimanche ${weekEnd}`, 10, 20);
-        }
+        const weekStart = format(new Date(selectedWeek), 'dd/MM', { locale: fr });
+        const weekEnd = format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr });
+        doc.text(`Semaine du Lundi ${weekStart} au Dimanche ${weekEnd}`, 10, (isWeekRecap || isEmployeeWeekRecap) ? 20 : 20);
         const body = [];
         recapData.forEach(dayData => {
             if (dayData.employees.length > 0) {
@@ -204,7 +202,7 @@ const RecapModal = ({
         doc.autoTable({
             head: [['Jour', 'Employé', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
             body: body.map(item => item.row),
-            startY: isEmployeeWeekRecap ? 30 : 20,
+            startY: (isWeekRecap || isEmployeeWeekRecap) ? 30 : 20,
             styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
             headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
             bodyStyles: { textColor: [51, 51, 51] },
@@ -239,7 +237,7 @@ const RecapModal = ({
                         ? `Récapitulatif de ${employee} ${totalWeekHours.toFixed(1)} h`
                         : `Récapitulatif de ${employee}`}
                 </h2>
-                {isEmployeeWeekRecap && (
+                {(isWeekRecap || isEmployeeWeekRecap) && (
                     <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
                         Semaine du Lundi {format(new Date(selectedWeek), 'dd/MM', { locale: fr })} au Dimanche {format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr })}
                     </p>

@@ -173,10 +173,7 @@ const GlobalDayViewModal = ({
                                 <th className="fixed-col header" rowSpan="2">Ouverture/Fermeture</th>
                                 {timeSlots.map((slot, index) => (
                                     <th key={index} className="scrollable-col header">
-                                        <div className="time-slot-header">
-                                            <span>{slot}</span>
-                                            <span>{format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}</span>
-                                        </div>
+                                        {`${slot}-${format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}`}
                                     </th>
                                 ))}
                             </tr>

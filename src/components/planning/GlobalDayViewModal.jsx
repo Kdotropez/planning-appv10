@@ -101,8 +101,8 @@ const GlobalDayViewModal = ({
 
         doc.autoTable({
             head: [
-                ['Jour', 'Ouverture/Fermeture', 'Tranche horaire', 'Employés'],
-                ['', '', 'À', '']
+                ['Jour', 'Ouverture/Fermeture', 'DE', 'Employés'],
+                ['', '', timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')), '']
             ],
             body: body.map(item => item.row),
             startY: 40,
@@ -124,12 +124,11 @@ const GlobalDayViewModal = ({
                         data.cell.styles.lineColor = [200, 200, 200];
                     }
                 }
-                if (data.section === 'head' && data.row.index === 1) {
-                    data.cell.styles.textColor = [0, 0, 0];
-                    data.cell.styles.fillColor = [240, 240, 240];
-                    if (data.column.index === 2) {
-                        data.cell.text = timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'));
-                    }
+                if (data.section === 'head' && data.row.index === 0 && data.column.index === 2) {
+                    data.cell.text = timeSlots;
+                }
+                if (data.section === 'head' && data.row.index === 1 && data.column.index === 2) {
+                    data.cell.text = timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'));
                 }
             },
             didDrawPage: (data) => {

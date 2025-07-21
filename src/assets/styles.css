@@ -161,24 +161,11 @@ body {
 }
 
 .scrollable-col.header {
-    font-size: 14px;
-    padding: 10px 2px;
-}
-
-.time-slot-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    font-size: 12px; /* Reduced font size */
     transform: rotate(-45deg);
     transform-origin: center;
     white-space: nowrap;
-    height: 80px;
-    line-height: 1.2;
-}
-
-.time-slot-header span {
-    display: block;
-    font-size: 12px;
+    padding: 10px 2px;
 }
 
 .scrollable-col.no-employee {
@@ -565,10 +552,6 @@ body {
         font-size: 8px;
         padding: 8px 1px;
     }
-    .time-slot-header {
-        height: 60px;
-        font-size: 10px;
-    }
     .button-jour {
         min-width: 50px;
         max-width: 90px;
@@ -628,10 +611,6 @@ body {
         font-size: 12px;
         padding: 8px 2px;
     }
-    .time-slot-header {
-        height: 70px;
-        font-size: 12px;
-    }
     .button-jour {
         min-width: 60px;
         max-width: 100px;
@@ -690,10 +669,6 @@ body {
         font-size: 10px;
         padding: 6px 2px;
     }
-    .time-slot-header {
-        height: 60px;
-        font-size: 10px;
-    }
     .button-jour {
         min-width: 50px;
         max-width: 90px;
@@ -751,10 +726,6 @@ body {
         font-size: 15px;
         padding: 10px 2px;
     }
-    .time-slot-header {
-        height: 80px;
-        font-size: 14px;
-    }
     .modal-content {
         max-width: 98vw;
     }
@@ -800,10 +771,6 @@ body {
         font-size: 16px;
         padding: 10px 2px;
     }
-    .time-slot-header {
-        height: 90px;
-        font-size: 15px;
-    }
     .modal-content {
         max-width: 96vw;
     }
@@ -848,10 +815,6 @@ body {
     .scrollable-col.header {
         font-size: 16px;
         padding: 12px 2px;
-    }
-    .time-slot-header {
-        height: 100px;
-        font-size: 16px;
     }
     .modal-content {
         max-width: 95vw;

@@ -35,6 +35,20 @@ const MonthlyRecapModals = ({
         return index >= 0 ? colors[index % colors.length] : '';
     };
 
+    const getEmployeeBorderColor = (employee) => {
+        const index = selectedEmployees.indexOf(employee);
+        const borderColors = [
+            [230, 240, 250], // #e6f0fa
+            [230, 255, 237], // #e6ffed
+            [255, 230, 230], // #ffe6e6
+            [208, 240, 250], // #d0f0fa
+            [240, 230, 250], // #f0e6fa
+            [255, 253, 230], // #fffde6
+            [214, 230, 255]  // #d6e6ff
+        ];
+        return index >= 0 ? borderColors[index % borderColors.length] : [200, 200, 200];
+    };
+
     const recapData = [];
     const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
     let totalMonthHoursByEmployee = {};
@@ -47,14 +61,16 @@ const MonthlyRecapModals = ({
             recapData.push({
                 employee,
                 week: `Semaine du ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`,
-                hours: `${weeklyHours.toFixed(1)} h`
+                hours: `${weeklyHours.toFixed(1)} h`,
+                borderColor: getEmployeeBorderColor(employee)
             });
             totalMonthHoursByEmployee[employee] += weeklyHours;
         });
         recapData.push({
             employee,
             week: `Total mois pour ${employee}`,
-            hours: `${totalMonthHoursByEmployee[employee].toFixed(1)} h`
+            hours: `${totalMonthHoursByEmployee[employee].toFixed(1)} h`,
+            borderColor: [200, 200, 200]
         });
     });
 
@@ -81,6 +97,13 @@ const MonthlyRecapModals = ({
                 0: { cellWidth: 40 },
                 1: { cellWidth: 80 },
                 2: { cellWidth: 30 }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body') {
+                    const rowIndex = data.row.index;
+                    data.cell.styles.lineWidth = 0.5;
+                    data.cell.styles.lineColor = recapData[rowIndex].borderColor;
+                }
             }
         });
         doc.save(`recap_monthly_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -103,11 +126,21 @@ const MonthlyRecapModals = ({
                     </thead>
                     <tbody>
                         {recapData.map((row, index) => (
-                            <tr key={index} className={row.week.includes('Total mois') ? 'total-row' : getEmployeeColorClass(row.employee)}>
-                                <td>{row.employee}</td>
-                                <td>{row.week}</td>
-                                <td>{row.hours}</td>
-                            </tr>
+                            <React.Fragment key={index}>
+                                <tr
+                                    className={row.week.includes('Total mois') ? 'total-row' : getEmployeeColorClass(row.employee)}
+                                    style={{ borderLeft: `4px solid ${row.borderColor.map(c => c.toString(16).padStart(2, '0')).join('')}` }}
+                                >
+                                    <td>{row.employee}</td>
+                                    <td>{row.week}</td>
+                                    <td>{row.hours}</td>
+                                </tr>
+                                {row.week.includes('Total mois') && index < recapData.length - 1 && (
+                                    <tr className="spacer-row">
+                                        <td colSpan="3" style={{ height: '10px', background: 'transparent' }}></td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>

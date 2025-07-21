@@ -1,5 +1,5 @@
 import React from 'react';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMinutes, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -77,12 +77,12 @@ const RecapModal = ({
                 end = slot;
                 inShift = false;
             } else if (isChecked && index === timeSlots.length - 1) {
-                end = slot;
+                end = format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm');
             }
         }
 
         if (inShift && !end) {
-            end = timeSlots[timeSlots.length - 1];
+            end = format(addMinutes(parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date()), 30), 'HH:mm');
         }
 
         const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
@@ -220,6 +220,10 @@ const RecapModal = ({
                 if (data.section === 'body') {
                     const rowIndex = data.row.index;
                     data.cell.styles.fillColor = body[rowIndex].backgroundColor;
+                    if (data.column.index === 0 && data.cell.text[0]) {
+                        data.cell.styles.lineWidth = 0.5;
+                        data.cell.styles.lineColor = [200, 200, 200];
+                    }
                 }
             }
         });

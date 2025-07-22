@@ -42,9 +42,9 @@ const MonthlyRecapModals = ({
         return index >= 0 ? colors[index % colors.length] : '';
     };
 
-    const getEmployeeBorderColor = (employee) => {
+    const getEmployeeBackgroundColor = (employee) => {
         const index = selectedEmployees.indexOf(employee);
-        const borderColors = [
+        const backgroundColors = [
             [230, 240, 250], // #e6f0fa
             [230, 255, 237], // #e6ffed
             [255, 230, 230], // #ffe6e6
@@ -53,7 +53,7 @@ const MonthlyRecapModals = ({
             [255, 253, 230], // #fffde6
             [214, 230, 255]  // #d6e6ff
         ];
-        return index >= 0 ? borderColors[index % borderColors.length] : [200, 200, 200];
+        return index >= 0 ? backgroundColors[index % backgroundColors.length] : [200, 200, 200];
     };
 
     const recapData = [];
@@ -67,7 +67,7 @@ const MonthlyRecapModals = ({
             weeks: [],
             totalHours: 0,
             colorClass: getEmployeeColorClass(employee),
-            borderColor: getEmployeeBorderColor(employee)
+            backgroundColor: getEmployeeBackgroundColor(employee)
         };
 
         weeks.forEach(week => {
@@ -106,12 +106,12 @@ const MonthlyRecapModals = ({
                             weekData.week,
                             `${weekData.hours} h`
                         ],
-                        backgroundColor: employeeData.borderColor
+                        backgroundColor: employeeData.backgroundColor
                     });
                 });
                 body.push({
                     row: ['', `Total mois pour ${employeeData.employee}`, `${employeeData.totalHours} h`],
-                    backgroundColor: employeeData.borderColor
+                    backgroundColor: employeeData.backgroundColor
                 });
                 if (empIndex < recapData.length - 1 || !showMonthlyRecapModal) {
                     body.push({
@@ -125,9 +125,9 @@ const MonthlyRecapModals = ({
                 head: [['Employé', 'Semaine', 'Heures']],
                 body: body.map(item => item.row),
                 startY: 30,
-                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 4 },
-                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-                bodyStyles: { textColor: [51, 51, 51] },
+                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 }, // Réduit pour compacter
+                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
+                bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
                 columnStyles: {
                     0: { cellWidth: 40, halign: 'left' },
                     1: { cellWidth: 80, halign: 'left' },
@@ -208,10 +208,10 @@ const MonthlyRecapModals = ({
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
+                <h2 style={{ fontFamily: 'Roboto', sans-serif', textAlign: 'center', marginBottom: '15px' }}>
                     Récapitulatif mensuel {showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}
                 </h2>
-                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
+                <p style={{ fontFamily: 'Roboto', sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
                     Mois de {format(monthStart, 'MMMM yyyy', { locale: fr })}
                 </p>
                 <table className="monthly-recap-table">

@@ -184,12 +184,18 @@ body {
     background-color: #f0e6fa;
 }
 
-.planning-table th, .planning-table td, .global-day-table th, .global-day-table td, .monthly-recap-table th, .monthly-recap-table td {
+.planning-table th, .planning-table td, .global-day-table th, .global-day-table td {
     padding: 8px;
     font-size: 14px;
 }
 
-.planning-table tr:nth-child(even), .monthly-recap-table tr:nth-child(even) {
+.monthly-recap-table th, .monthly-recap-table td {
+    padding: 4px; /* Réduit pour compacter les lignes */
+    font-size: 12px; /* Réduit pour compacter */
+    line-height: 1.2; /* Réduit l'espacement vertical */
+}
+
+.planning-table tr:nth-child(even) {
     background-color: #fafafa;
 }
 
@@ -561,9 +567,7 @@ body {
     background-color: #f0e6fa;
 }
 
-.scrollable-col.clicked-
-
-5 {
+.scrollable-col.clicked-5 {
     background-color: #fffde6;
 }
 
@@ -632,289 +636,51 @@ body {
     }
 }
 
-/* Responsive design */
+/* Responsive design pour .monthly-recap-table */
 @media (max-width: 896px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 100vw;
-        padding: 6px;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 100vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 100vw;
-        max-height: 400px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        max-width: 100vw;
-        gap: 6px;
-    }
-    .fixed-col {
-        width: 120px;
-        min-width: 120px;
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 3px;
         font-size: 10px;
-    }
-    .fixed-col.employee {
-        font-size: 10px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
-        font-size: 8px;
-        padding: 8px 1px;
-    }
-    .button-jour {
-        min-width: 50px;
-        max-width: 90px;
-        padding: 5px 6px;
-        font-size: 10px;
-    }
-    .recap-buttons > div {
-        min-width: 80px;
-        max-width: 120px;
-    }
-    .modal-content {
-        max-width: 100vw;
-        padding: 8px;
-        max-height: 70vh;
-    }
-    .copy-paste-container {
-        max-width: 95vw;
-    }
-    .copy-paste-modal {
-        max-width: 95vw;
+        line-height: 1.1;
     }
 }
 
 @media (max-width: 1200px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 100vw;
-        padding: 8px;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 100vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 100vw;
-        max-height: 500px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        max-width: 100vw;
-        gap: 8px;
-    }
-    .fixed-col {
-        width: 130px;
-        min-width: 130px;
-        font-size: 12px;
-    }
-    .fixed-col.employee {
-        font-size: 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
-        font-size: 12px;
-        padding: 8px 2px;
-    }
-    .button-jour {
-        min-width: 60px;
-        max-width: 100px;
-        padding: 6px 8px;
-        font-size: 11px;
-    }
-    .recap-buttons > div {
-        min-width: 100px;
-        max-width: 150px;
-    }
-    .modal-content {
-        max-width: 100vw;
-        padding: 10px;
-    }
-    .copy-paste-container {
-        max-width: 90vw;
-    }
-    .copy-paste-modal {
-        max-width: 90vw;
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 3px;
+        font-size: 10px;
+        line-height: 1.1;
     }
 }
 
 @media (max-width: 768px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 100vw;
-        padding: 6px;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 100vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 100vw;
-        max-height: 400px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        gap: 6px;
-    }
-    .fixed-col {
-        width: 130px;
-        min-width: 130px;
-        font-size: 12px;
-    }
-    .fixed-col.employee {
-        font-size: 12px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 3px;
         font-size: 10px;
-        padding: 6px 2px;
-    }
-    .button-jour {
-        min-width: 50px;
-        max-width: 90px;
-        padding: 5px 6px;
-        font-size: 10px;
-    }
-    .recap-buttons > div {
-        min-width: 80px;
-        max-width: 120px;
-    }
-    .modal-content {
-        max-width: 100vw;
-        padding: 8px;
-        max-height: 70vh;
-    }
-    .copy-paste-container {
-        max-width: 95vw;
-    }
-    .copy-paste-modal {
-        max-width: 95vw;
+        line-height: 1.1;
     }
 }
 
 @media (min-width: 1920px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 98vw;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 98vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 98vw;
-        max-height: 600px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        max-width: 98vw;
-    }
-    .table-container {
-        max-width: 98vw;
-    }
-    .fixed-col {
-        width: 140px;
-        min-width: 140px;
-        font-size: 16px;
-    }
-    .fixed-col.employee {
-        font-size: 16px;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
-        font-size: 15px;
-        padding: 10px 2px;
-    }
-    .modal-content {
-        max-width: 98vw;
-    }
-    .copy-paste-container {
-        max-width: 1000px;
-    }
-    .copy-paste-modal {
-        max-width: 600px;
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 4px;
+        font-size: 12px;
+        line-height: 1.2;
     }
 }
 
 @media (min-width: 2560px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 96vw;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 96vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 96vw;
-        max-height: 700px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        max-width: 96vw;
-    }
-    .table-container {
-        max-width: 96vw;
-    }
-    .fixed-col {
-        width: 140px;
-        min-width: 140px;
-        font-size: 16px;
-    }
-    .fixed-col.employee {
-        font-size: 16px;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
-        font-size: 16px;
-        padding: 10px 2px;
-    }
-    .modal-content {
-        max-width: 96vw;
-    }
-    .copy-paste-container {
-        max-width: 1200px;
-    }
-    .copy-paste-modal {
-        max-width: 700px;
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 4px;
+        font-size: 12px;
+        line-height: 1.2;
     }
 }
 
 @media (min-width: 3840px) {
-    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
-        max-width: 95vw;
-    }
-    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
-        max-width: 95vw;
-    }
-    .shop-list, .employee-list {
-        max-width: 95vw;
-        max-height: 800px;
-    }
-    .navigation-buttons, .day-buttons, .recap-buttons {
-        max-width: 95vw;
-    }
-    .table-container {
-        max-width: 95vw;
-    }
-    .fixed-col {
-        width: 140px;
-        min-width: 140px;
-        font-size: 16px;
-    }
-    .fixed-col.employee {
-        font-size: 16px;
-        padding: 8px 4px;
-    }
-    .scrollable-col.header {
-        font-size: 16px;
-        padding: 12px 2px;
-    }
-    .modal-content {
-        max-width: 95vw;
-    }
-    .copy-paste-container {
-        max-width: 1400px;
-    }
-    .copy-paste-modal {
-        max-width: 800px;
+    .monthly-recap-table th, .monthly-recap-table td {
+        padding: 4px;
+        font-size: 12px;
+        line-height: 1.2;
     }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, isWithinInterval, addDays, subMonths, addMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
@@ -20,7 +20,8 @@ const MonthlyRecapModals = ({
     setShowEmployeeMonthlyRecap,
     selectedEmployeeForMonthlyRecap,
     setSelectedEmployeeForMonthlyRecap,
-    calculateEmployeeWeeklyHours
+    calculateEmployeeWeeklyHours,
+    calculateEmployeeDailyHours
 }) => {
     if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) {
         console.log('MonthlyRecapModals: No modal to show');
@@ -29,6 +30,8 @@ const MonthlyRecapModals = ({
 
     const monthStart = startOfMonth(new Date(selectedWeek));
     const monthEnd = endOfMonth(new Date(selectedWeek));
+    const prevMonthStart = startOfMonth(subMonths(monthStart, 1));
+    const nextMonthStart = startOfMonth(addMonths(monthStart, 1));
     const weeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 })
         .filter(week => isMonday(week))
         .map(week => ({
@@ -56,12 +59,50 @@ const MonthlyRecapModals = ({
         return index >= 0 ? backgroundColors[index % backgroundColors.length] : [200, 200, 200];
     };
 
+    // Calculer les heures pour une semaine, en ne comptant que les jours du mois
+    const calculateEmployeeWeeklyHoursInMonth = (employee, weekKey, planning) => {
+        let weeklyHours = 0;
+        for (let i = 0; i < 7; i++) {
+            const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+            if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
+                weeklyHours += calculateEmployeeDailyHours(employee, dayKey, planning);
+            }
+        }
+        return weeklyHours;
+    };
+
+    // Calculer les heures des jours non comptés (avant et après le mois)
+    const calculateNonCountedDays = (employee, weekKey, planning) => {
+        const prevMonthHours = [];
+        const nextMonthHours = [];
+        for (let i = 0; i < 7; i++) {
+            const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+            const dayDate = new Date(dayKey);
+            const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
+            if (hours > 0) {
+                if (isWithinInterval(dayDate, { start: prevMonthStart, end: monthStart })) {
+                    prevMonthHours.push({
+                        day: format(dayDate, 'd MMMM yyyy', { locale: fr }),
+                        hours: hours.toFixed(1)
+                    });
+                } else if (isWithinInterval(dayDate, { start: nextMonthStart, end: endOfMonth(nextMonthStart) })) {
+                    nextMonthHours.push({
+                        day: format(dayDate, 'd MMMM yyyy', { locale: fr }),
+                        hours: hours.toFixed(1)
+                    });
+                }
+            }
+        }
+        return { prevMonthHours, nextMonthHours };
+    };
+
     const recapData = [];
     const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
-    let totalMonthHoursByEmployee = {};
+    let totalMonthActualHours = 0;
+    const nonCountedHours = {};
 
     employees.forEach(employee => {
-        totalMonthHoursByEmployee[employee] = 0;
+        nonCountedHours[employee] = { prevMonthHours: [], nextMonthHours: [] };
         const employeeData = {
             employee,
             weeks: [],
@@ -71,19 +112,31 @@ const MonthlyRecapModals = ({
         };
 
         weeks.forEach(week => {
-            const weeklyHours = calculateEmployeeWeeklyHours(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+            const weeklyHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
             employeeData.weeks.push({
                 week: week.label,
                 hours: weeklyHours.toFixed(1)
             });
-            totalMonthHoursByEmployee[employee] += weeklyHours;
+            employeeData.totalHours += weeklyHours;
+            // Collecter les heures non comptées
+            const { prevMonthHours, nextMonthHours } = calculateNonCountedDays(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+            nonCountedHours[employee].prevMonthHours.push(...prevMonthHours);
+            nonCountedHours[employee].nextMonthHours.push(...nextMonthHours);
         });
 
-        employeeData.totalHours = totalMonthHoursByEmployee[employee].toFixed(1);
+        // Ajouter les heures du mois précédent
+        nonCountedHours[employee].prevMonthHours.forEach(({ hours }) => {
+            employeeData.totalHours += parseFloat(hours);
+        });
+
+        employeeData.totalHours = employeeData.totalHours.toFixed(1);
+        totalMonthActualHours += parseFloat(employeeData.totalHours);
         recapData.push(employeeData);
     });
 
     console.log('MonthlyRecapModals: Generated recap data:', recapData);
+    console.log('MonthlyRecapModals: Total month hours:', totalMonthActualHours.toFixed(1));
+    console.log('MonthlyRecapModals: Non-counted hours:', nonCountedHours);
 
     const exportToPDF = () => {
         console.log('MonthlyRecapModals: Exporting to PDF');
@@ -96,6 +149,29 @@ const MonthlyRecapModals = ({
                 10
             );
             doc.text(`Mois de ${format(monthStart, 'MMMM yyyy', { locale: fr })}`, 10, 20);
+            doc.text(`Heures du mois dues: ${totalMonthActualHours.toFixed(1)} h`, 10, 30);
+
+            let yOffset = 40;
+            employees.forEach(employee => {
+                const prevHours = nonCountedHours[employee].prevMonthHours;
+                const nextHours = nonCountedHours[employee].nextMonthHours;
+                if (prevHours.length > 0) {
+                    doc.text(`Heures du mois précédent pour ${employee}:`, 10, yOffset);
+                    yOffset += 7;
+                    prevHours.forEach(({ day, hours }) => {
+                        doc.text(`${day}: ${hours} h`, 15, yOffset);
+                        yOffset += 7;
+                    });
+                }
+                if (nextHours.length > 0) {
+                    doc.text(`Heures reportées au mois suivant pour ${employee}:`, 10, yOffset);
+                    yOffset += 7;
+                    nextHours.forEach(({ day, hours }) => {
+                        doc.text(`${day}: ${hours} h`, 15, yOffset);
+                        yOffset += 7;
+                    });
+                }
+            });
 
             const body = [];
             recapData.forEach((employeeData, empIndex) => {
@@ -124,8 +200,8 @@ const MonthlyRecapModals = ({
             doc.autoTable({
                 head: [['Employé', 'Semaine', 'Heures']],
                 body: body.map(item => item.row),
-                startY: 30,
-                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 }, // Réduit pour compacter
+                startY: yOffset + 10,
+                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 },
                 headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
                 bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
                 columnStyles: {
@@ -208,12 +284,50 @@ const MonthlyRecapModals = ({
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h2 style={{ fontFamily: 'Roboto', sans-serif', textAlign: 'center', marginBottom: '15px' }}>
+                <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
                     Récapitulatif mensuel {showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}
                 </h2>
-                <p style={{ fontFamily: 'Roboto', sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
+                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
                     Mois de {format(monthStart, 'MMMM yyyy', { locale: fr })}
                 </p>
+                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
+                    Heures du mois dues : {totalMonthActualHours.toFixed(1)} h
+                </p>
+                {employees.map(employee => (
+                    <div key={employee} style={{ marginBottom: '10px' }}>
+                        {(nonCountedHours[employee].prevMonthHours.length > 0 || nonCountedHours[employee].nextMonthHours.length > 0) && (
+                            <>
+                                <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
+                                    Heures non comptées pour {employee} :
+                                </p>
+                                {nonCountedHours[employee].prevMonthHours.length > 0 && (
+                                    <>
+                                        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#333', marginLeft: '15px' }}>
+                                            Mois précédent :
+                                        </p>
+                                        {nonCountedHours[employee].prevMonthHours.map(({ day, hours }, index) => (
+                                            <p key={`prev-${index}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#333', marginLeft: '30px' }}>
+                                                {day} : {hours} h
+                                            </p>
+                                        ))}
+                                    </>
+                                )}
+                                {nonCountedHours[employee].nextMonthHours.length > 0 && (
+                                    <>
+                                        <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#333', marginLeft: '15px' }}>
+                                            Reportées au mois suivant :
+                                        </p>
+                                        {nonCountedHours[employee].nextMonthHours.map(({ day, hours }, index) => (
+                                            <p key={`next-${index}`} style={{ fontFamily: 'Roboto, sans-serif', fontSize: '12px', color: '#333', marginLeft: '30px' }}>
+                                                {day} : {hours} h
+                                            </p>
+                                        ))}
+                                    </>
+                                )}
+                            </>
+                        )}
+                    </div>
+                ))}
                 <table className="monthly-recap-table">
                     <thead>
                         <tr>

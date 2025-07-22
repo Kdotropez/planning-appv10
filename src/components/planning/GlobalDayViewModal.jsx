@@ -2,7 +2,7 @@ import React from 'react';
 import { format, addDays, addMinutes, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
@@ -71,101 +71,67 @@ const GlobalDayViewModal = ({
         };
     });
 
-    console.log('GlobalDayViewModal: Generated table data:', tableData);
+    console.log('GlobalDayViewModal: Generated table data:', JSON.stringify(tableData, null, 2));
 
     const legend = 'Légende : 0 = ⚠️ Aucun employé, 1 = 1 employé, 2 = 2 employés, 3 = 3 employés ou plus';
 
-    const exportToPDF = () => {
-        console.log('GlobalDayViewModal: Starting PDF export', { selectedShop, selectedWeek, timeSlots, selectedEmployees, tableData });
+    const exportGlobalAsImagePdf = async () => {
+        console.log('GlobalDayViewModal: Starting PDF export as image');
         try {
-            if (!timeSlots.length) {
-                throw new Error('Aucune tranche horaire disponible');
-            }
-            if (!selectedEmployees.length) {
-                throw new Error('Aucun employé sélectionné');
-            }
-            if (!tableData.length) {
-                throw new Error('Aucune donnée de tableau générée');
-            }
+            const modalElement = document.querySelector('.modal-content');
+            if (!modalElement) throw new Error('Contenu de la modale introuvable');
 
-            const doc = new jsPDF({ orientation: 'landscape' });
-            doc.setFont('Roboto', 'normal');
-            doc.text(`Vue globale par jour - ${selectedShop}`, 10, 10);
-            const weekStart = format(new Date(selectedWeek), 'dd/MM', { locale: fr });
-            const weekEnd = format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr });
-            doc.text(`Semaine du Lundi ${weekStart} au Dimanche ${weekEnd}`, 10, 20);
-            doc.text(legend, 10, 30);
-
-            const body = [];
-            tableData.forEach((dayData, dayIndex) => {
-                const row = [
-                    dayIndex === 0 ? dayData.day : '',
-                    dayIndex === 0 ? dayData.openClose : '',
-                    ...dayData.slots.map(slot => slot.display)
-                ];
-                body.push({
-                    row,
-                    backgroundColor: dayData.slots.map(slot => 
-                        slot.count === 0 ? [255, 230, 230] :
-                        slot.count === 1 ? [230, 255, 237] :
-                        slot.count === 2 ? [230, 240, 250] : [240, 230, 250]
-                    )
-                });
+            // Capturer toute la modale avec html2canvas
+            const canvas = await html2canvas(modalElement, {
+                scale: 3, // Augmenter la résolution pour une meilleure qualité
+                useCORS: true,
+                scrollX: 0, // Capturer tout le contenu horizontal
+                scrollY: -window.scrollY,
+                backgroundColor: '#ffffff',
+                windowWidth: modalElement.scrollWidth, // Capturer toute la largeur
+                windowHeight: modalElement.scrollHeight // Capturer toute la hauteur
             });
 
-            console.log('GlobalDayViewModal: Generating PDF table with body:', body);
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth(); // 297 mm
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+            const margin = 10;
 
-            doc.autoTable({
-                head: [
-                    ['Jour', 'Tranche', ...timeSlots],
-                    ['', '', ...timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'))]
-                ],
-                body: body.map(item => item.row),
-                startY: 40,
-                styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
-                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-                bodyStyles: { textColor: [51, 51, 51] },
-                columnStyles: {
-                    0: { cellWidth: 100 },
-                    1: { cellWidth: 40 },
-                    ...timeSlots.reduce((acc, _, index) => {
-                        acc[index + 2] = { cellWidth: 30 };
-                        return acc;
-                    }, {})
-                },
-                didParseCell: (data) => {
-                    if (data.section === 'body') {
-                        const rowIndex = data.row.index;
-                        const colIndex = data.column.index;
-                        if (colIndex >= 2) {
-                            data.cell.styles.fillColor = body[rowIndex].backgroundColor[colIndex - 2];
-                        }
-                        if (colIndex === 0 && data.cell.text[0]) {
-                            data.cell.styles.lineWidth = 0.5;
-                            data.cell.styles.lineColor = [200, 200, 200];
-                        }
+            // Calculer les dimensions de l'image
+            const imgWidth = canvas.width * 0.264583; // Convertir px en mm (1 px = 0.264583 mm à 96 DPI)
+            const imgHeight = canvas.height * 0.264583;
+            const maxWidth = pageWidth - 2 * margin;
+            const maxHeight = pageHeight - 2 * margin;
+
+            // Ajuster l'image à la page
+            const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+            const scaledWidth = imgWidth * ratio;
+            const scaledHeight = imgHeight * ratio;
+
+            // Si l'image est trop large ou trop haute, diviser en plusieurs pages
+            if (scaledWidth > maxWidth || scaledHeight > maxHeight) {
+                const totalWidth = imgWidth;
+                let currentX = 0;
+                let pageCount = 0;
+                while (currentX < totalWidth) {
+                    if (pageCount > 0) {
+                        pdf.addPage();
                     }
-                },
-                didDrawPage: (data) => {
-                    console.log('GlobalDayViewModal: Drawing PDF page');
-                    const tableStartY = data.table.startY;
-                    const tableBody = data.table.body;
-                    let currentY = tableStartY + data.table.headHeight;
-                    tableBody.forEach((row, index) => {
-                        if (index > 0) {
-                            doc.setDrawColor(200, 200, 200);
-                            doc.line(10, currentY, doc.internal.pageSize.width - 10, currentY);
-                        }
-                        currentY += data.table.rows[index].height;
-                    });
+                    const sliceWidth = maxWidth / ratio;
+                    pdf.addImage(imgData, 'PNG', margin, margin, maxWidth, Math.min(scaledHeight, maxHeight), null, 'FAST', 0, currentX);
+                    currentX += sliceWidth;
+                    pageCount++;
                 }
-            });
+            } else {
+                pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
+            }
 
-            doc.save(`global_day_view_${selectedShop}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            pdf.save(`global_day_view_${selectedShop || 'inconnu'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
             console.log('GlobalDayViewModal: PDF exported successfully');
         } catch (error) {
             console.error('GlobalDayViewModal: PDF export failed', error);
-            alert(`Erreur lors de l'exportation PDF : ${error.message}`);
+            alert(`Erreur lors de l'exportation PDF : ${error.message || 'Erreur inconnue'}`);
         }
     };
 
@@ -224,8 +190,8 @@ const GlobalDayViewModal = ({
                     </table>
                 </div>
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                    <Button className="button-pdf" onClick={exportToPDF}>
-                        Exporter en PDF
+                    <Button className="button-pdf" onClick={exportGlobalAsImagePdf}>
+                        Exporter en PDF (image fidèle)
                     </Button>
                     <Button
                         className="modal-close"

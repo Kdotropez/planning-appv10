@@ -286,6 +286,10 @@ body {
     border-collapse: collapse;
     overflow-x: auto;
 }
+ .recap-table td.align-left {
+		text-align: left;
+		padding-left: 8px; 
+    }
 
 /* Boutons */
 .button-base {
@@ -825,4 +829,5 @@ body {
     .copy-paste-modal {
         max-width: 800px;
     }
+	
 }

@@ -66,24 +66,24 @@ const RecapModal = ({
             console.log(`RecapModal: Processing slot ${slot} at index ${index}, isChecked: ${isChecked}, inShift: ${inShift}, start: ${start}, pause: ${pause}, resume: ${resume}, end: ${end}`);
             
             if (isChecked && !inShift && !start) {
-                start = slot;
+                start = slot ? `${slot} H` : '-'; // Ajouter "H"
                 inShift = true;
             } else if (!isChecked && inShift && !pause) {
-                pause = slot;
+                pause = slot ? `${slot} H` : '-';
                 inShift = false;
             } else if (isChecked && !inShift && pause && !resume) {
-                resume = slot;
+                resume = slot ? `${slot} H` : '-';
                 inShift = true;
             } else if (!isChecked && inShift && resume) {
-                end = slot;
+                end = slot ? `${slot} H` : '-';
                 inShift = false;
             } else if (isChecked && index === timeSlots.length - 1) {
-                end = format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm');
+                end = format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm') + ' H';
             }
         }
 
         if (inShift && !end) {
-            end = format(addMinutes(parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date()), 30), 'HH:mm');
+            end = format(addMinutes(parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date()), 30), 'HH:mm') + ' H';
         }
 
         const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
@@ -209,8 +209,8 @@ const RecapModal = ({
             bodyStyles: { textColor: [51, 51, 51] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
             columnStyles: {
-                0: { cellWidth: 40 },
-                1: { cellWidth: 30 },
+                0: { cellWidth: 40, halign: 'left' }, // Alignement à gauche pour Jour
+                1: { cellWidth: 30, halign: 'left' }, // Alignement à gauche pour Employé
                 2: { cellWidth: 25 },
                 3: { cellWidth: 25 },
                 4: { cellWidth: 25 },
@@ -310,8 +310,8 @@ const RecapModal = ({
                 <table className="recap-table">
                     <thead>
                         <tr>
-                            <th>Jour</th>
-                            <th>Employé</th>
+                            <th className="align-left">Jour</th>
+                            <th className="align-left">Employé</th>
                             <th>ENTRÉE</th>
                             <th>PAUSE</th>
                             <th>RETOUR</th>
@@ -327,8 +327,8 @@ const RecapModal = ({
                                         key={`${index}-${empIndex}`}
                                         className={getDayColorClass(dayData.dayIndex)}
                                     >
-                                        <td>{empIndex === 0 ? dayData.day : ''}</td>
-                                        <td>{emp.employee}</td>
+                                        <td className="align-left">{empIndex === 0 ? dayData.day : ''}</td>
+                                        <td className="align-left">{emp.employee}</td>
                                         <td>{emp.start}</td>
                                         <td>{emp.pause}</td>
                                         <td>{emp.resume}</td>
@@ -340,7 +340,7 @@ const RecapModal = ({
                         ))}
                         {(isWeekRecap || isEmployeeWeekRecap) && (
                             <tr className="total-row">
-                                <td>Total semaine</td>
+                                <td className="align-left">Total semaine</td>
                                 <td colSpan="5"></td>
                                 <td>{`${totalWeekHours.toFixed(1)} h`}</td>
                             </tr>

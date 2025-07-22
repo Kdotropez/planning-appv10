@@ -83,7 +83,7 @@ body {
     transform: scale(1.05);
 }
 
-/* Tableaux (WeekSelection, PlanningTable, GlobalDayViewModal) */
+/* Tableaux (WeekSelection, PlanningTable, GlobalDayViewModal, MonthlyRecap) */
 .table-container {
     width: 100%;
     max-width: 100vw;
@@ -91,7 +91,7 @@ body {
     margin: 0;
 }
 
-.planning-table, .global-day-table {
+.planning-table, .global-day-table, .monthly-recap-table {
     width: 100%;
     max-width: none;
     border-collapse: collapse;
@@ -124,31 +124,31 @@ body {
     padding: 8px 4px;
 }
 
-.fixed-col.employee-0 {
+.fixed-col.employee-0, .employee-0 {
     background-color: #e6f0fa;
 }
 
-.fixed-col.employee-1 {
+.fixed-col.employee-1, .employee-1 {
     background-color: #e6ffed;
 }
 
-.fixed-col.employee-2 {
+.fixed-col.employee-2, .employee-2 {
     background-color: #ffe6e6;
 }
 
-.fixed-col.employee-3 {
+.fixed-col.employee-3, .employee-3 {
     background-color: #d0f0fa;
 }
 
-.fixed-col.employee-4 {
+.fixed-col.employee-4, .employee-4 {
     background-color: #f0e6fa;
 }
 
-.fixed-col.employee-5 {
+.fixed-col.employee-5, .employee-5 {
     background-color: #fffde6;
 }
 
-.fixed-col.employee-6 {
+.fixed-col.employee-6, .employee-6 {
     background-color: #d6e6ff;
 }
 
@@ -161,7 +161,7 @@ body {
 }
 
 .scrollable-col.header {
-    font-size: 12px; /* Reduced font size */
+    font-size: 12px;
     transform: rotate(-45deg);
     transform-origin: center;
     white-space: nowrap;
@@ -184,18 +184,18 @@ body {
     background-color: #f0e6fa;
 }
 
-.planning-table th, .planning-table td, .global-day-table th, .global-day-table td {
+.planning-table th, .planning-table td, .global-day-table th, .global-day-table td, .monthly-recap-table th, .monthly-recap-table td {
     padding: 8px;
     font-size: 14px;
 }
 
-.planning-table tr:nth-child(even) {
+.planning-table tr:nth-child(even), .monthly-recap-table tr:nth-child(even) {
     background-color: #fafafa;
 }
 
-.day-divider {
-    height: 2px;
-    background-color: #ccc;
+.day-divider, .employee-divider {
+    height: 10px;
+    background-color: #fff;
 }
 
 .day-group {
@@ -280,15 +280,15 @@ body {
     cursor: pointer;
 }
 
-.recap-table, .global-day-table {
+.recap-table, .global-day-table, .monthly-recap-table {
     width: 100%;
     max-width: 100%;
     border-collapse: collapse;
     overflow-x: auto;
 }
 
-.recap-table th.align-left,
-.recap-table td.align-left {
+.recap-table th.align-left, .recap-table td.align-left,
+.monthly-recap-table th.align-left, .monthly-recap-table td.align-left {
     text-align: left;
     padding-left: 8px;
 }
@@ -523,7 +523,7 @@ body {
 /* Ajout pour gérer le ✅ et les colonnes scrollable-col */
 .scrollable-col .checkmark {
     display: inline-block;
-    font-size: 12px; /* Taille par défaut du ✅ */
+    font-size: 12px;
     line-height: 1;
     width: 100%;
     text-align: center;
@@ -534,7 +534,7 @@ body {
 .scrollable-col {
     width: calc(100% / 28);
     min-width: 40px;
-    max-width: 50px; /* Limiter la largeur maximale */
+    max-width: 50px;
     text-align: center;
     border: 1px solid #ccc;
     transition: width 0.3s ease;
@@ -561,7 +561,9 @@ body {
     background-color: #f0e6fa;
 }
 
-.scrollable-col.clicked-5 {
+.scrollable-col.clicked-
+
+5 {
     background-color: #fffde6;
 }
 
@@ -572,11 +574,11 @@ body {
 /* Media queries pour ajuster le ✅ et les colonnes scrollable-col */
 @media (max-width: 896px) {
     .scrollable-col {
-        min-width: 28px; /* Ajusté pour éviter la perte de tranches */
+        min-width: 28px;
         max-width: 32px;
     }
     .scrollable-col .checkmark {
-        font-size: 10px; /* Réduire la taille du ✅ */
+        font-size: 10px;
     }
 }
 

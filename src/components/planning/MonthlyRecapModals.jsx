@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
@@ -21,13 +22,19 @@ const MonthlyRecapModals = ({
     setSelectedEmployeeForMonthlyRecap,
     calculateEmployeeWeeklyHours
 }) => {
-    if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) return null;
+    if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) {
+        console.log('MonthlyRecapModals: No modal to show');
+        return null;
+    }
 
     const monthStart = startOfMonth(new Date(selectedWeek));
     const monthEnd = endOfMonth(new Date(selectedWeek));
     const weeks = eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 })
         .filter(week => isMonday(week))
-        .map(week => format(week, 'yyyy-MM-dd'));
+        .map(week => ({
+            key: format(week, 'yyyy-MM-dd'),
+            label: `Semaine du ${format(week, 'd MMMM yyyy', { locale: fr })}`
+        }));
 
     const getEmployeeColorClass = (employee) => {
         const index = selectedEmployees.indexOf(employee);
@@ -55,59 +62,147 @@ const MonthlyRecapModals = ({
 
     employees.forEach(employee => {
         totalMonthHoursByEmployee[employee] = 0;
+        const employeeData = {
+            employee,
+            weeks: [],
+            totalHours: 0,
+            colorClass: getEmployeeColorClass(employee),
+            borderColor: getEmployeeBorderColor(employee)
+        };
+
         weeks.forEach(week => {
-            const weekStart = new Date(week);
-            const weeklyHours = calculateEmployeeWeeklyHours(employee, week, loadFromLocalStorage(`planning_${selectedShop}_${week}`, planning));
-            recapData.push({
-                employee,
-                week: `Semaine du ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`,
-                hours: `${weeklyHours.toFixed(1)} h`,
-                borderColor: getEmployeeBorderColor(employee)
+            const weeklyHours = calculateEmployeeWeeklyHours(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+            employeeData.weeks.push({
+                week: week.label,
+                hours: weeklyHours.toFixed(1)
             });
             totalMonthHoursByEmployee[employee] += weeklyHours;
         });
-        recapData.push({
-            employee,
-            week: `Total mois pour ${employee}`,
-            hours: `${totalMonthHoursByEmployee[employee].toFixed(1)} h`,
-            borderColor: [200, 200, 200]
-        });
+
+        employeeData.totalHours = totalMonthHoursByEmployee[employee].toFixed(1);
+        recapData.push(employeeData);
     });
 
     console.log('MonthlyRecapModals: Generated recap data:', recapData);
 
     const exportToPDF = () => {
         console.log('MonthlyRecapModals: Exporting to PDF');
-        const doc = new jsPDF();
-        doc.setFont('Roboto', 'normal');
-        doc.text(
-            `Récapitulatif mensuel ${showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}`,
-            10,
-            10
-        );
-        doc.autoTable({
-            head: [['Employé', 'Semaine', 'Heures']],
-            body: recapData.map(row => [row.employee, row.week, row.hours]),
-            startY: 20,
-            styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
-            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-            bodyStyles: { textColor: [51, 51, 51] },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            columnStyles: {
-                0: { cellWidth: 40 },
-                1: { cellWidth: 80 },
-                2: { cellWidth: 30 }
-            },
-            didParseCell: (data) => {
-                if (data.section === 'body') {
-                    const rowIndex = data.row.index;
-                    data.cell.styles.lineWidth = 0.5;
-                    data.cell.styles.lineColor = recapData[rowIndex].borderColor;
+        try {
+            const doc = new jsPDF({ orientation: 'landscape' });
+            doc.setFont('Helvetica', 'normal');
+            doc.text(
+                `Récapitulatif mensuel ${showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}`,
+                10,
+                10
+            );
+            doc.text(`Mois de ${format(monthStart, 'MMMM yyyy', { locale: fr })}`, 10, 20);
+
+            const body = [];
+            recapData.forEach((employeeData, empIndex) => {
+                employeeData.weeks.forEach((weekData, weekIndex) => {
+                    body.push({
+                        row: [
+                            weekIndex === 0 ? employeeData.employee : '',
+                            weekData.week,
+                            `${weekData.hours} h`
+                        ],
+                        backgroundColor: employeeData.borderColor
+                    });
+                });
+                body.push({
+                    row: ['', `Total mois pour ${employeeData.employee}`, `${employeeData.totalHours} h`],
+                    backgroundColor: employeeData.borderColor
+                });
+                if (empIndex < recapData.length - 1 || !showMonthlyRecapModal) {
+                    body.push({
+                        row: ['', '', ''],
+                        backgroundColor: [255, 255, 255]
+                    });
                 }
+            });
+
+            doc.autoTable({
+                head: [['Employé', 'Semaine', 'Heures']],
+                body: body.map(item => item.row),
+                startY: 30,
+                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 4 },
+                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+                bodyStyles: { textColor: [51, 51, 51] },
+                columnStyles: {
+                    0: { cellWidth: 40, halign: 'left' },
+                    1: { cellWidth: 80, halign: 'left' },
+                    2: { cellWidth: 30 }
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body') {
+                        const rowIndex = data.row.index;
+                        data.cell.styles.fillColor = body[rowIndex].backgroundColor;
+                    }
+                }
+            });
+
+            doc.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            console.log('MonthlyRecapModals: PDF exported successfully');
+        } catch (error) {
+            console.error('MonthlyRecapModals: PDF export failed', error);
+            alert(`Erreur lors de l'exportation PDF : ${error.message || 'Erreur inconnue'}`);
+        }
+    };
+
+    const exportAsImagePdf = async () => {
+        console.log('MonthlyRecapModals: Starting PDF export as image');
+        try {
+            const modalElement = document.querySelector('.modal-content');
+            if (!modalElement) throw new Error('Contenu de la modale introuvable');
+
+            const canvas = await html2canvas(modalElement, {
+                scale: 3,
+                useCORS: true,
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                backgroundColor: '#ffffff',
+                windowWidth: modalElement.scrollWidth,
+                windowHeight: modalElement.scrollHeight
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+
+            const imgWidth = canvas.width * 0.264583;
+            const imgHeight = canvas.height * 0.264583;
+            const maxWidth = pageWidth - 2 * margin;
+            const maxHeight = pageHeight - 2 * margin;
+
+            const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+            const scaledWidth = imgWidth * ratio;
+            const scaledHeight = imgHeight * ratio;
+
+            if (scaledWidth > maxWidth || scaledHeight > maxHeight) {
+                const totalWidth = imgWidth;
+                let currentX = 0;
+                let pageCount = 0;
+                while (currentX < totalWidth) {
+                    if (pageCount > 0) {
+                        pdf.addPage();
+                    }
+                    const sliceWidth = maxWidth / ratio;
+                    pdf.addImage(imgData, 'PNG', margin, margin, maxWidth, Math.min(scaledHeight, maxHeight), null, 'FAST', 0, currentX);
+                    currentX += sliceWidth;
+                    pageCount++;
+                }
+            } else {
+                pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
             }
-        });
-        doc.save(`recap_monthly_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        console.log('MonthlyRecapModals: PDF exported successfully');
+
+            pdf.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            console.log('MonthlyRecapModals: PDF exported successfully as image');
+        } catch (error) {
+            console.error('MonthlyRecapModals: PDF export failed', error);
+            alert(`Erreur lors de l'exportation PDF : ${error.message || 'Erreur inconnue'}`);
+        }
     };
 
     return (
@@ -116,28 +211,35 @@ const MonthlyRecapModals = ({
                 <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
                     Récapitulatif mensuel {showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}
                 </h2>
-                <table className="recap-table">
+                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
+                    Mois de {format(monthStart, 'MMMM yyyy', { locale: fr })}
+                </p>
+                <table className="monthly-recap-table">
                     <thead>
                         <tr>
-                            <th>Employé</th>
-                            <th>Semaine</th>
+                            <th className="align-left">Employé</th>
+                            <th className="align-left">Semaine</th>
                             <th>Heures</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {recapData.map((row, index) => (
-                            <React.Fragment key={index}>
-                                <tr
-                                    className={row.week.includes('Total mois') ? 'total-row' : getEmployeeColorClass(row.employee)}
-                                    style={{ borderLeft: `4px solid ${row.borderColor.map(c => c.toString(16).padStart(2, '0')).join('')}` }}
-                                >
-                                    <td>{row.employee}</td>
-                                    <td>{row.week}</td>
-                                    <td>{row.hours}</td>
+                        {recapData.map((employeeData, empIndex) => (
+                            <React.Fragment key={empIndex}>
+                                {employeeData.weeks.map((weekData, weekIndex) => (
+                                    <tr key={`${empIndex}-${weekIndex}`} className={employeeData.colorClass}>
+                                        <td className="align-left">{weekIndex === 0 ? employeeData.employee : ''}</td>
+                                        <td className="align-left">{weekData.week}</td>
+                                        <td>{`${weekData.hours} h`}</td>
+                                    </tr>
+                                ))}
+                                <tr className={employeeData.colorClass}>
+                                    <td className="align-left"></td>
+                                    <td className="align-left">Total mois pour {employeeData.employee}</td>
+                                    <td>{`${employeeData.totalHours} h`}</td>
                                 </tr>
-                                {row.week.includes('Total mois') && index < recapData.length - 1 && (
-                                    <tr className="spacer-row">
-                                        <td colSpan="3" style={{ height: '10px', background: 'transparent' }}></td>
+                                {(empIndex < recapData.length - 1 || !showMonthlyRecapModal) && (
+                                    <tr className="employee-divider">
+                                        <td colSpan="3" style={{ height: '10px', backgroundColor: '#fff' }}></td>
                                     </tr>
                                 )}
                             </React.Fragment>
@@ -147,6 +249,9 @@ const MonthlyRecapModals = ({
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
                     <Button className="button-pdf" onClick={exportToPDF}>
                         Exporter en PDF
+                    </Button>
+                    <Button className="button-pdf" onClick={exportAsImagePdf}>
+                        Exporter en PDF (image fidèle)
                     </Button>
                     <Button
                         className="modal-close"

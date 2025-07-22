@@ -427,7 +427,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        PLANNING SEMAINE ({calculateShopWeeklyHours()} h)
+                        SEMAINE ({calculateShopWeeklyHours()} h)
                     </Button>
                     <Button
                         className="button-recap"
@@ -448,7 +448,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        PLANNING MENSUEL ({calculateShopMonthlyHours()} h)
+                         MENSUEL ({calculateShopMonthlyHours()} h)
                     </Button>
                 </div>
             </div>

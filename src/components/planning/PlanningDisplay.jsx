@@ -11,6 +11,7 @@ import MonthlyRecapModals from './MonthlyRecapModals';
 import ResetModal from './ResetModal';
 import CopyPasteSection from './CopyPasteSection';
 import WeekCopySection from './WeekCopySection';
+import GlobalDayViewModal from './GlobalDayViewModal';
 import '@/assets/styles.css';
 
 const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees, planning: initialPlanning, onBack, onBackToShop, onBackToWeek, onBackToConfig, onReset, setStep, setGlobalPlanning, setFeedback }) => {
@@ -18,6 +19,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const [planning, setPlanning] = useState(loadFromLocalStorage(`planning_${selectedShop}_${selectedWeek}`, initialPlanning || {}) || {});
     const [showCopyPaste, setShowCopyPaste] = useState(false);
     const [showWeekCopy, setShowWeekCopy] = useState(false);
+    const [showGlobalDayViewModal, setShowGlobalDayViewModal] = useState(false);
     const [feedback, setLocalFeedback] = useState('');
     const [showResetModal, setShowResetModal] = useState(false);
     const [showRecapModal, setShowRecapModal] = useState(null);
@@ -78,7 +80,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     useEffect(() => {
         if (Object.keys(planning).length && config?.timeSlots?.length) {
             saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, planning);
-            setGlobalPlanning(planning); // Synchroniser avec l'état global
+            setGlobalPlanning(planning);
             const currentWeekKey = format(new Date(selectedWeek), 'yyyy-MM-dd');
             if (isMonday(new Date(selectedWeek))) {
                 saveToLocalStorage(`planning_${selectedShop}_${currentWeekKey}`, planning);
@@ -178,7 +180,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     [dayKey]: prev[employee]?.[dayKey]?.map((val, idx) => idx === slotIndex ? (forceValue !== null ? forceValue : !val) : val) || Array(config.timeSlots.length).fill(false)
                 }
             };
-            setGlobalPlanning(updatedPlanning); // Synchroniser avec l'état global
+            setGlobalPlanning(updatedPlanning);
             return updatedPlanning;
         });
     }, [config, selectedWeek, setGlobalPlanning]);
@@ -262,6 +264,12 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     console.log('Opening ResetModal');
                     setShowResetModal(true);
                 }}>Réinitialiser</Button>
+                <Button className="button-primary" onClick={() => {
+                    console.log('Opening GlobalDayViewModal');
+                    setShowGlobalDayViewModal(true);
+                }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
+                    Vue globale par jour
+                </Button>
             </div>
             <div className="day-buttons" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>
                 {days.map((day, index) => (
@@ -529,6 +537,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     calculateEmployeeDailyHours={calculateEmployeeDailyHours}
                     calculateEmployeeWeeklyHours={calculateEmployeeWeeklyHours}
                     calculateShopWeeklyHours={calculateShopWeeklyHours}
+                />
+            )}
+            {showGlobalDayViewModal && (
+                <GlobalDayViewModal
+                    showGlobalDayViewModal={showGlobalDayViewModal}
+                    setShowGlobalDayViewModal={setShowGlobalDayViewModal}
+                    config={config}
+                    selectedShop={selectedShop}
+                    selectedWeek={selectedWeek}
+                    selectedEmployees={selectedEmployees}
+                    planning={planning}
                 />
             )}
             {(showMonthlyRecapModal || showEmployeeMonthlyRecap) && (

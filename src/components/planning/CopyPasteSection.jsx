@@ -1,292 +1,397 @@
-import { useState } from 'react';
-import { format, addDays, addWeeks } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
 import Button from '../common/Button';
 import '../../assets/styles.css';
 
-const CopyPasteSection = ({ config, selectedShop, selectedWeek, selectedEmployees, planning, setPlanning, days, setAvailableWeeks, setFeedback }) => {
-    const [copyEmployee, setCopyEmployee] = useState('');
-    const [pasteEmployee, setPasteEmployee] = useState('');
-    const [copyDay, setCopyDay] = useState('');
-    const [copyWeek, setCopyWeek] = useState('');
-    const [pasteWeek, setPasteWeek] = useState('');
-    const [showConfirmDay, setShowConfirmDay] = useState(false);
-    const [showConfirmWeek, setShowConfirmWeek] = useState(false);
+const CopyPasteSection = ({
+    config,
+    selectedShop,
+    selectedWeek,
+    selectedEmployees,
+    planning,
+    setPlanning,
+    setFeedback
+}) => {
+    const [sourceEmployee, setSourceEmployee] = useState('');
+    const [sourceWeek, setSourceWeek] = useState('');
+    const [sourceDay, setSourceDay] = useState('');
+    const [targetWeek, setTargetWeek] = useState('');
+    const [targetDay, setTargetDay] = useState('');
+    const [showCopyModal, setShowCopyModal] = useState(false);
+    const [showPasteModal, setShowPasteModal] = useState(false);
+    const [showWeekCopyModal, setShowWeekCopyModal] = useState(false);
+    const [weekSource, setWeekSource] = useState('');
+    const [weekTarget, setWeekTarget] = useState('');
 
-    // Lister les semaines disponibles dans localStorage
-    const availableWeeks = Object.keys(localStorage)
-        .filter(key => key.startsWith(`planning_${selectedShop}_`))
-        .map(key => key.replace(`planning_${selectedShop}_`, ''))
-        .map(week => ({
-            key: week,
-            display: `Semaine du ${format(new Date(week), 'd MMMM yyyy', { locale: fr })}`
-        }))
-        .sort((a, b) => new Date(a.key) - new Date(b.key));
-
-    // Ajouter la semaine suivante comme option pour pasteWeek
-    const nextWeek = format(addWeeks(new Date(selectedWeek), 1), 'yyyy-MM-dd');
-    const availablePasteWeeks = [
-        ...availableWeeks,
-        { key: nextWeek, display: `Semaine du ${format(new Date(nextWeek), 'd MMMM yyyy', { locale: fr })}` }
+    const days = config.days || [
+        { name: 'Lundi' },
+        { name: 'Mardi' },
+        { name: 'Mercredi' },
+        { name: 'Jeudi' },
+        { name: 'Vendredi' },
+        { name: 'Samedi' },
+        { name: 'Dimanche' }
     ];
 
-    const handleCopyEmployeeDay = () => {
-        if (!copyEmployee || !pasteEmployee || !copyDay) {
-            setFeedback('Erreur: Veuillez sélectionner un employé source, un employé cible et un jour.');
-            console.error('Missing copy parameters:', { copyEmployee, pasteEmployee, copyDay });
-            return;
-        }
-        setShowConfirmDay(true);
+    const getEmployeeColorClass = (employee) => {
+        const index = selectedEmployees.indexOf(employee);
+        const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
+        return index >= 0 ? colors[index % colors.length] : '';
     };
 
-    const confirmCopyEmployeeDay = () => {
-        const dayKey = copyDay;
-        const sourceData = planning[copyEmployee === 'all' ? selectedEmployees[0] : copyEmployee]?.[dayKey] || Array(config.timeSlots.length).fill(false);
-
-        setPlanning(prev => {
-            const updatedPlanning = { ...prev };
-            if (pasteEmployee === 'all') {
-                selectedEmployees.forEach(employee => {
-                    updatedPlanning[employee] = {
-                        ...updatedPlanning[employee],
-                        [dayKey]: [...sourceData]
-                    };
-                });
-            } else {
-                updatedPlanning[pasteEmployee] = {
-                    ...updatedPlanning[pasteEmployee],
-                    [dayKey]: [...sourceData]
-                };
-            }
-            saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, updatedPlanning);
-            return updatedPlanning;
+    const weeks = [];
+    for (let i = -4; i <= 4; i++) {
+        const weekStart = addDays(new Date(selectedWeek), i * 7);
+        weeks.push({
+            value: format(weekStart, 'yyyy-MM-dd'),
+            label: `Semaine du ${format(weekStart, 'd MMMM yyyy', { locale: fr })}`
         });
+    }
 
-        setFeedback(`Succès: Planning de ${copyEmployee === 'all' ? 'tous les employés' : copyEmployee} copié sur ${pasteEmployee === 'all' ? 'tous les employés' : pasteEmployee} pour ${days.find(day => day.date === copyDay)?.name || 'le jour sélectionné'}.`);
-        console.log('Employee day copied:', { copyEmployee, pasteEmployee, dayKey });
-        setShowConfirmDay(false);
-    };
+    const dayOptions = [
+        { value: 'all', label: 'Tous les jours' },
+        ...days.map((day, index) => ({
+            value: format(addDays(new Date(sourceWeek || selectedWeek), index), 'yyyy-MM-dd'),
+            label: `${day.name} ${format(addDays(new Date(sourceWeek || selectedWeek), index), 'dd/MM', { locale: fr })}`
+        }))
+    ];
 
-    const handleCopyWeek = () => {
-        if (!copyWeek || !pasteWeek) {
-            setFeedback('Erreur: Veuillez sélectionner une semaine source et une semaine cible.');
-            console.error('Missing week parameters:', { copyWeek, pasteWeek });
+    const targetDayOptions = [
+        { value: 'all', label: 'Tous les jours' },
+        ...days.map((day, index) => ({
+            value: format(addDays(new Date(targetWeek || selectedWeek), index), 'yyyy-MM-dd'),
+            label: `${day.name} ${format(addDays(new Date(targetWeek || selectedWeek), index), 'dd/MM', { locale: fr })}`
+        }))
+    ];
+
+    const handleCopy = () => {
+        if (!sourceEmployee || !sourceWeek) {
+            setFeedback({ type: 'error', message: 'Veuillez sélectionner un employé source et une semaine source.' });
             return;
         }
-        setShowConfirmWeek(true);
+        setShowCopyModal(true);
     };
 
-    const confirmCopyWeek = () => {
-        const sourcePlanning = loadFromLocalStorage(`planning_${selectedShop}_${copyWeek}`, {});
-        if (!Object.keys(sourcePlanning).length) {
-            setFeedback('Erreur: Aucune donnée trouvée pour la semaine source.');
-            console.error('No data for source week:', copyWeek);
+    const confirmCopy = () => {
+        console.log('CopyPasteSection: Copying', { sourceEmployee, sourceWeek, sourceDay });
+        setFeedback({
+            type: 'success',
+            message: `Créneaux de ${sourceEmployee} ${sourceDay === 'all' ? 'pour toute la semaine' : `du ${dayOptions.find(opt => opt.value === sourceDay)?.label}`} copiés.`
+        });
+        setShowCopyModal(false);
+    };
+
+    const handlePaste = () => {
+        if (!sourceEmployee || !sourceWeek || !targetWeek) {
+            setFeedback({ type: 'error', message: 'Veuillez sélectionner un employé source, une semaine source et une semaine cible.' });
             return;
         }
+        setShowPasteModal(true);
+    };
 
-        setPlanning(prev => {
-            const updatedPlanning = { ...sourcePlanning };
-            saveToLocalStorage(`planning_${selectedShop}_${pasteWeek}`, updatedPlanning);
-            setAvailableWeeks(prevWeeks => {
-                const newWeeks = prevWeeks.slice();
-                if (!newWeeks.some(week => week.key === pasteWeek)) {
-                    newWeeks.push({
-                        key: pasteWeek,
-                        display: `Semaine du ${format(new Date(pasteWeek), 'd MMMM yyyy', { locale: fr })}`
+    const confirmPaste = () => {
+        console.log('CopyPasteSection: Pasting', { sourceEmployee, sourceWeek, sourceDay, targetWeek, targetDay });
+        const newPlanning = { ...planning };
+
+        if (sourceDay === 'all' && targetDay === 'all') {
+            // Copier toute la semaine source vers toute la semaine cible
+            selectedEmployees.forEach(employee => {
+                if (employee !== sourceEmployee) {
+                    days.forEach((day, index) => {
+                        const sourceKey = format(addDays(new Date(sourceWeek), index), 'yyyy-MM-dd');
+                        const targetKey = format(addDays(new Date(targetWeek), index), 'yyyy-MM-dd');
+                        if (!newPlanning[employee]) newPlanning[employee] = {};
+                        newPlanning[employee][targetKey] = [...(planning[sourceEmployee]?.[sourceKey] || config.timeSlots.map(() => false))];
                     });
-                    newWeeks.sort((a, b) => new Date(a.key) - new Date(b.key));
                 }
-                return newWeeks;
             });
-            return selectedWeek === pasteWeek ? updatedPlanning : prev;
-        });
+        } else if (sourceDay === 'all') {
+            // Copier toute la semaine source vers un jour cible
+            selectedEmployees.forEach(employee => {
+                if (employee !== sourceEmployee) {
+                    days.forEach((day, index) => {
+                        const sourceKey = format(addDays(new Date(sourceWeek), index), 'yyyy-MM-dd');
+                        if (!newPlanning[employee]) newPlanning[employee] = {};
+                        newPlanning[employee][targetDay] = [...(planning[sourceEmployee]?.[sourceKey] || config.timeSlots.map(() => false))];
+                    });
+                }
+            });
+        } else if (targetDay === 'all') {
+            // Copier un jour source vers toute la semaine cible
+            selectedEmployees.forEach(employee => {
+                if (employee !== sourceEmployee) {
+                    days.forEach((day, index) => {
+                        const targetKey = format(addDays(new Date(targetWeek), index), 'yyyy-MM-dd');
+                        if (!newPlanning[employee]) newPlanning[employee] = {};
+                        newPlanning[employee][targetKey] = [...(planning[sourceEmployee]?.[sourceDay] || config.timeSlots.map(() => false))];
+                    });
+                }
+            });
+        } else {
+            // Copier un jour source vers un jour cible
+            selectedEmployees.forEach(employee => {
+                if (employee !== sourceEmployee) {
+                    if (!newPlanning[employee]) newPlanning[employee] = {};
+                    newPlanning[employee][targetDay] = [...(planning[sourceEmployee]?.[sourceDay] || config.timeSlots.map(() => false))];
+                }
+            });
+        }
 
-        setFeedback(`Succès: Semaine du ${format(new Date(copyWeek), 'd MMMM yyyy', { locale: fr })} copiée sur ${format(new Date(pasteWeek), 'd MMMM yyyy', { locale: fr })}.`);
-        console.log('Week copied:', { copyWeek, pasteWeek });
-        setShowConfirmWeek(false);
+        setPlanning(newPlanning);
+        saveToLocalStorage(`planning_${selectedShop}_${targetWeek}`, newPlanning);
+        setFeedback({
+            type: 'success',
+            message: `Créneaux de ${sourceEmployee} ${sourceDay === 'all' ? 'pour toute la semaine' : `du ${dayOptions.find(opt => opt.value === sourceDay)?.label}`} collés ${targetDay === 'all' ? 'sur toute la semaine' : `sur ${targetDayOptions.find(opt => opt.value === targetDay)?.label}`} de la semaine du ${format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })}.`
+        });
+        setShowPasteModal(false);
+        setSourceEmployee('');
+        setSourceWeek('');
+        setSourceDay('');
+        setTargetWeek('');
+        setTargetDay('');
+    };
+
+    const handleWeekCopy = () => {
+        if (!weekSource || !weekTarget) {
+            setFeedback({ type: 'error', message: 'Veuillez sélectionner une semaine source et une semaine cible.' });
+            return;
+        }
+        setShowWeekCopyModal(true);
+    };
+
+    const confirmWeekCopy = () => {
+        console.log('CopyPasteSection: Copying entire week', { weekSource, weekTarget });
+        const newPlanning = { ...planning };
+        selectedEmployees.forEach(employee => {
+            days.forEach((day, index) => {
+                const sourceKey = format(addDays(new Date(weekSource), index), 'yyyy-MM-dd');
+                const targetKey = format(addDays(new Date(weekTarget), index), 'yyyy-MM-dd');
+                if (!newPlanning[employee]) newPlanning[employee] = {};
+                newPlanning[employee][targetKey] = [...(planning[employee]?.[sourceKey] || config.timeSlots.map(() => false))];
+            });
+        });
+        setPlanning(newPlanning);
+        saveToLocalStorage(`planning_${selectedShop}_${weekTarget}`, newPlanning);
+        setFeedback({
+            type: 'success',
+            message: `Planning de la semaine du ${format(new Date(weekSource), 'd MMMM yyyy', { locale: fr })} copié vers la semaine du ${format(new Date(weekTarget), 'd MMMM yyyy', { locale: fr })}.`
+        });
+        setShowWeekCopyModal(false);
+        setWeekSource('');
+        setWeekTarget('');
     };
 
     return (
         <div className="copy-paste-section">
-            <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '20px', color: '#333' }}>
-                Copier/Coller le Planning
-            </h3>
             <div className="copy-paste-container">
-                <h4 style={{ fontFamily: 'Roboto, sans-serif', marginBottom: '10px', fontSize: '16px', color: '#1e88e5' }}>
-                    Copier un employé sur un autre (jour)
-                </h4>
+                <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
+                    Copier/Coller les créneaux d’un employé
+                </h3>
                 <div className="form-group">
-                    <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
-                        Employé source
-                    </label>
+                    <label>Employé source</label>
                     <select
-                        value={copyEmployee}
-                        onChange={(e) => setCopyEmployee(e.target.value)}
                         className="copy-paste-select"
+                        value={sourceEmployee}
+                        onChange={(e) => setSourceEmployee(e.target.value)}
                     >
                         <option value="">Sélectionner un employé</option>
-                        <option value="all">Tous les employés</option>
                         {selectedEmployees.map(employee => (
-                            <option key={employee} value={employee}>{employee}</option>
+                            <option key={employee} value={employee}>
+                                {employee}
+                            </option>
                         ))}
                     </select>
                 </div>
                 <div className="form-group">
-                    <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
-                        Employé cible
-                    </label>
+                    <label>Semaine source</label>
                     <select
-                        value={pasteEmployee}
-                        onChange={(e) => setPasteEmployee(e.target.value)}
                         className="copy-paste-select"
+                        value={sourceWeek}
+                        onChange={(e) => setSourceWeek(e.target.value)}
                     >
-                        <option value="">Sélectionner un employé</option>
-                        <option value="all">Tous les employés</option>
-                        {selectedEmployees.map(employee => (
-                            <option key={employee} value={employee}>{employee}</option>
+                        <option value="">Sélectionner une semaine</option>
+                        {weeks.map(week => (
+                            <option key={week.value} value={week.value}>
+                                {week.label}
+                            </option>
                         ))}
                     </select>
                 </div>
                 <div className="form-group">
-                    <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
-                        Jour cible
-                    </label>
+                    <label>Jour source</label>
                     <select
-                        value={copyDay}
-                        onChange={(e) => setCopyDay(e.target.value)}
                         className="copy-paste-select"
+                        value={sourceDay}
+                        onChange={(e) => setSourceDay(e.target.value)}
                     >
                         <option value="">Sélectionner un jour</option>
-                        {days.map((day, index) => (
-                            <option key={index} value={day.date}>{day.name} ({day.date})</option>
-                        ))}
-                    </select>
-                </div>
-                <Button
-                    className="button-validate"
-                    onClick={handleCopyEmployeeDay}
-                    style={{ backgroundColor: '#4caf50', color: '#fff', padding: '10px 20px', fontSize: '14px', marginTop: '15px' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#388e3c'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#4caf50'}
-                >
-                    Copier le jour
-                </Button>
-            </div>
-            <div className="copy-paste-container" style={{ marginTop: '20px' }}>
-                <h4 style={{ fontFamily: 'Roboto, sans-serif', marginBottom: '10px', fontSize: '16px', color: '#1e88e5' }}>
-                    Copier une semaine complète
-                </h4>
-                <div className="form-group">
-                    <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
-                        Semaine source
-                    </label>
-                    <select
-                        value={copyWeek}
-                        onChange={(e) => setCopyWeek(e.target.value)}
-                        className="copy-paste-select"
-                    >
-                        <option value="">Sélectionner une semaine</option>
-                        {availableWeeks.map(week => (
-                            <option key={week.key} value={week.key}>{week.display}</option>
+                        {dayOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
                         ))}
                     </select>
                 </div>
                 <div className="form-group">
-                    <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', color: '#333' }}>
-                        Semaine cible
-                    </label>
+                    <label>Semaine cible</label>
                     <select
-                        value={pasteWeek}
-                        onChange={(e) => setPasteWeek(e.target.value)}
                         className="copy-paste-select"
+                        value={targetWeek}
+                        onChange={(e) => setTargetWeek(e.target.value)}
                     >
                         <option value="">Sélectionner une semaine</option>
-                        {availablePasteWeeks.map(week => (
-                            <option key={week.key} value={week.key}>{week.display}</option>
+                        {weeks.map(week => (
+                            <option key={week.value} value={week.value}>
+                                {week.label}
+                            </option>
                         ))}
                     </select>
                 </div>
-                <Button
-                    className="button-validate"
-                    onClick={handleCopyWeek}
-                    style={{ backgroundColor: '#4caf50', color: '#fff', padding: '10px 20px', fontSize: '14px', marginTop: '15px' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#388e3c'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#4caf50'}
-                >
-                    Copier la semaine
-                </Button>
+                <div className="form-group">
+                    <label>Jour cible</label>
+                    <select
+                        className="copy-paste-select"
+                        value={targetDay}
+                        onChange={(e) => setTargetDay(e.target.value)}
+                    >
+                        <option value="">Sélectionner un jour</option>
+                        {targetDayOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="navigation-buttons">
+                    <Button
+                        className="button-primary"
+                        onClick={handleCopy}
+                        text="Copier"
+                    />
+                    <Button
+                        className="button-validate"
+                        onClick={handlePaste}
+                        text="Coller"
+                    />
+                </div>
+                <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', margin: '20px 0 15px' }}>
+                    Copier toute la semaine
+                </h3>
+                <div className="form-group">
+                    <label>Semaine source</label>
+                    <select
+                        className="copy-paste-select"
+                        value={weekSource}
+                        onChange={(e) => setWeekSource(e.target.value)}
+                    >
+                        <option value="">Sélectionner une semaine</option>
+                        {weeks.map(week => (
+                            <option key={week.value} value={week.value}>
+                                {week.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label>Semaine cible</label>
+                    <select
+                        className="copy-paste-select"
+                        value={weekTarget}
+                        onChange={(e) => setWeekTarget(e.target.value)}
+                    >
+                        <option value="">Sélectionner une semaine</option>
+                        {weeks.map(week => (
+                            <option key={week.value} value={week.value}>
+                                {week.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="navigation-buttons">
+                    <Button
+                        className="button-primary"
+                        onClick={handleWeekCopy}
+                        text="Copier la semaine entière"
+                    />
+                </div>
+                {showCopyModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content copy-paste-modal">
+                            <button
+                                className="modal-close"
+                                onClick={() => setShowCopyModal(false)}
+                            >
+                                ✕
+                            </button>
+                            <h3>Confirmer la copie</h3>
+                            <p>
+                                Voulez-vous copier les créneaux de{' '}
+                                <span className={getEmployeeColorClass(sourceEmployee)}>
+                                    {sourceEmployee}
+                                </span>{' '}
+                                {sourceDay === 'all' ? 'pour toute la semaine' : `du ${dayOptions.find(opt => opt.value === sourceDay)?.label}`} ?
+                            </p>
+                            <Button
+                                className="button-validate"
+                                onClick={confirmCopy}
+                                text="Confirmer"
+                            />
+                        </div>
+                    </div>
+                )}
+                {showPasteModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content copy-paste-modal">
+                            <button
+                                className="modal-close"
+                                onClick={() => setShowPasteModal(false)}
+                            >
+                                ✕
+                            </button>
+                            <h3>Confirmer le collage</h3>
+                            <p>
+                                Voulez-vous coller les créneaux de{' '}
+                                <span className={getEmployeeColorClass(sourceEmployee)}>
+                                    {sourceEmployee}
+                                </span>{' '}
+                                {sourceDay === 'all' ? 'pour toute la semaine' : `du ${dayOptions.find(opt => opt.value === sourceDay)?.label}`}{' '}
+                                sur {targetDay === 'all' ? 'tous les employés pour toute la semaine' : `tous les employés pour ${targetDayOptions.find(opt => opt.value === targetDay)?.label}`}{' '}
+                                de la semaine du {format(new Date(targetWeek), 'd MMMM yyyy', { locale: fr })} ?
+                            </p>
+                            <Button
+                                className="button-validate"
+                                onClick={confirmPaste}
+                                text="Confirmer"
+                            />
+                        </div>
+                    </div>
+                )}
+                {showWeekCopyModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-content copy-paste-modal">
+                            <button
+                                className="modal-close"
+                                onClick={() => setShowWeekCopyModal(false)}
+                            >
+                                ✕
+                            </button>
+                            <h3>Confirmer la copie de la semaine</h3>
+                            <p>
+                                Voulez-vous copier tout le planning de la semaine du{' '}
+                                {format(new Date(weekSource), 'd MMMM yyyy', { locale: fr })}{' '}
+                                vers la semaine du {format(new Date(weekTarget), 'd MMMM yyyy', { locale: fr })} ?
+                            </p>
+                            <Button
+                                className="button-validate"
+                                onClick={confirmWeekCopy}
+                                text="Confirmer"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
-
-            {/* Modal de confirmation pour copie de jour */}
-            {showConfirmDay && (
-                <div className="modal-overlay">
-                    <div className="modal-content copy-paste-modal">
-                        <button className="modal-close" onClick={() => setShowConfirmDay(false)}>✕</button>
-                        <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '18px', color: '#333' }}>
-                            Confirmer la copie
-                        </h3>
-                        <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px', fontSize: '14px', color: '#333' }}>
-                            Copier le planning de {copyEmployee === 'all' ? 'tous les employés' : copyEmployee} pour {days.find(day => day.date === copyDay)?.name || 'le jour sélectionné'} sur {pasteEmployee === 'all' ? 'tous les employés' : pasteEmployee} ?
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                            <Button
-                                className="button-validate"
-                                onClick={confirmCopyEmployeeDay}
-                                style={{ backgroundColor: '#4caf50', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#388e3c'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#4caf50'}
-                            >
-                                Confirmer
-                            </Button>
-                            <Button
-                                className="button-reinitialiser"
-                                onClick={() => setShowConfirmDay(false)}
-                                style={{ backgroundColor: '#e53935', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
-                            >
-                                Annuler
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal de confirmation pour copie de semaine */}
-            {showConfirmWeek && (
-                <div className="modal-overlay">
-                    <div className="modal-content copy-paste-modal">
-                        <button className="modal-close" onClick={() => setShowConfirmWeek(false)}>✕</button>
-                        <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '18px', color: '#333' }}>
-                            Confirmer la copie
-                        </h3>
-                        <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px', fontSize: '14px', color: '#333' }}>
-                            Copier la semaine du {format(new Date(copyWeek), 'd MMMM yyyy', { locale: fr })} sur la semaine du {format(new Date(pasteWeek), 'd MMMM yyyy', { locale: fr })} ?
-                        </p>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                            <Button
-                                className="button-validate"
-                                onClick={confirmCopyWeek}
-                                style={{ backgroundColor: '#4caf50', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#388e3c'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#4caf50'}
-                            >
-                                Confirmer
-                            </Button>
-                            <Button
-                                className="button-reinitialiser"
-                                onClick={() => setShowConfirmWeek(false)}
-                                style={{ backgroundColor: '#e53935', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
-                            >
-                                Annuler
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

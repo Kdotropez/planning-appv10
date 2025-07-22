@@ -67,7 +67,7 @@ const GlobalDayViewModal = ({
         return {
             day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
             slots: timeSlots.map((_, slotIndex) => getEmployeesInSlot(dayKey, slotIndex)),
-            openClose: `Ouverture: ${open}, Fermeture: ${close}`
+            openClose: `O: ${open}, F: ${close}`
         };
     });
 
@@ -76,8 +76,18 @@ const GlobalDayViewModal = ({
     const legend = 'Légende : 0 = ⚠️ Aucun employé, 1 = 1 employé, 2 = 2 employés, 3 = 3 employés ou plus';
 
     const exportToPDF = () => {
-        console.log('GlobalDayViewModal: Starting PDF export', { selectedShop, selectedWeek, timeSlots, tableData });
+        console.log('GlobalDayViewModal: Starting PDF export', { selectedShop, selectedWeek, timeSlots, selectedEmployees, tableData });
         try {
+            if (!timeSlots.length) {
+                throw new Error('Aucune tranche horaire disponible');
+            }
+            if (!selectedEmployees.length) {
+                throw new Error('Aucun employé sélectionné');
+            }
+            if (!tableData.length) {
+                throw new Error('Aucune donnée de tableau générée');
+            }
+
             const doc = new jsPDF({ orientation: 'landscape' });
             doc.setFont('Roboto', 'normal');
             doc.text(`Vue globale par jour - ${selectedShop}`, 10, 10);
@@ -103,9 +113,11 @@ const GlobalDayViewModal = ({
                 });
             });
 
+            console.log('GlobalDayViewModal: Generating PDF table with body:', body);
+
             doc.autoTable({
                 head: [
-                    ['Jour', 'Ouverture/Fermeture', ...timeSlots],
+                    ['Jour', 'Tranche', ...timeSlots],
                     ['', '', ...timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'))]
                 ],
                 body: body.map(item => item.row),
@@ -114,8 +126,8 @@ const GlobalDayViewModal = ({
                 headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
                 bodyStyles: { textColor: [51, 51, 51] },
                 columnStyles: {
-                    0: { cellWidth: 40 },
-                    1: { cellWidth: 50 },
+                    0: { cellWidth: 100 },
+                    1: { cellWidth: 40 },
                     ...timeSlots.reduce((acc, _, index) => {
                         acc[index + 2] = { cellWidth: 30 };
                         return acc;
@@ -139,14 +151,10 @@ const GlobalDayViewModal = ({
                     const tableStartY = data.table.startY;
                     const tableBody = data.table.body;
                     let currentY = tableStartY + data.table.headHeight;
-                    let lastDay = null;
                     tableBody.forEach((row, index) => {
-                        if (row[0] && row[0] !== lastDay) {
-                            if (lastDay !== null) {
-                                doc.setDrawColor(200, 200, 200);
-                                doc.line(10, currentY, doc.internal.pageSize.width - 10, currentY);
-                            }
-                            lastDay = row[0];
+                        if (index > 0) {
+                            doc.setDrawColor(200, 200, 200);
+                            doc.line(10, currentY, doc.internal.pageSize.width - 10, currentY);
                         }
                         currentY += data.table.rows[index].height;
                     });
@@ -157,6 +165,7 @@ const GlobalDayViewModal = ({
             console.log('GlobalDayViewModal: PDF exported successfully');
         } catch (error) {
             console.error('GlobalDayViewModal: PDF export failed', error);
+            alert(`Erreur lors de l'exportation PDF : ${error.message}`);
         }
     };
 

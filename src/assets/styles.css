@@ -161,12 +161,11 @@ body {
 }
 
 .scrollable-col.header {
-    font-size: 10px;
+    font-size: 12px; /* Reduced font size */
     transform: rotate(-45deg);
     transform-origin: center;
     white-space: nowrap;
     padding: 10px 2px;
-    height: 80px;
 }
 
 .scrollable-col.no-employee {
@@ -431,4 +430,399 @@ body {
 /* Boutons de navigation */
 .navigation-buttons {
     display: flex;
-    justify-content: center
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 100vw;
+    flex-wrap: wrap;
+}
+
+.day-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.recap-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.recap-buttons > div {
+    flex: 1;
+    min-width: clamp(120px, 5vw, 200px);
+    max-width: clamp(150px, 8vw, 250px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+/* Copy/Paste section */
+.copy-paste-section {
+    width: 100%;
+    max-width: 100vw;
+    margin: 20px auto;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.copy-paste-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.copy-paste-select, .copy-paste-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.copy-paste-select:focus, .copy-paste-input:focus {
+    border-color: #1e88e5;
+    box-shadow: 0 0 5px rgba(30, 136, 229, 0.3);
+    outline: none;
+}
+
+/* Responsive design */
+@media (max-width: 896px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 100vw;
+        padding: 6px;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 100vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 100vw;
+        max-height: 400px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 100vw;
+        gap: 6px;
+    }
+    .fixed-col {
+        width: 120px;
+        min-width: 120px;
+        font-size: 10px;
+    }
+    .fixed-col.employee {
+        font-size: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 25px;
+        font-size: 12px;
+    }
+    .scrollable-col.header {
+        font-size: 8px;
+        padding: 8px 1px;
+    }
+    .button-jour {
+        min-width: 50px;
+        max-width: 90px;
+        padding: 5px 6px;
+        font-size: 10px;
+    }
+    .recap-buttons > div {
+        min-width: 80px;
+        max-width: 120px;
+    }
+    .modal-content {
+        max-width: 100vw;
+        padding: 8px;
+        max-height: 70vh;
+    }
+    .copy-paste-container {
+        max-width: 95vw;
+    }
+    .copy-paste-modal {
+        max-width: 95vw;
+    }
+}
+
+@media (max-width: 1200px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 100vw;
+        padding: 8px;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 100vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 100vw;
+        max-height: 500px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 100vw;
+        gap: 8px;
+    }
+    .fixed-col {
+        width: 130px;
+        min-width: 130px;
+        font-size: 12px;
+    }
+    .fixed-col.employee {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 30px;
+    }
+    .scrollable-col.header {
+        font-size: 12px;
+        padding: 8px 2px;
+    }
+    .button-jour {
+        min-width: 60px;
+        max-width: 100px;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+    .recap-buttons > div {
+        min-width: 100px;
+        max-width: 150px;
+    }
+    .modal-content {
+        max-width: 100vw;
+        padding: 10px;
+    }
+    .copy-paste-container {
+        max-width: 90vw;
+    }
+    .copy-paste-modal {
+        max-width: 90vw;
+    }
+}
+
+@media (max-width: 768px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 100vw;
+        padding: 6px;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 100vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 100vw;
+        max-height: 400px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        gap: 6px;
+    }
+    .fixed-col {
+        width: 130px;
+        min-width: 130px;
+        font-size: 12px;
+    }
+    .fixed-col.employee {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 25px;
+        font-size: 12px;
+    }
+    .scrollable-col.header {
+        font-size: 10px;
+        padding: 6px 2px;
+    }
+    .button-jour {
+        min-width: 50px;
+        max-width: 90px;
+        padding: 5px 6px;
+        font-size: 10px;
+    }
+    .recap-buttons > div {
+        min-width: 80px;
+        max-width: 120px;
+    }
+    .modal-content {
+        max-width: 100vw;
+        padding: 8px;
+        max-height: 70vh;
+    }
+    .copy-paste-container {
+        max-width: 95vw;
+    }
+    .copy-paste-modal {
+        max-width: 95vw;
+    }
+}
+
+@media (min-width: 1920px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 98vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 98vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 98vw;
+        max-height: 600px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 98vw;
+    }
+    .table-container {
+        max-width: 98vw;
+    }
+    .fixed-col {
+        width: 140px;
+        min-width: 140px;
+        font-size: 16px;
+    }
+    .fixed-col.employee {
+        font-size: 16px;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 50px;
+    }
+    .scrollable-col.header {
+        font-size: 15px;
+        padding: 10px 2px;
+    }
+    .modal-content {
+        max-width: 98vw;
+    }
+    .copy-paste-container {
+        max-width: 1000px;
+    }
+    .copy-paste-modal {
+        max-width: 600px;
+    }
+}
+
+@media (min-width: 2560px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 96vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 96vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 96vw;
+        max-height: 700px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 96vw;
+    }
+    .table-container {
+        max-width: 96vw;
+    }
+    .fixed-col {
+        width: 140px;
+        min-width: 140px;
+        font-size: 16px;
+    }
+    .fixed-col.employee {
+        font-size: 16px;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 60px;
+    }
+    .scrollable-col.header {
+        font-size: 16px;
+        padding: 10px 2px;
+    }
+    .modal-content {
+        max-width: 96vw;
+    }
+    .copy-paste-container {
+        max-width: 1200px;
+    }
+    .copy-paste-modal {
+        max-width: 700px;
+    }
+}
+
+@media (min-width: 3840px) {
+    .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
+        max-width: 95vw;
+    }
+    .form-group, .month-selector, .week-selector, .saved-weeks, .shop-input, .employee-input, .copy-paste-container {
+        max-width: 95vw;
+    }
+    .shop-list, .employee-list {
+        max-width: 95vw;
+        max-height: 800px;
+    }
+    .navigation-buttons, .day-buttons, .recap-buttons {
+        max-width: 95vw;
+    }
+    .table-container {
+        max-width: 95vw;
+    }
+    .fixed-col {
+        width: 140px;
+        min-width: 140px;
+        font-size: 16px;
+    }
+    .fixed-col.employee {
+        font-size: 16px;
+        padding: 8px 4px;
+    }
+    .scrollable-col {
+        width: calc(100% / 28);
+        min-width: 70px;
+    }
+    .scrollable-col.header {
+        font-size: 16px;
+        padding: 12px 2px;
+    }
+    .modal-content {
+        max-width: 95vw;
+    }
+    .copy-paste-container {
+        max-width: 1400px;
+    }
+    .copy-paste-modal {
+        max-width: 800px;
+    }
+}

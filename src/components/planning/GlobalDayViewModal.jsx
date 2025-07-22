@@ -66,7 +66,7 @@ const GlobalDayViewModal = ({
         return {
             day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
             slots: timeSlots.map((_, slotIndex) => getEmployeesInSlot(dayKey, slotIndex)),
-            openClose: `Ouverture: ${open}, Fermeture: ${close}`
+            openClose: `O: ${open}, F: ${close}`
         };
     });
 
@@ -89,7 +89,6 @@ const GlobalDayViewModal = ({
                     row: [
                         slotIndex === 0 ? dayData.day : '',
                         slotIndex === 0 ? dayData.openClose : '',
-                        `${timeSlots[slotIndex]}`,
                         slot.display
                     ],
                     backgroundColor: slot.count === 0 ? [255, 230, 230] :
@@ -101,8 +100,7 @@ const GlobalDayViewModal = ({
 
         doc.autoTable({
             head: [
-                ['Jour', 'Ouverture/Fermeture', 'DE', 'Employés'],
-                ['', '', timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')), '']
+                ['Jour', 'Ouverture/Fermeture', ...timeSlots.map(slot => `${slot}-${format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}`)]
             ],
             body: body.map(item => item.row),
             startY: 40,
@@ -112,8 +110,10 @@ const GlobalDayViewModal = ({
             columnStyles: {
                 0: { cellWidth: 40 },
                 1: { cellWidth: 50 },
-                2: { cellWidth: 30 },
-                3: { cellWidth: 30 }
+                ...timeSlots.reduce((acc, _, index) => {
+                    acc[index + 2] = { cellWidth: 30 };
+                    return acc;
+                }, {})
             },
             didParseCell: (data) => {
                 if (data.section === 'body') {
@@ -123,12 +123,6 @@ const GlobalDayViewModal = ({
                         data.cell.styles.lineWidth = 0.5;
                         data.cell.styles.lineColor = [200, 200, 200];
                     }
-                }
-                if (data.section === 'head' && data.row.index === 0 && data.column.index === 2) {
-                    data.cell.text = timeSlots;
-                }
-                if (data.section === 'head' && data.row.index === 1 && data.column.index === 2) {
-                    data.cell.text = timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'));
                 }
             },
             didDrawPage: (data) => {
@@ -170,10 +164,19 @@ const GlobalDayViewModal = ({
                         <thead>
                             <tr>
                                 <th className="fixed-col header" rowSpan="2">Jour</th>
-                                <th className="fixed-col header" rowSpan="2">Ouverture/Fermeture</th>
+                                <th className="fixed-col header" rowSpan="2">DE/A</th>
+                                <th className="fixed-col header">XXX</th>
                                 {timeSlots.map((slot, index) => (
                                     <th key={index} className="scrollable-col header">
-                                        {`${slot}-${format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}`}
+                                        {slot}
+                                    </th>
+                                ))}
+                            </tr>
+                            <tr>
+                                <th className="fixed-col header">XXX</th>
+                                {timeSlots.map((slot, index) => (
+                                    <th key={index} className="scrollable-col header">
+                                        {format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}
                                     </th>
                                 ))}
                             </tr>
@@ -184,6 +187,7 @@ const GlobalDayViewModal = ({
                                     <tr className="day-group">
                                         <td className="fixed-col">{dayData.day}</td>
                                         <td className="fixed-col">{dayData.openClose}</td>
+                                        <td className="fixed-col"></td>
                                         {dayData.slots.map((slot, slotIndex) => (
                                             <td key={slotIndex} className={`scrollable-col ${slot.className}`}>
                                                 {slot.display}
@@ -192,7 +196,7 @@ const GlobalDayViewModal = ({
                                     </tr>
                                     {dayIndex < tableData.length - 1 && (
                                         <tr className="day-divider">
-                                            <td colSpan={timeSlots.length + 2} style={{ borderTop: '2px solid #ccc' }}></td>
+                                            <td colSpan={timeSlots.length + 3} style={{ borderTop: '2px solid #ccc' }}></td>
                                         </tr>
                                     )}
                                 </React.Fragment>

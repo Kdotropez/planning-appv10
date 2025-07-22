@@ -3,6 +3,7 @@ import { format, addDays, addMinutes, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
@@ -171,7 +172,7 @@ const RecapModal = ({
     const exportToPDF = () => {
         console.log('RecapModal: Exporting to PDF for', { showRecapModal, employee });
         const doc = new jsPDF();
-        doc.setFont('Roboto', 'normal');
+        doc.setFont('Helvetica', 'normal');
         const title = isWeekRecap
             ? `Récapitulatif hebdomadaire - ${selectedShop} (${calculateShopWeeklyHours()} h)`
             : isEmployeeWeekRecap
@@ -184,12 +185,12 @@ const RecapModal = ({
         const body = [];
         recapData.forEach(dayData => {
             if (dayData.employees.length > 0) {
-                dayData.employees.forEach(emp => {
+                dayData.employees.forEach((emp, empIndex) => {
                     body.push({
                         row: [dayData.day, emp.employee, emp.start, emp.pause, emp.resume, emp.end, emp.hours],
                         backgroundColor: getDayBackgroundColor(dayData.dayIndex)
                     });
-                    dayData.day = ''; // Effacer le jour pour les lignes suivantes du même jour
+                    if (empIndex === 0) dayData.day = ''; // Effacer le jour pour les lignes suivantes du même jour
                 });
             }
         });
@@ -203,7 +204,7 @@ const RecapModal = ({
             head: [['Jour', 'Employé', 'ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE', 'Heures effectives']],
             body: body.map(item => item.row),
             startY: (isWeekRecap || isEmployeeWeekRecap) ? 30 : 20,
-            styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
+            styles: { font: 'Helvetica', fontSize: 10, cellPadding: 4 },
             headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
             bodyStyles: { textColor: [51, 51, 51] },
             alternateRowStyles: { fillColor: [245, 245, 245] },
@@ -229,6 +230,66 @@ const RecapModal = ({
         });
         doc.save(`recap_${isWeekRecap ? 'weekly' : isEmployeeWeekRecap ? `employee_week_${employee}` : `employee_day_${employee}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         console.log('RecapModal: PDF exported successfully');
+    };
+
+    const exportAsImagePdf = async () => {
+        console.log('RecapModal: Starting PDF export as image');
+        try {
+            const modalElement = document.querySelector('.modal-content');
+            if (!modalElement) throw new Error('Contenu de la modale introuvable');
+
+            // Capturer toute la modale avec html2canvas
+            const canvas = await html2canvas(modalElement, {
+                scale: 3, // Haute résolution
+                useCORS: true,
+                scrollX: 0, // Capturer tout le contenu horizontal
+                scrollY: -window.scrollY,
+                backgroundColor: '#ffffff',
+                windowWidth: modalElement.scrollWidth, // Capturer toute la largeur
+                windowHeight: modalElement.scrollHeight // Capturer toute la hauteur
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth(); // 297 mm
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+            const margin = 10;
+
+            // Calculer les dimensions de l'image
+            const imgWidth = canvas.width * 0.264583; // Convertir px en mm (1 px = 0.264583 mm à 96 DPI)
+            const imgHeight = canvas.height * 0.264583;
+            const maxWidth = pageWidth - 2 * margin;
+            const maxHeight = pageHeight - 2 * margin;
+
+            // Ajuster l'image à la page
+            const ratio = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
+            const scaledWidth = imgWidth * ratio;
+            const scaledHeight = imgHeight * ratio;
+
+            // Si l'image est trop large ou trop haute, diviser en plusieurs pages
+            if (scaledWidth > maxWidth || scaledHeight > maxHeight) {
+                const totalWidth = imgWidth;
+                let currentX = 0;
+                let pageCount = 0;
+                while (currentX < totalWidth) {
+                    if (pageCount > 0) {
+                        pdf.addPage();
+                    }
+                    const sliceWidth = maxWidth / ratio;
+                    pdf.addImage(imgData, 'PNG', margin, margin, maxWidth, Math.min(scaledHeight, maxHeight), null, 'FAST', 0, currentX);
+                    currentX += sliceWidth;
+                    pageCount++;
+                }
+            } else {
+                pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
+            }
+
+            pdf.save(`recap_${isWeekRecap ? 'weekly' : isEmployeeWeekRecap ? `employee_week_${employee}` : `employee_day_${employee}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            console.log('RecapModal: PDF exported successfully as image');
+        } catch (error) {
+            console.error('RecapModal: PDF export failed', error);
+            alert(`Erreur lors de l'exportation PDF : ${error.message || 'Erreur inconnue'}`);
+        }
     };
 
     return (
@@ -289,6 +350,9 @@ const RecapModal = ({
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
                     <Button className="button-pdf" onClick={exportToPDF}>
                         Exporter en PDF
+                    </Button>
+                    <Button className="button-pdf" onClick={exportAsImagePdf}>
+                        Exporter en PDF (image fidèle)
                     </Button>
                     <Button
                         className="modal-close"

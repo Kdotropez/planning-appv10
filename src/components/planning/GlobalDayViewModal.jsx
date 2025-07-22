@@ -33,6 +33,7 @@ const GlobalDayViewModal = ({
     const timeSlots = config.timeSlots || [];
 
     const getEmployeesInSlot = (dayKey, slotIndex) => {
+        console.log(`GlobalDayViewModal: Checking employees for ${dayKey}, slot ${slotIndex}`);
         const employees = selectedEmployees.filter(emp => 
             planning[emp]?.[dayKey]?.[slotIndex]
         );
@@ -66,85 +67,97 @@ const GlobalDayViewModal = ({
         return {
             day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
             slots: timeSlots.map((_, slotIndex) => getEmployeesInSlot(dayKey, slotIndex)),
-            openClose: `O: ${open}, F: ${close}`
+            openClose: `Ouverture: ${open}, Fermeture: ${close}`
         };
     });
+
+    console.log('GlobalDayViewModal: Generated table data:', tableData);
 
     const legend = 'Légende : 0 = ⚠️ Aucun employé, 1 = 1 employé, 2 = 2 employés, 3 = 3 employés ou plus';
 
     const exportToPDF = () => {
-        console.log('GlobalDayViewModal: Exporting to PDF');
-        const doc = new jsPDF({ orientation: 'landscape' });
-        doc.setFont('Roboto', 'normal');
-        doc.text(`Vue globale par jour - ${selectedShop}`, 10, 10);
-        const weekStart = format(new Date(selectedWeek), 'dd/MM', { locale: fr });
-        const weekEnd = format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr });
-        doc.text(`Semaine du Lundi ${weekStart} au Dimanche ${weekEnd}`, 10, 20);
-        doc.text(legend, 10, 30);
+        console.log('GlobalDayViewModal: Starting PDF export', { selectedShop, selectedWeek, timeSlots, tableData });
+        try {
+            const doc = new jsPDF({ orientation: 'landscape' });
+            doc.setFont('Roboto', 'normal');
+            doc.text(`Vue globale par jour - ${selectedShop}`, 10, 10);
+            const weekStart = format(new Date(selectedWeek), 'dd/MM', { locale: fr });
+            const weekEnd = format(addDays(new Date(selectedWeek), 6), 'dd/MM', { locale: fr });
+            doc.text(`Semaine du Lundi ${weekStart} au Dimanche ${weekEnd}`, 10, 20);
+            doc.text(legend, 10, 30);
 
-        const body = [];
-        tableData.forEach((dayData, dayIndex) => {
-            dayData.slots.forEach((slot, slotIndex) => {
+            const body = [];
+            tableData.forEach((dayData, dayIndex) => {
+                const row = [
+                    dayIndex === 0 ? dayData.day : '',
+                    dayIndex === 0 ? dayData.openClose : '',
+                    ...dayData.slots.map(slot => slot.display)
+                ];
                 body.push({
-                    row: [
-                        slotIndex === 0 ? dayData.day : '',
-                        slotIndex === 0 ? dayData.openClose : '',
-                        slot.display
-                    ],
-                    backgroundColor: slot.count === 0 ? [255, 230, 230] :
-                                    slot.count === 1 ? [230, 255, 237] :
-                                    slot.count === 2 ? [230, 240, 250] : [240, 230, 250]
+                    row,
+                    backgroundColor: dayData.slots.map(slot => 
+                        slot.count === 0 ? [255, 230, 230] :
+                        slot.count === 1 ? [230, 255, 237] :
+                        slot.count === 2 ? [230, 240, 250] : [240, 230, 250]
+                    )
                 });
             });
-        });
 
-        doc.autoTable({
-            head: [
-                ['Jour', 'Ouverture/Fermeture', ...timeSlots.map(slot => `${slot}-${format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}`)]
-            ],
-            body: body.map(item => item.row),
-            startY: 40,
-            styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
-            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-            bodyStyles: { textColor: [51, 51, 51] },
-            columnStyles: {
-                0: { cellWidth: 40 },
-                1: { cellWidth: 50 },
-                ...timeSlots.reduce((acc, _, index) => {
-                    acc[index + 2] = { cellWidth: 30 };
-                    return acc;
-                }, {})
-            },
-            didParseCell: (data) => {
-                if (data.section === 'body') {
-                    const rowIndex = data.row.index;
-                    data.cell.styles.fillColor = body[rowIndex].backgroundColor;
-                    if (data.column.index === 0 && data.cell.text[0]) {
-                        data.cell.styles.lineWidth = 0.5;
-                        data.cell.styles.lineColor = [200, 200, 200];
-                    }
-                }
-            },
-            didDrawPage: (data) => {
-                const tableStartY = data.table.startY;
-                const tableBody = data.table.body;
-                let currentY = tableStartY + data.table.headHeight;
-                let lastDay = null;
-                tableBody.forEach((row, index) => {
-                    if (row[0] && row[0] !== lastDay) {
-                        if (lastDay !== null) {
-                            doc.setDrawColor(200, 200, 200);
-                            doc.line(10, currentY, doc.internal.pageSize.width - 10, currentY);
+            doc.autoTable({
+                head: [
+                    ['Jour', 'Ouverture/Fermeture', ...timeSlots],
+                    ['', '', ...timeSlots.map(slot => format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm'))]
+                ],
+                body: body.map(item => item.row),
+                startY: 40,
+                styles: { font: 'Roboto', fontSize: 10, cellPadding: 4 },
+                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+                bodyStyles: { textColor: [51, 51, 51] },
+                columnStyles: {
+                    0: { cellWidth: 40 },
+                    1: { cellWidth: 50 },
+                    ...timeSlots.reduce((acc, _, index) => {
+                        acc[index + 2] = { cellWidth: 30 };
+                        return acc;
+                    }, {})
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body') {
+                        const rowIndex = data.row.index;
+                        const colIndex = data.column.index;
+                        if (colIndex >= 2) {
+                            data.cell.styles.fillColor = body[rowIndex].backgroundColor[colIndex - 2];
                         }
-                        lastDay = row[0];
+                        if (colIndex === 0 && data.cell.text[0]) {
+                            data.cell.styles.lineWidth = 0.5;
+                            data.cell.styles.lineColor = [200, 200, 200];
+                        }
                     }
-                    currentY += data.table.rows[index].height;
-                });
-            }
-        });
+                },
+                didDrawPage: (data) => {
+                    console.log('GlobalDayViewModal: Drawing PDF page');
+                    const tableStartY = data.table.startY;
+                    const tableBody = data.table.body;
+                    let currentY = tableStartY + data.table.headHeight;
+                    let lastDay = null;
+                    tableBody.forEach((row, index) => {
+                        if (row[0] && row[0] !== lastDay) {
+                            if (lastDay !== null) {
+                                doc.setDrawColor(200, 200, 200);
+                                doc.line(10, currentY, doc.internal.pageSize.width - 10, currentY);
+                            }
+                            lastDay = row[0];
+                        }
+                        currentY += data.table.rows[index].height;
+                    });
+                }
+            });
 
-        doc.save(`global_day_view_${selectedShop}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        console.log('GlobalDayViewModal: PDF exported successfully');
+            doc.save(`global_day_view_${selectedShop}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            console.log('GlobalDayViewModal: PDF exported successfully');
+        } catch (error) {
+            console.error('GlobalDayViewModal: PDF export failed', error);
+        }
     };
 
     return (
@@ -164,19 +177,17 @@ const GlobalDayViewModal = ({
                         <thead>
                             <tr>
                                 <th className="fixed-col header" rowSpan="2">Jour</th>
-                                <th className="fixed-col header" rowSpan="2">DE/A</th>
-                                <th className="fixed-col header">XXX</th>
+                                <th className="fixed-col header" rowSpan="2">Tranche</th>
                                 {timeSlots.map((slot, index) => (
                                     <th key={index} className="scrollable-col header">
-                                        {slot}
+                                        <span>{slot}</span>
                                     </th>
                                 ))}
                             </tr>
                             <tr>
-                                <th className="fixed-col header">XXX</th>
                                 {timeSlots.map((slot, index) => (
                                     <th key={index} className="scrollable-col header">
-                                        {format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}
+                                        <span>{format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm')}</span>
                                     </th>
                                 ))}
                             </tr>
@@ -187,7 +198,6 @@ const GlobalDayViewModal = ({
                                     <tr className="day-group">
                                         <td className="fixed-col">{dayData.day}</td>
                                         <td className="fixed-col">{dayData.openClose}</td>
-                                        <td className="fixed-col"></td>
                                         {dayData.slots.map((slot, slotIndex) => (
                                             <td key={slotIndex} className={`scrollable-col ${slot.className}`}>
                                                 {slot.display}
@@ -196,7 +206,7 @@ const GlobalDayViewModal = ({
                                     </tr>
                                     {dayIndex < tableData.length - 1 && (
                                         <tr className="day-divider">
-                                            <td colSpan={timeSlots.length + 3} style={{ borderTop: '2px solid #ccc' }}></td>
+                                            <td colSpan={timeSlots.length + 2} style={{ borderTop: '2px solid #ccc' }}></td>
                                         </tr>
                                     )}
                                 </React.Fragment>

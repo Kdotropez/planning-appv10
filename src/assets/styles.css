@@ -286,10 +286,12 @@ body {
     border-collapse: collapse;
     overflow-x: auto;
 }
- .recap-table td.align-left {
-		text-align: left;
-		padding-left: 8px; 
-    }
+
+.recap-table th.align-left,
+.recap-table td.align-left {
+    text-align: left;
+    padding-left: 8px;
+}
 
 /* Boutons */
 .button-base {
@@ -518,6 +520,116 @@ body {
     outline: none;
 }
 
+/* Ajout pour gérer le ✅ et les colonnes scrollable-col */
+.scrollable-col .checkmark {
+    display: inline-block;
+    font-size: 12px; /* Taille par défaut du ✅ */
+    line-height: 1;
+    width: 100%;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: clip;
+}
+
+.scrollable-col {
+    width: calc(100% / 28);
+    min-width: 40px;
+    max-width: 50px; /* Limiter la largeur maximale */
+    text-align: center;
+    border: 1px solid #ccc;
+    transition: width 0.3s ease;
+}
+
+/* Ajout pour les cases cochées avec les couleurs pastel des employés */
+.scrollable-col.clicked-0 {
+    background-color: #e6f0fa;
+}
+
+.scrollable-col.clicked-1 {
+    background-color: #e6ffed;
+}
+
+.scrollable-col.clicked-2 {
+    background-color: #ffe6e6;
+}
+
+.scrollable-col.clicked-3 {
+    background-color: #d0f0fa;
+}
+
+.scrollable-col.clicked-4 {
+    background-color: #f0e6fa;
+}
+
+.scrollable-col.clicked-5 {
+    background-color: #fffde6;
+}
+
+.scrollable-col.clicked-6 {
+    background-color: #d6e6ff;
+}
+
+/* Media queries pour ajuster le ✅ et les colonnes scrollable-col */
+@media (max-width: 896px) {
+    .scrollable-col {
+        min-width: 28px; /* Ajusté pour éviter la perte de tranches */
+        max-width: 32px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 10px; /* Réduire la taille du ✅ */
+    }
+}
+
+@media (max-width: 1200px) {
+    .scrollable-col {
+        min-width: 30px;
+        max-width: 35px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 768px) {
+    .scrollable-col {
+        min-width: 28px;
+        max-width: 32px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 10px;
+    }
+}
+
+@media (min-width: 1920px) {
+    .scrollable-col {
+        min-width: 50px;
+        max-width: 60px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 14px;
+    }
+}
+
+@media (min-width: 2560px) {
+    .scrollable-col {
+        min-width: 60px;
+        max-width: 70px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 14px;
+    }
+}
+
+@media (min-width: 3840px) {
+    .scrollable-col {
+        min-width: 70px;
+        max-width: 80px;
+    }
+    .scrollable-col .checkmark {
+        font-size: 14px;
+    }
+}
+
 /* Responsive design */
 @media (max-width: 896px) {
     .step-container, .week-selection-container, .employee-selection-container, .shop-selection-container, .planning-container {
@@ -546,11 +658,6 @@ body {
         overflow: hidden;
         text-overflow: ellipsis;
         padding: 8px 4px;
-    }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 25px;
-        font-size: 12px;
     }
     .scrollable-col.header {
         font-size: 8px;
@@ -607,10 +714,6 @@ body {
         text-overflow: ellipsis;
         padding: 8px 4px;
     }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 30px;
-    }
     .scrollable-col.header {
         font-size: 12px;
         padding: 8px 2px;
@@ -663,11 +766,6 @@ body {
         overflow: hidden;
         text-overflow: ellipsis;
         padding: 8px 4px;
-    }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 25px;
-        font-size: 12px;
     }
     .scrollable-col.header {
         font-size: 10px;
@@ -722,10 +820,6 @@ body {
         font-size: 16px;
         padding: 8px 4px;
     }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 50px;
-    }
     .scrollable-col.header {
         font-size: 15px;
         padding: 10px 2px;
@@ -766,10 +860,6 @@ body {
     .fixed-col.employee {
         font-size: 16px;
         padding: 8px 4px;
-    }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 60px;
     }
     .scrollable-col.header {
         font-size: 16px;
@@ -812,10 +902,6 @@ body {
         font-size: 16px;
         padding: 8px 4px;
     }
-    .scrollable-col {
-        width: calc(100% / 28);
-        min-width: 70px;
-    }
     .scrollable-col.header {
         font-size: 16px;
         padding: 12px 2px;
@@ -829,5 +915,4 @@ body {
     .copy-paste-modal {
         max-width: 800px;
     }
-	
 }

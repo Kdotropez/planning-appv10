@@ -109,33 +109,50 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
         return storedEmployees.reduce((total, employee) => {
-            const slots = planning[employee]?.[dayKey] || [];
-            return total + slots.reduce((sum, slot) => sum + (slot ? 0.5 : 0), 0);
+            return total + calculateEmployeeDailyHours(employee, dayKey, planning);
         }, 0);
     };
 
     const calculateEmployeeDailyHours = (employee, dayKey, weekPlanning) => {
-        const slots = weekPlanning[employee]?.[dayKey] || [];
-        const hours = slots.reduce((sum, slot) => sum + (slot ? 0.5 : 0), 0);
-        return hours;
+        const slots = weekPlanning[employee]?.[dayKey];
+        if (!slots || slots === 'Congé ☀️') return 0;
+        if (Array.isArray(slots)) {
+            return slots.reduce((sum, slot) => sum + (slot ? config.interval / 60 : 0), 0);
+        }
+        // Calcul basé sur les créneaux horaires (ENTRÉE, PAUSE, RETOUR, SORTIE)
+        const [entry, pause, resume, exit] = slots || [];
+        if (!entry || !exit) return 0;
+        const entryTime = new Date(`1970-01-01T${entry}`);
+        const exitTime = new Date(`1970-01-01T${exit}`);
+        let hours = (exitTime - entryTime) / 1000 / 3600;
+        if (pause && resume) {
+            const pauseTime = new Date(`1970-01-01T${pause}`);
+            const resumeTime = new Date(`1970-01-01T${resume}`);
+            hours -= (resumeTime - pauseTime) / 1000 / 3600;
+        }
+        return hours > 0 ? hours : 0;
     };
 
     const calculateEmployeeWeeklyHours = (employee, week, weekPlanning) => {
-        let totalHours = 0;
+        let calendarHours = 0;
+        let realHours = 0;
         const monthStart = startOfMonth(new Date(week));
         const monthEnd = endOfMonth(new Date(week));
         for (let i = 0; i < 7; i++) {
             const dayKey = format(addDays(new Date(week), i), 'yyyy-MM-dd');
+            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+            realHours += hours;
             if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                totalHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                calendarHours += hours;
             }
         }
-        console.log('Weekly hours for', employee, week, totalHours.toFixed(1));
-        return totalHours;
+        console.log('Weekly hours for', employee, week, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
+        return { calendarHours, realHours };
     };
 
     const calculateEmployeeMonthlyHours = (employee, week) => {
-        let totalHours = 0;
+        let calendarHours = 0;
+        let realHours = 0;
         const monthStart = startOfMonth(new Date(week));
         const monthEnd = endOfMonth(new Date(week));
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
@@ -144,29 +161,40 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             const weekDate = new Date(weekKey);
             if (weekDate >= monthStart && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
-                let weeklyHours = 0;
+                let weeklyCalendarHours = 0;
+                let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
                     const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+                    const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                    weeklyRealHours += hours;
                     if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                        weeklyHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                        weeklyCalendarHours += hours;
                     }
                 }
-                totalHours += weeklyHours;
+                calendarHours += weeklyCalendarHours;
+                realHours += weeklyRealHours;
             }
         });
-        console.log('Monthly hours for', employee, totalHours.toFixed(1));
-        return totalHours;
+        console.log('Monthly hours for', employee, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
+        return { calendarHours, realHours };
     };
 
     const calculateShopWeeklyHours = () => {
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
-        const totalHours = storedEmployees.reduce((sum, employee) => sum + calculateEmployeeWeeklyHours(employee, selectedWeek, planning), 0);
-        return totalHours.toFixed(1);
+        const totals = storedEmployees.reduce((sum, employee) => {
+            const { calendarHours, realHours } = calculateEmployeeWeeklyHours(employee, selectedWeek, planning);
+            return {
+                calendarHours: sum.calendarHours + calendarHours,
+                realHours: sum.realHours + realHours
+            };
+        }, { calendarHours: 0, realHours: 0 });
+        return { calendarHours: totals.calendarHours.toFixed(1), realHours: totals.realHours.toFixed(1) };
     };
 
     const calculateShopMonthlyHours = () => {
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
-        let totalHours = 0;
+        let calendarHours = 0;
+        let realHours = 0;
         const monthStart = startOfMonth(new Date(selectedWeek));
         const monthEnd = endOfMonth(new Date(selectedWeek));
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
@@ -175,17 +203,21 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             const weekDate = new Date(weekKey);
             if (weekDate >= monthStart && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
-                let weeklyHours = 0;
+                let weeklyCalendarHours = 0;
+                let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
                     const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+                    const dailyHours = storedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
+                    weeklyRealHours += dailyHours;
                     if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                        weeklyHours += storedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
+                        weeklyCalendarHours += dailyHours;
                     }
                 }
-                totalHours += weeklyHours;
+                calendarHours += weeklyCalendarHours;
+                realHours += weeklyRealHours;
             }
         });
-        return totalHours.toFixed(1);
+        return { calendarHours: calendarHours.toFixed(1), realHours: realHours.toFixed(1) };
     };
 
     const toggleSlot = useCallback((employee, slotIndex, dayIndex, forceValue = null) => {
@@ -259,6 +291,9 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         );
     }
 
+    const shopWeeklyHours = calculateShopWeeklyHours();
+    const shopMonthlyHours = calculateShopMonthlyHours();
+
     return (
         <div className="planning-container">
             <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center' }}>
@@ -314,6 +349,12 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     </Button>
                 ))}
             </div>
+            <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
+                SEMAINE CALENDAIRE ({shopWeeklyHours.calendarHours} h)<br />
+                SEMAINE RÉELLE ({shopWeeklyHours.realHours} h)<br />
+                MENSUEL CALENDAIRE ({shopMonthlyHours.calendarHours} h)<br />
+                MENSUEL RÉEL ({shopMonthlyHours.realHours} h)
+            </p>
             <div className="recap-buttons" style={{ display: 'flex', flexDirection: 'row', overflowX: 'auto', justifyContent: 'center', gap: '12px', marginBottom: '15px' }}>
                 {(loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || []).map((employee, index) => (
                     <div
@@ -387,7 +428,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            SEMAINE ({calculateEmployeeWeeklyHours(employee, selectedWeek, planning).toFixed(1)} h)
+                            SEMAINE CALENDAIRE ({calculateEmployeeWeeklyHours(employee, selectedWeek, planning).calendarHours.toFixed(1)} h)
                         </Button>
                         <Button
                             className="button-recap"
@@ -409,7 +450,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS ({calculateEmployeeMonthlyHours(employee, selectedWeek).toFixed(1)} h)
+                            MOIS CALENDAIRE ({calculateEmployeeMonthlyHours(employee, selectedWeek).calendarHours.toFixed(1)} h)
                         </Button>
                     </div>
                 ))}
@@ -449,7 +490,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        SEMAINE ({calculateShopWeeklyHours()} h)
+                        SEMAINE CALENDAIRE ({shopWeeklyHours.calendarHours} h)
                     </Button>
                     <Button
                         className="button-recap"
@@ -470,7 +511,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        MENSUEL ({calculateShopMonthlyHours()} h)
+                        MENSUEL CALENDAIRE ({shopMonthlyHours.calendarHours} h)
                     </Button>
                 </div>
             </div>

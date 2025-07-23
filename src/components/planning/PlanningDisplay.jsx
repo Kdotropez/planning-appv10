@@ -159,11 +159,14 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         const monthStart = startOfMonth(new Date(week));
         const monthEnd = endOfMonth(new Date(week));
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
+        console.log('LocalStorage keys for monthly hours:', storageKeys);
         storageKeys.forEach(key => {
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
-            if (weekDate >= monthStart && weekDate <= monthEnd) {
+            // Inclure les semaines qui chevauchent le mois
+            if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
+                console.log(`Week planning for ${weekKey}:`, weekPlanning);
                 let weeklyCalendarHours = 0;
                 let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
@@ -176,6 +179,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 }
                 calendarHours += weeklyCalendarHours;
                 realHours += weeklyRealHours;
+                console.log(`Weekly hours for ${employee} in ${weekKey}:`, { calendar: weeklyCalendarHours.toFixed(1), real: weeklyRealHours.toFixed(1) });
             }
         });
         console.log('Monthly hours for', employee, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
@@ -202,11 +206,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         const monthStart = startOfMonth(new Date(selectedWeek));
         const monthEnd = endOfMonth(new Date(selectedWeek));
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
+        console.log('LocalStorage keys for shop monthly hours:', storageKeys);
         storageKeys.forEach(key => {
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
-            if (weekDate >= monthStart && weekDate <= monthEnd) {
+            if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
+                console.log(`Week planning for ${weekKey}:`, weekPlanning);
                 let weeklyCalendarHours = 0;
                 let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
@@ -219,6 +225,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 }
                 calendarHours += weeklyCalendarHours;
                 realHours += weeklyRealHours;
+                console.log(`Shop weekly hours for ${weekKey}:`, { calendar: weeklyCalendarHours.toFixed(1), real: weeklyRealHours.toFixed(1) });
             }
         });
         console.log('Shop monthly hours:', { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });

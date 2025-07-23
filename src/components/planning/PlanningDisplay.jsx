@@ -108,9 +108,12 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const calculateDailyHours = (dayIndex) => {
         const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
         const storedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || [];
-        return storedEmployees.reduce((total, employee) => {
-            return total + calculateEmployeeDailyHours(employee, dayKey, planning);
+        const total = storedEmployees.reduce((total, employee) => {
+            const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
+            console.log('Daily hours for', employee, dayKey, hours.toFixed(1));
+            return total + hours;
         }, 0);
+        return total;
     };
 
     const calculateEmployeeDailyHours = (employee, dayKey, weekPlanning) => {
@@ -188,6 +191,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 realHours: sum.realHours + realHours
             };
         }, { calendarHours: 0, realHours: 0 });
+        console.log('Shop weekly hours:', { calendar: totals.calendarHours.toFixed(1), real: totals.realHours.toFixed(1) });
         return { calendarHours: totals.calendarHours.toFixed(1), realHours: totals.realHours.toFixed(1) };
     };
 
@@ -217,6 +221,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 realHours += weeklyRealHours;
             }
         });
+        console.log('Shop monthly hours:', { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
         return { calendarHours: calendarHours.toFixed(1), realHours: realHours.toFixed(1) };
     };
 

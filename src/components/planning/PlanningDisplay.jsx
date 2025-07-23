@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, isMonday, startOfMonth, endOfMonth } from 'date-fns';
+import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { FaToggleOn, FaDownload } from 'react-icons/fa';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
@@ -122,10 +122,15 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     const calculateEmployeeWeeklyHours = (employee, week, weekPlanning) => {
         let totalHours = 0;
+        const monthStart = startOfMonth(new Date(week));
+        const monthEnd = endOfMonth(new Date(week));
         for (let i = 0; i < 7; i++) {
             const dayKey = format(addDays(new Date(week), i), 'yyyy-MM-dd');
-            totalHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+            if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
+                totalHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+            }
         }
+        console.log('Weekly hours for', employee, week, totalHours.toFixed(1));
         return totalHours;
     };
 
@@ -138,9 +143,18 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
             if (weekDate >= monthStart && weekDate <= monthEnd) {
-                totalHours += calculateEmployeeWeeklyHours(employee, weekKey, loadFromLocalStorage(key, {}));
+                const weekPlanning = loadFromLocalStorage(key, {});
+                let weeklyHours = 0;
+                for (let i = 0; i < 7; i++) {
+                    const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+                    if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
+                        weeklyHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                    }
+                }
+                totalHours += weeklyHours;
             }
         });
+        console.log('Monthly hours for', employee, totalHours.toFixed(1));
         return totalHours;
     };
 
@@ -160,7 +174,15 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
             if (weekDate >= monthStart && weekDate <= monthEnd) {
-                totalHours += storedEmployees.reduce((sum, employee) => sum + calculateEmployeeWeeklyHours(employee, weekKey, loadFromLocalStorage(key, {})), 0);
+                const weekPlanning = loadFromLocalStorage(key, {});
+                let weeklyHours = 0;
+                for (let i = 0; i < 7; i++) {
+                    const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
+                    if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
+                        weeklyHours += storedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
+                    }
+                }
+                totalHours += weeklyHours;
             }
         });
         return totalHours.toFixed(1);

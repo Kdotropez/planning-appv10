@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, isWithinInterval, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
@@ -20,7 +20,8 @@ const MonthlyRecapModals = ({
     setShowEmployeeMonthlyRecap,
     selectedEmployeeForMonthlyRecap,
     setSelectedEmployeeForMonthlyRecap,
-    calculateEmployeeWeeklyHours
+    calculateEmployeeWeeklyHours,
+    calculateEmployeeDailyHours
 }) => {
     if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) {
         console.log('MonthlyRecapModals: No modal to show');
@@ -72,6 +73,18 @@ const MonthlyRecapModals = ({
         return index >= 0 ? backgroundColors[index % backgroundColors.length] : [200, 200, 200];
     };
 
+    const calculateEmployeeWeeklyHoursInMonth = (employee, week, weekPlanning) => {
+        let totalHours = 0;
+        for (let i = 0; i < 7; i++) {
+            const dayKey = format(addDays(new Date(week), i), 'yyyy-MM-dd');
+            if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
+                totalHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+            }
+        }
+        console.log('Weekly hours for', employee, week, totalHours.toFixed(1));
+        return totalHours;
+    };
+
     const recapData = [];
     const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
     let totalMonthHours = 0;
@@ -86,7 +99,7 @@ const MonthlyRecapModals = ({
         };
 
         weeks.forEach(week => {
-            const weeklyHours = calculateEmployeeWeeklyHours(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+            const weeklyHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
             employeeData.weeks.push({
                 week: week.label,
                 hours: weeklyHours.toFixed(1)

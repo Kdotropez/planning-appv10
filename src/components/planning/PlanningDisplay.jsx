@@ -274,7 +274,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         return (
             <div className="planning-container">
                 <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center' }}>
-                    Planning pour {selectedShop} - Semaine du {format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })}
+                    Planning pour {selectedShop}
                 </h2>
                 <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', color: '#e53935' }}>
                     Erreur: Aucune configuration de tranches horaires disponible.
@@ -298,12 +298,16 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     const shopWeeklyHours = calculateShopWeeklyHours();
     const shopMonthlyHours = calculateShopMonthlyHours();
+    const monthDisplay = format(new Date(selectedWeek), 'MM');
 
     return (
         <div className="planning-container">
-            <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center' }}>
-                Planning pour {selectedShop} - Semaine du {format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })}
+            <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', fontSize: '14px', marginBottom: '5px' }}>
+                Planning pour {selectedShop}
             </h2>
+            <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', fontSize: '14px', marginBottom: '15px' }}>
+                Semaine du Lundi {format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })} au Dimanche {format(addDays(new Date(selectedWeek), 6), 'd MMMM yyyy', { locale: fr })}
+            </p>
             {feedback && (
                 <p style={{
                     fontFamily: 'Roboto, sans-serif',
@@ -470,7 +474,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS RÉEL ({calculateEmployeeMonthlyHours(employee, selectedWeek).realHours.toFixed(1)} h)
+                            MOIS RÉEL ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, selectedWeek).realHours.toFixed(1)} h)
                         </Button>
                         <Button
                             className="button-recap"
@@ -492,7 +496,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS CALENDAIRE ({calculateEmployeeMonthlyHours(employee, selectedWeek).calendarHours.toFixed(1)} h)
+                            MOIS CALENDAIRE ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, selectedWeek).calendarHours.toFixed(1)} h)
                         </Button>
                     </div>
                 ))}
@@ -553,7 +557,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        MENSUEL CALENDAIRE ({shopMonthlyHours.calendarHours} h)
+                        MENSUEL CALENDAIRE ({monthDisplay}) ({shopMonthlyHours.calendarHours} h)
                     </Button>
                     <Button
                         className="button-recap"
@@ -595,7 +599,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        MENSUEL RÉEL ({shopMonthlyHours.realHours} h)
+                        MENSUEL RÉEL ({monthDisplay}) ({shopMonthlyHours.realHours} h)
                     </Button>
                 </div>
             </div>

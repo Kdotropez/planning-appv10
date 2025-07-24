@@ -37,10 +37,14 @@ const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop }) 
                     return null;
                 }
             })
-            .filter(week => week !== null)
+            .filter(week => week !== null);
+
+        // Supprimer les doublons en utilisant un Set
+        const uniqueWeeks = Array.from(new Set(weeks.map(w => w.key)))
+            .map(key => weeks.find(w => w.key === key))
             .sort((a, b) => new Date(a.key) - new Date(b.key));
-        console.log('Processed saved weeks:', weeks);
-        setSavedWeeks(weeks);
+        console.log('Processed saved weeks:', uniqueWeeks);
+        setSavedWeeks(uniqueWeeks);
     }, [selectedShop]);
 
     const handleMonthChange = (e) => {

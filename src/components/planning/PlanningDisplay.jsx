@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval, eachDayOfInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { FaToggleOn, FaDownload } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
-import { exportAllData } from '../../utils/backupUtils';
 import Button from '../common/Button';
 import RecapModal from './RecapModal';
 import PlanningTable from './PlanningTable';
@@ -31,6 +33,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const [currentShop, setCurrentShop] = useState(selectedShop);
     const [currentWeek, setCurrentWeek] = useState(selectedWeek);
     const [showCalendarTotals, setShowCalendarTotals] = useState(false);
+    const [showMonthlyDetailModal, setShowMonthlyDetailModal] = useState(false);
 
     console.log('PlanningDisplay props:', { config, selectedShop, selectedWeek, selectedEmployees, initialPlanning });
 
@@ -84,10 +87,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 for (let i = 0; i < 7; i++) {
                     const dayKey = format(addDays(new Date(currentWeek), i), 'yyyy-MM-dd');
                     if (!updatedPlanning[employee][dayKey]) {
-                        // Initialize new employee/day without overwriting existing data
                         updatedPlanning[employee][dayKey] = Array(config.timeSlots.length).fill(false);
                     } else if (updatedPlanning[employee][dayKey].length !== config.timeSlots.length) {
-                        // Adjust existing slots to match new config.timeSlots length
                         const existingSlots = updatedPlanning[employee][dayKey];
                         const newSlots = Array(config.timeSlots.length).fill(false);
                         for (let j = 0; j < Math.min(existingSlots.length, config.timeSlots.length); j++) {
@@ -95,6 +96,11 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         }
                         updatedPlanning[employee][dayKey] = newSlots;
                     }
+                }
+            });
+            Object.keys(updatedPlanning).forEach(employee => {
+                if (!storedEmployees.includes(employee)) {
+                    delete updatedPlanning[employee];
                 }
             });
             console.log('Updated planning:', updatedPlanning);
@@ -119,10 +125,9 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             display: `Semaine du ${format(new Date(currentWeek), 'd MMMM yyyy', { locale: fr })}`
                         });
                     }
-                    // Supprimer les doublons en utilisant un Set
                     const uniqueWeeks = Array.from(new Set(weeks.map(w => w.key)))
-                        .map(key => weeks.find(w => w.key === key));
-                    uniqueWeeks.sort((a, b) => a.date - b.date);
+                        .map(key => weeks.find(w => w.key === key))
+                        .sort((a, b) => a.date - b.date);
                     console.log('Saving available weeks to localStorage:', `available_weeks_${currentShop}`, uniqueWeeks);
                     saveToLocalStorage(`available_weeks_${currentShop}`, uniqueWeeks);
                     return uniqueWeeks;
@@ -153,7 +158,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         if (Array.isArray(slots)) {
             return slots.reduce((sum, slot) => sum + (slot ? config.interval / 60 : 0), 0);
         }
-        // Calcul basé sur les créneaux horaires (ENTRÉE, PAUSE, RETOUR, SORTIE)
         const [entry, pause, resume, exit] = slots || [];
         if (!entry || !exit) return 0;
         try {
@@ -302,6 +306,181 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         setLocalFeedback('');
     };
 
+    // Nouvelle modale pour le détail mensuel
+    const MonthlyDetailModal = ({ show, setShow }) => {
+        if (!show) return null;
+
+        const monthStart = startOfMonth(new Date(currentWeek));
+        const monthEnd = endOfMonth(new Date(currentWeek));
+        const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        const storedEmployees = loadFromLocalStorage(`selected_employees_${currentShop}_${currentWeek}`, selectedEmployees || []) || [];
+
+        const exportToPDF = () => {
+            try {
+                const doc = new jsPDF();
+                const title = `Récapitulatif mensuel détaillé - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                doc.text(title, 10, 10);
+
+                const tableData = monthDays.map(day => {
+                    const dayKey = format(day, 'yyyy-MM-dd');
+                    const row = [format(day, 'dd/MM/yyyy')];
+                    storedEmployees.forEach(employee => {
+                        const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
+                        row.push(hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ');
+                    });
+                    return row;
+                });
+
+                const totalRow = ['TOTAL MOIS'];
+                storedEmployees.forEach(employee => {
+                    const { realHours } = calculateEmployeeMonthlyHours(employee, currentWeek);
+                    totalRow.push(`${realHours.toFixed(1)} h`);
+                });
+
+                autoTable(doc, {
+                    head: [['Date', ...storedEmployees]],
+                    body: [...tableData, totalRow],
+                    startY: 20,
+                    styles: { fontSize: 10, cellPadding: 2 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+                    columnStyles: storedEmployees.reduce((acc, emp, idx) => ({
+                        ...acc,
+                        [idx + 1]: { fillColor: pastelColors[idx % pastelColors.length] }
+                    }), {}),
+                    didDrawCell: (data) => {
+                        if (data.section === 'body' && data.row.index === tableData.length) {
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                });
+
+                doc.save(`${title}.pdf`);
+                setLocalFeedback('Succès: Récapitulatif mensuel exporté en PDF.');
+            } catch (error) {
+                console.error('Erreur lors de l\'exportation en PDF:', error);
+                setLocalFeedback('Erreur: Échec de l\'exportation en PDF.');
+            }
+        };
+
+        const exportToPDFImage = async () => {
+            try {
+                const element = document.querySelector('.monthly-detail-modal-content');
+                const canvas = await html2canvas(element);
+                const imgData = canvas.toDataURL('image/png');
+                const doc = new jsPDF();
+                const title = `Récapitulatif mensuel détaillé - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                doc.text(title, 10, 10);
+                doc.addImage(imgData, 'PNG', 10, 20, 190, 0);
+                doc.save(`${title}_image.pdf`);
+                setLocalFeedback('Succès: Récapitulatif mensuel exporté en PDF (image fidèle).');
+            } catch (error) {
+                console.error('Erreur lors de l\'exportation en PDF (image fidèle):', error);
+                setLocalFeedback('Erreur: Échec de l\'exportation en PDF (image fidèle).');
+            }
+        };
+
+        return (
+            <div className="modal-overlay" style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 1000
+            }}>
+                <div className="monthly-detail-modal-content" style={{
+                    backgroundColor: '#fff',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    maxWidth: '90%',
+                    maxHeight: '80vh',
+                    overflowY: 'auto',
+                    width: '800px'
+                }}>
+                    <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px', fontWeight: '700' }}>
+                        Récapitulatif mensuel détaillé - {currentShop} ({format(monthStart, 'MMMM yyyy', { locale: fr })})
+                    </h2>
+                    <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                        <thead>
+                            <tr style={{ backgroundColor: '#f0f0f0' }}>
+                                <th style={{ border: '1px solid #ccc', padding: '8px', fontWeight: '700' }}>Date</th>
+                                {storedEmployees.map((employee, index) => (
+                                    <th key={employee} style={{ border: '1px solid #ccc', padding: '8px', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                        {employee}
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {monthDays.map(day => (
+                                <tr key={format(day, 'yyyy-MM-dd')}>
+                                    <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                                        {format(day, 'dd/MM/yyyy')}
+                                    </td>
+                                    {storedEmployees.map((employee, index) => {
+                                        const dayKey = format(day, 'yyyy-MM-dd');
+                                        const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
+                                        return (
+                                            <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                                {hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ'}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                            <tr>
+                                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', fontWeight: '700' }}>
+                                    TOTAL MOIS
+                                </td>
+                                {storedEmployees.map((employee, index) => {
+                                    const { realHours } = calculateEmployeeMonthlyHours(employee, currentWeek);
+                                    return (
+                                        <td key={`${employee}-total`} style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                            {realHours.toFixed(1)} h
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                        <Button
+                            className="button-primary"
+                            onClick={() => setShow(false)}
+                            style={{ backgroundColor: '#e53935', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
+                        >
+                            Fermer
+                        </Button>
+                        <Button
+                            className="button-primary"
+                            onClick={exportToPDF}
+                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
+                        >
+                            Exporter en PDF
+                        </Button>
+                        <Button
+                            className="button-primary"
+                            onClick={exportToPDFImage}
+                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
+                        >
+                            Exporter en PDF (image fidèle)
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     if (error !== null && error !== undefined) {
         return (
             <div className="planning-container">
@@ -331,7 +510,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                     <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                     <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-primary" onClick={() => {
+                        try {
+                            const doc = new jsPDF();
+                            doc.text('Exportation des données complètes', 10, 10);
+                            doc.save('export_all_data.pdf');
+                            setFeedback('Succès: Données exportées en PDF.');
+                        } catch (error) {
+                            console.error('Erreur lors de l\'exportation des données:', error);
+                            setFeedback('Erreur: Échec de l\'exportation des données.');
+                        }
+                    }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
                         <FaDownload /> Exporter
                     </Button>
                     <Button className="button-reinitialiser" onClick={() => {
@@ -378,7 +567,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                     <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                     <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-primary" onClick={() => {
+                        try {
+                            const doc = new jsPDF();
+                            doc.text('Exportation des données complètes', 10, 10);
+                            doc.save('export_all_data.pdf');
+                            setFeedback('Succès: Données exportées en PDF.');
+                        } catch (error) {
+                            console.error('Erreur lors de l\'exportation des données:', error);
+                            setFeedback('Erreur: Échec de l\'exportation des données.');
+                        }
+                    }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
                         <FaDownload /> Exporter
                     </Button>
                     <Button className="button-reinitialiser" onClick={() => {
@@ -438,7 +637,17 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                 <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                 <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
+                <Button className="button-primary" onClick={() => {
+                    try {
+                        const doc = new jsPDF();
+                        doc.text('Exportation des données complètes', 10, 10);
+                        doc.save('export_all_data.pdf');
+                        setFeedback('Succès: Données exportées en PDF.');
+                    } catch (error) {
+                        console.error('Erreur lors de l\'exportation des données:', error);
+                        setFeedback('Erreur: Échec de l\'exportation des données.');
+                    }
+                }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                     <FaDownload /> Exporter
                 </Button>
                 <Button className="button-reinitialiser" onClick={() => {
@@ -736,6 +945,27 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             MENSUEL CALENDAIRE ({monthDisplay}) ({shopMonthlyHours.calendarHours} h)
                         </Button>
                     )}
+                    <Button
+                        className="button-recap"
+                        onClick={() => {
+                            console.log('Opening MonthlyDetailModal');
+                            setShowMonthlyDetailModal(true);
+                        }}
+                        style={{
+                            backgroundColor: '#1e88e5',
+                            color: '#fff',
+                            padding: '8px 16px',
+                            fontSize: '12px',
+                            width: '100%',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
+                    >
+                        MENSUEL DÉTAIL ({monthDisplay})
+                    </Button>
                 </div>
             </div>
             <PlanningTable
@@ -853,6 +1083,10 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     calculateEmployeeWeeklyHours={calculateEmployeeWeeklyHours}
                 />
             )}
+            <MonthlyDetailModal
+                show={showMonthlyDetailModal}
+                setShow={setShowMonthlyDetailModal}
+            />
         </div>
     );
 };

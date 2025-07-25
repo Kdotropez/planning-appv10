@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval, eachDayOfInterval } from 'date-fns';
+import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval, eachDayOfInterval, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { FaToggleOn, FaDownload } from 'react-icons/fa';
 import jsPDF from 'jspdf';
@@ -194,11 +194,10 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         return { calendarHours, realHours };
     };
 
-    const calculateEmployeeMonthlyHours = (employee, week) => {
+    const calculateEmployeeMonthlyHours = (employee, monthStart) => {
         let calendarHours = 0;
         let realHours = 0;
-        const monthStart = startOfMonth(new Date(week));
-        const monthEnd = endOfMonth(new Date(week));
+        const monthEnd = endOfMonth(new Date(monthStart));
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${currentShop}_`));
         console.log('LocalStorage keys for monthly hours:', storageKeys);
         storageKeys.forEach(key => {
@@ -309,10 +308,31 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const MonthlyDetailModal = ({ show, setShow }) => {
         if (!show) return null;
 
-        const monthStart = startOfMonth(new Date(currentWeek));
-        const monthEnd = endOfMonth(new Date(currentWeek));
+        // Récupérer les mois disponibles à partir des clés de localStorage
+        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${currentShop}_`));
+        const availableMonths = Array.from(new Set(
+            storageKeys.map(key => {
+                const weekKey = key.replace(`planning_${currentShop}_`, '');
+                const weekDate = new Date(weekKey);
+                return format(weekDate, 'yyyy-MM');
+            })
+        )).map(month => {
+            const [year, monthIndex] = month.split('-').map(Number);
+            return new Date(year, monthIndex - 1, 1);
+        }).sort((a, b) => a - b);
+
+        const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date(currentWeek)));
+
+        const monthStart = startOfMonth(selectedMonth);
+        const monthEnd = endOfMonth(selectedMonth);
         const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const storedEmployees = loadFromLocalStorage(`selected_employees_${currentShop}_${currentWeek}`, selectedEmployees || []) || [];
+
+        const getPlanningForDay = (day) => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            return loadFromLocalStorage(`planning_${currentShop}_${weekKey}`, {});
+        };
 
         const exportToPDF = () => {
             try {
@@ -323,9 +343,10 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
                 const tableData = monthDays.map(day => {
                     const dayKey = format(day, 'yyyy-MM-dd');
+                    const weekPlanning = getPlanningForDay(day);
                     const row = [format(day, 'dd/MM/yyyy')];
                     storedEmployees.forEach(employee => {
-                        const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
+                        const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
                         row.push(hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ');
                     });
                     return row;
@@ -333,7 +354,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
                 const totalRow = ['TOTAL MOIS'];
                 storedEmployees.forEach(employee => {
-                    const { realHours } = calculateEmployeeMonthlyHours(employee, currentWeek);
+                    const { realHours } = calculateEmployeeMonthlyHours(employee, monthStart);
                     totalRow.push(`${realHours.toFixed(1)} h`);
                 });
 
@@ -352,7 +373,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             data.cell.styles.fontStyle = 'bold';
                         }
                     },
-                    margin: { top: 15, left: 10, right: 10 },
+                    margin: { top: 15, left: 10, right: 10 }
                 });
 
                 doc.save(`${title}.pdf`);
@@ -408,6 +429,20 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '10px', fontWeight: '700', fontSize: '12px' }}>
                         Récap. mensuel - {currentShop} ({format(monthStart, 'MMMM yyyy', { locale: fr })})
                     </h2>
+                    <select
+                        value={format(selectedMonth, 'yyyy-MM')}
+                        onChange={(e) => {
+                            const [year, month] = e.target.value.split('-').map(Number);
+                            setSelectedMonth(new Date(year, month - 1, 1));
+                        }}
+                        style={{ fontFamily: 'Roboto, sans-serif', padding: '6px', fontSize: '12px', marginBottom: '10px', width: '100%' }}
+                    >
+                        {availableMonths.map(month => (
+                            <option key={format(month, 'yyyy-MM')} value={format(month, 'yyyy-MM')}>
+                                {format(month, 'MMMM yyyy', { locale: fr })}
+                            </option>
+                        ))}
+                    </select>
                     <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '8px' }}>
                         <thead>
                             <tr style={{ backgroundColor: '#f0f0f0' }}>
@@ -420,28 +455,31 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             </tr>
                         </thead>
                         <tbody>
-                            {monthDays.map(day => (
-                                <tr key={format(day, 'yyyy-MM-dd')}>
-                                    <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
-                                        {format(day, 'dd/MM/yyyy')}
-                                    </td>
-                                    {storedEmployees.map((employee, index) => {
-                                        const dayKey = format(day, 'yyyy-MM-dd');
-                                        const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
-                                        return (
-                                            <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
-                                                {hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ'}
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
+                            {monthDays.map(day => {
+                                const dayKey = format(day, 'yyyy-MM-dd');
+                                const weekPlanning = getPlanningForDay(day);
+                                return (
+                                    <tr key={dayKey}>
+                                        <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
+                                            {format(day, 'dd/MM/yyyy')}
+                                        </td>
+                                        {storedEmployees.map((employee, index) => {
+                                            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                                            return (
+                                                <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                                    {hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ'}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
                             <tr>
                                 <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700' }}>
                                     TOTAL MOIS
                                 </td>
                                 {storedEmployees.map((employee, index) => {
-                                    const { realHours } = calculateEmployeeMonthlyHours(employee, currentWeek);
+                                    const { realHours } = calculateEmployeeMonthlyHours(employee, monthStart);
                                     return (
                                         <td key={`${employee}-total`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
                                             {realHours.toFixed(1)} h
@@ -786,7 +824,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS RÉEL ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, currentWeek).realHours.toFixed(1)} h)
+                            MOIS RÉEL ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, new Date(currentWeek)).realHours.toFixed(1)} h)
                         </Button>
                         {showCalendarTotals && (
                             <Button
@@ -809,7 +847,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                             >
-                                MOIS CALENDAIRE ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, currentWeek).calendarHours.toFixed(1)} h)
+                                MOIS CALENDAIRE ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, new Date(currentWeek)).calendarHours.toFixed(1)} h)
                             </Button>
                         )}
                     </div>

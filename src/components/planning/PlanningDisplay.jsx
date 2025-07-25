@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
+import { exportAllData } from '../../utils/backupUtils';
 import Button from '../common/Button';
 import RecapModal from './RecapModal';
 import PlanningTable from './PlanningTable';
@@ -39,7 +40,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     const pastelColors = ['#e6f0fa', '#e6ffed', '#ffe6e6', '#d0f0fa', '#f0e6fa', '#fffde6', '#d6e6ff'];
 
-    // Charger la liste des boutiques depuis localStorage ou utiliser une liste par défaut
     const shops = loadFromLocalStorage('shops', [selectedShop]) || [selectedShop];
 
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -306,7 +306,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         setLocalFeedback('');
     };
 
-    // Nouvelle modale pour le détail mensuel
     const MonthlyDetailModal = ({ show, setShow }) => {
         if (!show) return null;
 
@@ -317,8 +316,9 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
         const exportToPDF = () => {
             try {
-                const doc = new jsPDF();
-                const title = `Récapitulatif mensuel détaillé - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                const doc = new jsPDF({ orientation: 'portrait' });
+                const title = `Récap. mensuel - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                doc.setFontSize(10);
                 doc.text(title, 10, 10);
 
                 const tableData = monthDays.map(day => {
@@ -340,18 +340,19 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 autoTable(doc, {
                     head: [['Date', ...storedEmployees]],
                     body: [...tableData, totalRow],
-                    startY: 20,
-                    styles: { fontSize: 10, cellPadding: 2 },
-                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+                    startY: 15,
+                    styles: { fontSize: 8, cellPadding: 1, lineHeight: 0.5 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
                     columnStyles: storedEmployees.reduce((acc, emp, idx) => ({
                         ...acc,
                         [idx + 1]: { fillColor: pastelColors[idx % pastelColors.length] }
-                    }), {}),
+                    }), { 0: { fillColor: [255, 255, 255] } }),
                     didDrawCell: (data) => {
                         if (data.section === 'body' && data.row.index === tableData.length) {
                             data.cell.styles.fontStyle = 'bold';
                         }
-                    }
+                    },
+                    margin: { top: 15, left: 10, right: 10 },
                 });
 
                 doc.save(`${title}.pdf`);
@@ -365,12 +366,15 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         const exportToPDFImage = async () => {
             try {
                 const element = document.querySelector('.monthly-detail-modal-content');
-                const canvas = await html2canvas(element);
+                const canvas = await html2canvas(element, { scale: 2 });
                 const imgData = canvas.toDataURL('image/png');
-                const doc = new jsPDF();
-                const title = `Récapitulatif mensuel détaillé - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                const doc = new jsPDF({ orientation: 'portrait' });
+                const title = `Récap. mensuel - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
+                doc.setFontSize(10);
                 doc.text(title, 10, 10);
-                doc.addImage(imgData, 'PNG', 10, 20, 190, 0);
+                const imgWidth = 190;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                doc.addImage(imgData, 'PNG', 10, 15, imgWidth, imgHeight);
                 doc.save(`${title}_image.pdf`);
                 setLocalFeedback('Succès: Récapitulatif mensuel exporté en PDF (image fidèle).');
             } catch (error) {
@@ -394,22 +398,22 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             }}>
                 <div className="monthly-detail-modal-content" style={{
                     backgroundColor: '#fff',
-                    padding: '20px',
+                    padding: '10px',
                     borderRadius: '8px',
                     maxWidth: '90%',
                     maxHeight: '80vh',
                     overflowY: 'auto',
-                    width: '800px'
+                    width: '700px'
                 }}>
-                    <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px', fontWeight: '700' }}>
-                        Récapitulatif mensuel détaillé - {currentShop} ({format(monthStart, 'MMMM yyyy', { locale: fr })})
+                    <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '10px', fontWeight: '700', fontSize: '12px' }}>
+                        Récap. mensuel - {currentShop} ({format(monthStart, 'MMMM yyyy', { locale: fr })})
                     </h2>
-                    <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                    <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '8px' }}>
                         <thead>
                             <tr style={{ backgroundColor: '#f0f0f0' }}>
-                                <th style={{ border: '1px solid #ccc', padding: '8px', fontWeight: '700' }}>Date</th>
+                                <th style={{ border: '1px solid #ccc', padding: '4px', fontWeight: '700' }}>Date</th>
                                 {storedEmployees.map((employee, index) => (
-                                    <th key={employee} style={{ border: '1px solid #ccc', padding: '8px', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                    <th key={employee} style={{ border: '1px solid #ccc', padding: '4px', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
                                         {employee}
                                     </th>
                                 ))}
@@ -418,14 +422,14 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         <tbody>
                             {monthDays.map(day => (
                                 <tr key={format(day, 'yyyy-MM-dd')}>
-                                    <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                                    <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
                                         {format(day, 'dd/MM/yyyy')}
                                     </td>
                                     {storedEmployees.map((employee, index) => {
                                         const dayKey = format(day, 'yyyy-MM-dd');
                                         const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
                                         return (
-                                            <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                            <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
                                                 {hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ'}
                                             </td>
                                         );
@@ -433,13 +437,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                                 </tr>
                             ))}
                             <tr>
-                                <td style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', fontWeight: '700' }}>
+                                <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700' }}>
                                     TOTAL MOIS
                                 </td>
                                 {storedEmployees.map((employee, index) => {
                                     const { realHours } = calculateEmployeeMonthlyHours(employee, currentWeek);
                                     return (
-                                        <td key={`${employee}-total`} style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
+                                        <td key={`${employee}-total`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
                                             {realHours.toFixed(1)} h
                                         </td>
                                     );
@@ -451,7 +455,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         <Button
                             className="button-primary"
                             onClick={() => setShow(false)}
-                            style={{ backgroundColor: '#e53935', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            style={{ backgroundColor: '#e53935', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
                         >
@@ -460,7 +464,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         <Button
                             className="button-primary"
                             onClick={exportToPDF}
-                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
@@ -469,7 +473,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         <Button
                             className="button-primary"
                             onClick={exportToPDFImage}
-                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
+                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
@@ -510,17 +514,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                     <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                     <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => {
-                        try {
-                            const doc = new jsPDF();
-                            doc.text('Exportation des données complètes', 10, 10);
-                            doc.save('export_all_data.pdf');
-                            setFeedback('Succès: Données exportées en PDF.');
-                        } catch (error) {
-                            console.error('Erreur lors de l\'exportation des données:', error);
-                            setFeedback('Erreur: Échec de l\'exportation des données.');
-                        }
-                    }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
                         <FaDownload /> Exporter
                     </Button>
                     <Button className="button-reinitialiser" onClick={() => {
@@ -567,17 +561,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                     <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                     <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                    <Button className="button-primary" onClick={() => {
-                        try {
-                            const doc = new jsPDF();
-                            doc.text('Exportation des données complètes', 10, 10);
-                            doc.save('export_all_data.pdf');
-                            setFeedback('Succès: Données exportées en PDF.');
-                        } catch (error) {
-                            console.error('Erreur lors de l\'exportation des données:', error);
-                            setFeedback('Erreur: Échec de l\'exportation des données.');
-                        }
-                    }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
+                    <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
                         <FaDownload /> Exporter
                     </Button>
                     <Button className="button-reinitialiser" onClick={() => {
@@ -637,17 +621,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 <Button className="button-retour" onClick={onBackToShop}>Retour Boutique</Button>
                 <Button className="button-retour" onClick={onBackToWeek}>Retour Semaine</Button>
                 <Button className="button-retour" onClick={onBackToConfig}>Retour Configuration</Button>
-                <Button className="button-primary" onClick={() => {
-                    try {
-                        const doc = new jsPDF();
-                        doc.text('Exportation des données complètes', 10, 10);
-                        doc.save('export_all_data.pdf');
-                        setFeedback('Succès: Données exportées en PDF.');
-                    } catch (error) {
-                        console.error('Erreur lors de l\'exportation des données:', error);
-                        setFeedback('Erreur: Échec de l\'exportation des données.');
-                    }
-                }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
+                <Button className="button-primary" onClick={() => exportAllData(setFeedback)} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}>
                     <FaDownload /> Exporter
                 </Button>
                 <Button className="button-reinitialiser" onClick={() => {

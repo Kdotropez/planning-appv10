@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, eachDayOfInterval, addDays, isWithinInterval, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { loadFromLocalStorage } from '../../utils/localStorage';
+import { loadFromLocalStorage, loadShopBackup } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -32,7 +32,6 @@ const MonthlyRecapModals = ({
     return null;
   }
 
-  // Sélecteur de mois
   const [selectedMonth, setSelectedMonth] = useState(new Date(selectedWeek));
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -43,7 +42,6 @@ const MonthlyRecapModals = ({
       label: `Semaine du ${format(week, 'd MMMM yyyy', { locale: fr })}`
     }));
 
-  // Liste des mois pour le sélecteur
   const months = Array.from({ length: 12 }, (_, i) => {
     const monthDate = new Date(selectedMonth.getFullYear(), i, 1);
     return {
@@ -116,7 +114,8 @@ const MonthlyRecapModals = ({
         return;
       }
       const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, {});
+      const shopData = loadShopBackup(selectedShop);
+      const weekPlanning = shopData.weeks[weekKey]?.planning || {};
       console.log(`Loading planning for ${employee} on ${dayKey} (week ${weekKey}):`, weekPlanning);
       const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
       realHours += hours;
@@ -138,7 +137,8 @@ const MonthlyRecapModals = ({
         return;
       }
       const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, {});
+      const shopData = loadShopBackup(selectedShop);
+      const weekPlanning = shopData.weeks[weekKey]?.planning || {};
       console.log(`Loading shop planning for ${dayKey} (week ${weekKey}):`, weekPlanning);
       const dailyHours = selectedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
       realHours += dailyHours;
@@ -157,14 +157,11 @@ const MonthlyRecapModals = ({
     }
     if (Array.isArray(slots)) {
       if (slots.length === 4 && typeof slots[0] === 'string') {
-        // Format [entry, pause, resume, exit]
         const [entry, pause, resume, exit] = slots;
         const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
         return [entry || '', pause || '', resume || '', exit || '', `${hours.toFixed(1)} h`];
       } else if (slots.some(s => s === true)) {
-        // Format booléen avec heures non nulles
         const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-        // Si heures non nulles, utiliser des horaires par défaut basés sur les créneaux
         if (hours > 0) {
           const startIndex = slots.findIndex(s => s === true);
           const endIndex = slots.lastIndexOf(true);
@@ -188,7 +185,8 @@ const MonthlyRecapModals = ({
       return {
         employee,
         weeks: weeks.map(week => {
-          const realHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+          const shopData = loadShopBackup(selectedShop);
+          const realHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, shopData.weeks[week.key]?.planning || planning);
           return {
             week: week.label,
             realHours: realHours.toFixed(1)
@@ -209,7 +207,8 @@ const MonthlyRecapModals = ({
     recapData = [{
       employee,
       weeks: weeks.map(week => {
-        const realHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+        const shopData = loadShopBackup(selectedShop);
+        const realHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, shopData.weeks[week.key]?.planning || planning);
         return {
           week: week.label,
           realHours: realHours.toFixed(1)
@@ -228,7 +227,8 @@ const MonthlyRecapModals = ({
     detailData = days.map(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, planning);
+      const shopData = loadShopBackup(selectedShop);
+      const weekPlanning = shopData.weeks[weekKey]?.planning || planning;
       const row = {
         day: format(day, 'dd/MM/yyyy', { locale: fr }),
         employees: {}
@@ -250,7 +250,8 @@ const MonthlyRecapModals = ({
     employeeDetailData = days.map(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-      const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, planning);
+      const shopData = loadShopBackup(selectedShop);
+      const weekPlanning = shopData.weeks[weekKey]?.planning || planning;
       const [entry, pause, resume, exit, hours] = getDailyHoursOrCongé(employee, dayKey, weekPlanning);
       return {
         day: format(day, 'dd/MM/yyyy', { locale: fr }),

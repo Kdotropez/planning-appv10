@@ -137,7 +137,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     setLocalFeedback('');
   }, [showCopyPaste, showWeekCopy]);
 
-  // Calcul des totaux mensuels
   useEffect(() => {
     const monthStart = startOfMonth(new Date(currentWeek));
     const shopData = loadShopBackup(currentShop);

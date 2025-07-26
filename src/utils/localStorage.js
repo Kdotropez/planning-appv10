@@ -24,7 +24,6 @@ export const loadFromLocalStorage = (key, defaultValue) => {
   }
 };
 
-// Nouvelle fonction pour sauvegarder une boutique
 export const saveShopBackup = (shop, data) => {
   saveToLocalStorage(`backup_${shop}`, {
     shop,
@@ -34,7 +33,6 @@ export const saveShopBackup = (shop, data) => {
   });
 };
 
-// Nouvelle fonction pour charger une boutique
 export const loadShopBackup = (shop, defaultValue = {}) => {
   return loadFromLocalStorage(`backup_${shop}`, {
     shop,

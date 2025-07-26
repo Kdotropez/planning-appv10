@@ -11,7 +11,7 @@ import './App.css';
 
 const App = () => {
   const [step, setStep] = useState(1);
-  const [config, setConfig] = useState({});
+  const [config, setConfig] = useState(loadFromLocalStorage('timeSlotConfig', { interval: 30, startTime: '09:00', endTime: '23:00', timeSlots: [] }));
   const [shops, setShops] = useState(loadFromLocalStorage('shops', []));
   const [selectedShop, setSelectedShop] = useState('');
   const [selectedWeek, setSelectedWeek] = useState('');
@@ -22,19 +22,30 @@ const App = () => {
   useEffect(() => {
     if (selectedShop) {
       const shopData = loadShopBackup(selectedShop);
-      setConfig(shopData.timeSlotConfig || { interval: 30, startTime: '09:00', endTime: '01:00', timeSlots: [] });
+      if (shopData.timeSlotConfig && Object.keys(shopData.timeSlotConfig).length > 0) {
+        setConfig(shopData.timeSlotConfig);
+      } else {
+        setConfig({ interval: 30, startTime: '09:00', endTime: '23:00', timeSlots: [] });
+      }
     }
-    console.log('App.jsx: Current state:', { step, config, shops, selectedShop, selectedWeek, selectedEmployees, planning });
+  }, [selectedShop]);
+
+  useEffect(() => {
+    console.log('App.jsx: Current state:', { step, config, shops, selectedShop2, selectedWeek, selectedEmployees, planning });
     if (feedback) {
       const timer = setTimeout(() => setFeedback(''), 5000);
       return () => clearTimeout(timer);
     }
-  }, [step, config, shops, selectedShop, selectedWeek, selectedEmployees, planning, feedback]);
+  }, [step, shops, selectedShop, selectedWeek, selectedEmployees, planning, feedback]);
 
   const handleNext = (newShop) => {
     setSelectedShop(newShop);
     const shopData = loadShopBackup(newShop);
-    setConfig(shopData.timeSlotConfig || { interval: 30, startTime: '09:00', endTime: '01:00', timeSlots: [] });
+    if (shopData.timeSlotConfig && Object.keys(shopData.timeSlotConfig).length > 0) {
+      setConfig(shopData.timeSlotConfig);
+    } else {
+      setConfig({ interval: 30, startTime: '09:00', endTime: '23:00', timeSlots: [] });
+    }
     setStep(3);
   };
 

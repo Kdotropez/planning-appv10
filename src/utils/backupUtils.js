@@ -16,7 +16,7 @@ export const exportAllData = async (setFeedback) => {
 
     shops.forEach(shop => {
       const shopData = loadShopBackup(shop);
-      if (Object.keys(shopData).length > 1) { // Vérifie que shopData contient plus que juste 'shop'
+      if (Object.keys(shopData).length > 1) {
         const dataStr = JSON.stringify(shopData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -39,7 +39,7 @@ export const exportAllData = async (setFeedback) => {
   }
 };
 
-export const importAllData = async (setFeedback, setShops, setSelectedShop, setConfig) => {
+export const importAllData = async (setFeedback, setShops, setSelectedShop, setConfig, setSelectedWeek, setSelectedEmployees, setPlanning, setStep) => {
   try {
     console.log('importAllData called');
     if (typeof document === 'undefined') {
@@ -78,7 +78,13 @@ export const importAllData = async (setFeedback, setShops, setSelectedShop, setC
         }
         setSelectedShop(shop);
         setConfig(importData.timeSlotConfig);
-        saveToLocalStorage('lastPlanning', { shop, week: Object.keys(importData.weeks).sort().pop() });
+        const latestWeek = Object.keys(importData.weeks).sort().pop();
+        if (latestWeek) {
+          setSelectedWeek(latestWeek);
+          setSelectedEmployees(importData.weeks[latestWeek].selectedEmployees || []);
+          setPlanning(importData.weeks[latestWeek].planning || {});
+          setStep(5); // Passe directement à l'étape PlanningDisplay
+        }
         setFeedback(`Succès: Sauvegarde de la boutique ${shop} restaurée avec succès.`);
         console.log(`Import completed successfully for ${shop}`);
       } catch (fileError) {

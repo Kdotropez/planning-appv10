@@ -1,5 +1,6 @@
+// src/components/planning/MonthlyRecapModals.jsx
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, isWithinInterval, addDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, eachDayOfInterval, addDays, isWithinInterval, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
@@ -18,11 +19,13 @@ const MonthlyRecapModals = ({
     setShowMonthlyRecapModal,
     showEmployeeMonthlyRecap,
     setShowEmployeeMonthlyRecap,
+    showMonthlyDetailModal,
+    setShowMonthlyDetailModal,
     selectedEmployeeForMonthlyRecap,
     setSelectedEmployeeForMonthlyRecap,
     calculateEmployeeDailyHours
 }) => {
-    if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap) {
+    if (!showMonthlyRecapModal && !showEmployeeMonthlyRecap && !showMonthlyDetailModal) {
         console.log('MonthlyRecapModals: No modal to show');
         return null;
     }
@@ -73,55 +76,118 @@ const MonthlyRecapModals = ({
     };
 
     const calculateEmployeeWeeklyHoursInMonth = (employee, week, weekPlanning) => {
-        let calendarHours = 0;
         let realHours = 0;
+        const processedDays = new Set();
         for (let i = 0; i < 7; i++) {
             const dayKey = format(addDays(new Date(week), i), 'yyyy-MM-dd');
-            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-            realHours += hours;
-            if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                calendarHours += hours;
+            if (processedDays.has(dayKey)) {
+                console.log(`Skipping duplicate day ${dayKey} for ${employee} in week ${week}`);
+                continue;
+            }
+            const dayDate = new Date(dayKey);
+            if (isWithinInterval(dayDate, { start: monthStart, end: monthEnd })) {
+                const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                realHours += hours;
+                processedDays.add(dayKey);
+                console.log(`Hours for ${employee} on ${dayKey}:`, hours.toFixed(1));
             }
         }
-        console.log('Weekly hours for', employee, week, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
-        return { calendarHours, realHours };
+        console.log('Weekly hours for', employee, week, realHours.toFixed(1));
+        return realHours;
     };
 
-    const recapData = [];
-    const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
-    let totalMonthCalendarHours = 0;
-    let totalMonthRealHours = 0;
-
-    employees.forEach(employee => {
-        const employeeData = {
-            employee,
-            weeks: [],
-            totalCalendarHours: 0,
-            totalRealHours: 0,
-            colorClass: getEmployeeColorClass(employee),
-            backgroundColor: getEmployeeBackgroundColor(employee)
-        };
-
-        weeks.forEach(week => {
-            const { calendarHours, realHours } = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
-            employeeData.weeks.push({
-                week: week.label,
-                calendarHours: calendarHours.toFixed(1),
-                realHours: realHours.toFixed(1)
-            });
-            employeeData.totalCalendarHours += calendarHours;
-            employeeData.totalRealHours += realHours;
+    const calculateEmployeeMonthlyHours = (employee) => {
+        let realHours = 0;
+        const processedDays = new Set();
+        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        days.forEach(day => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            if (processedDays.has(dayKey)) {
+                console.log(`Skipping duplicate day ${dayKey} for ${employee}`);
+                return;
+            }
+            const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, {});
+            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+            realHours += hours;
+            processedDays.add(dayKey);
+            console.log(`Hours for ${employee} on ${dayKey}:`, hours.toFixed(1));
         });
+        console.log('Monthly hours for', employee, realHours.toFixed(1));
+        return realHours.toFixed(1);
+    };
 
-        employeeData.totalCalendarHours = employeeData.totalCalendarHours.toFixed(1);
-        employeeData.totalRealHours = employeeData.totalRealHours.toFixed(1);
-        totalMonthCalendarHours += parseFloat(employeeData.totalCalendarHours);
-        totalMonthRealHours += parseFloat(employeeData.totalRealHours);
-        recapData.push(employeeData);
-    });
+    const calculateShopMonthlyHours = () => {
+        let realHours = 0;
+        const processedDays = new Set();
+        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        days.forEach(day => {
+            const dayKey = format(day, 'yyyy-MM-dd');
+            if (processedDays.has(dayKey)) {
+                console.log(`Skipping duplicate day ${dayKey} for shop`);
+                return;
+            }
+            const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            const weekPlanning = loadFromLocalStorage(`planning_${selectedShop}_${weekKey}`, {});
+            const dailyHours = selectedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
+            realHours += dailyHours;
+            processedDays.add(dayKey);
+            console.log(`Shop hours for ${dayKey}:`, dailyHours.toFixed(1));
+        });
+        console.log('Shop monthly hours:', realHours.toFixed(1));
+        return realHours.toFixed(1);
+    };
 
-    console.log('MonthlyRecapModals: Generated recap data:', recapData);
-    console.log('MonthlyRecapModals: Total month hours:', { calendar: totalMonthCalendarHours.toFixed(1), real: totalMonthRealHours.toFixed(1) });
+    let recapData = [];
+    let detailData = [];
+    let totalMonthHours = 0;
+
+    if (showMonthlyRecapModal || showEmployeeMonthlyRecap) {
+        const employees = showMonthlyRecapModal ? selectedEmployees : [selectedEmployeeForMonthlyRecap];
+        recapData = employees.map(employee => {
+            const totalRealHours = calculateEmployeeMonthlyHours(employee);
+            return {
+                employee,
+                weeks: weeks.map(week => {
+                    const realHours = calculateEmployeeWeeklyHoursInMonth(employee, week.key, loadFromLocalStorage(`planning_${selectedShop}_${week.key}`, planning));
+                    return {
+                        week: week.label,
+                        realHours: realHours.toFixed(1)
+                    };
+                }),
+                totalRealHours,
+                colorClass: getEmployeeColorClass(employee),
+                backgroundColor: getEmployeeBackgroundColor(employee)
+            };
+        });
+        totalMonthHours = showMonthlyRecapModal ? calculateShopMonthlyHours() : calculateEmployeeMonthlyHours(selectedEmployeeForMonthlyRecap);
+        console.log('MonthlyRecapModals: Generated recap data:', recapData);
+    }
+
+    if (showMonthlyDetailModal) {
+        const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        detailData = selectedEmployees.map(employee => {
+            const totalHours = calculateEmployeeMonthlyHours(employee);
+            return {
+                employee,
+                days: days.map(day => {
+                    const dayKey = format(day, 'yyyy-MM-dd');
+                    const hours = calculateEmployeeDailyHours(employee, dayKey, loadFromLocalStorage(`planning_${selectedShop}_${format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd')}`, planning));
+                    return {
+                        day: format(day, 'd MMMM yyyy', { locale: fr }),
+                        hours: hours.toFixed(1)
+                    };
+                }),
+                totalHours,
+                colorClass: getEmployeeColorClass(employee),
+                backgroundColor: getEmployeeBackgroundColor(employee)
+            };
+        });
+        totalMonthHours = calculateShopMonthlyHours();
+        console.log('MonthlyRecapModals: Generated detail data:', detailData);
+    }
+
+    console.log('MonthlyRecapModals: Total month hours:', totalMonthHours);
 
     const exportToPDF = () => {
         console.log('MonthlyRecapModals: Exporting to PDF');
@@ -129,63 +195,101 @@ const MonthlyRecapModals = ({
             const doc = new jsPDF({ orientation: 'landscape' });
             doc.setFont('Helvetica', 'normal');
             doc.text(
-                `Récapitulatif mensuel ${showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}`,
+                `Récapitulatif mensuel ${showMonthlyRecapModal ? `- ${selectedShop}` : showEmployeeMonthlyRecap ? `de ${selectedEmployeeForMonthlyRecap}` : `détaillé - ${selectedShop}`}`,
                 10,
                 10
             );
             doc.text(`Mois de ${format(monthStart, 'MMMM yyyy', { locale: fr })}`, 10, 20);
-            doc.text(`Total heures du mois calendaire : ${totalMonthCalendarHours.toFixed(1)} h`, 10, 30);
-            doc.text(`Total heures du mois réel : ${totalMonthRealHours.toFixed(1)} h`, 10, 40);
+            doc.text(`Total heures du mois : ${totalMonthHours} h`, 10, 30);
 
-            const body = [];
-            recapData.forEach((employeeData, empIndex) => {
-                employeeData.weeks.forEach((weekData, weekIndex) => {
+            let body = [];
+            if (showMonthlyDetailModal) {
+                detailData.forEach((employeeData, empIndex) => {
+                    employeeData.days.forEach((dayData, dayIndex) => {
+                        body.push({
+                            row: [
+                                dayIndex === 0 ? employeeData.employee : '',
+                                dayData.day,
+                                `${dayData.hours} h`
+                            ],
+                            backgroundColor: employeeData.backgroundColor
+                        });
+                    });
                     body.push({
-                        row: [
-                            weekIndex === 0 ? employeeData.employee : '',
-                            weekData.week,
-                            `${weekData.calendarHours} h / ${weekData.realHours} h`
-                        ],
+                        row: ['', `Total mois pour ${employeeData.employee}`, `${employeeData.totalHours} h`],
                         backgroundColor: employeeData.backgroundColor
                     });
-                });
-                body.push({
-                    row: ['', `Total mois calendaire pour ${employeeData.employee}`, `${employeeData.totalCalendarHours} h`],
-                    backgroundColor: employeeData.backgroundColor
-                });
-                body.push({
-                    row: ['', `Total mois réel pour ${employeeData.employee}`, `${employeeData.totalRealHours} h`],
-                    backgroundColor: employeeData.backgroundColor
-                });
-                if (empIndex < recapData.length - 1 || !showMonthlyRecapModal) {
-                    body.push({
-                        row: ['', '', ''],
-                        backgroundColor: [255, 255, 255]
-                    });
-                }
-            });
-
-            doc.autoTable({
-                head: [['Employé', 'Semaine', 'Heures (Calendaire / Réel)']],
-                body: body.map(item => item.row),
-                startY: 50,
-                styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 },
-                headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
-                bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
-                columnStyles: {
-                    0: { cellWidth: 40, halign: 'left' },
-                    1: { cellWidth: 80, halign: 'left' },
-                    2: { cellWidth: 30 }
-                },
-                didParseCell: (data) => {
-                    if (data.section === 'body') {
-                        const rowIndex = data.row.index;
-                        data.cell.styles.fillColor = body[rowIndex].backgroundColor;
+                    if (empIndex < detailData.length - 1) {
+                        body.push({
+                            row: ['', '', ''],
+                            backgroundColor: [255, 255, 255]
+                        });
                     }
-                }
-            });
+                });
+                doc.autoTable({
+                    head: [['Employé', 'Jour', 'Heures']],
+                    body: body.map(item => item.row),
+                    startY: 40,
+                    styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
+                    bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
+                    columnStyles: {
+                        0: { cellWidth: 40, halign: 'left' },
+                        1: { cellWidth: 80, halign: 'left' },
+                        2: { cellWidth: 30 }
+                    },
+                    didParseCell: (data) => {
+                        if (data.section === 'body') {
+                            const rowIndex = data.row.index;
+                            data.cell.styles.fillColor = body[rowIndex].backgroundColor;
+                        }
+                    }
+                });
+            } else {
+                recapData.forEach((employeeData, empIndex) => {
+                    employeeData.weeks.forEach((weekData, weekIndex) => {
+                        body.push({
+                            row: [
+                                weekIndex === 0 ? employeeData.employee : '',
+                                weekData.week,
+                                `${weekData.realHours} h`
+                            ],
+                            backgroundColor: employeeData.backgroundColor
+                        });
+                    });
+                    body.push({
+                        row: ['', `Total mois pour ${employeeData.employee}`, `${employeeData.totalRealHours} h`],
+                        backgroundColor: employeeData.backgroundColor
+                    });
+                    if (empIndex < recapData.length - 1 || !showMonthlyRecapModal) {
+                        body.push({
+                            row: ['', '', ''],
+                            backgroundColor: [255, 255, 255]
+                        });
+                    }
+                });
+                doc.autoTable({
+                    head: [['Employé', 'Semaine', 'Heures']],
+                    body: body.map(item => item.row),
+                    startY: 40,
+                    styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
+                    bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
+                    columnStyles: {
+                        0: { cellWidth: 40, halign: 'left' },
+                        1: { cellWidth: 80, halign: 'left' },
+                        2: { cellWidth: 30 }
+                    },
+                    didParseCell: (data) => {
+                        if (data.section === 'body') {
+                            const rowIndex = data.row.index;
+                            data.cell.styles.fillColor = body[rowIndex].backgroundColor;
+                        }
+                    }
+                });
+            }
 
-            doc.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : showEmployeeMonthlyRecap ? `employee_${selectedEmployeeForMonthlyRecap}` : 'detail'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
             console.log('MonthlyRecapModals: PDF exported successfully');
         } catch (error) {
             console.error('MonthlyRecapModals: PDF export failed', error);
@@ -241,7 +345,7 @@ const MonthlyRecapModals = ({
                 pdf.addImage(imgData, 'PNG', margin, margin, scaledWidth, scaledHeight);
             }
 
-            pdf.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : `employee_${selectedEmployeeForMonthlyRecap}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            pdf.save(`monthly_recap_${showMonthlyRecapModal ? 'shop' : showEmployeeMonthlyRecap ? `employee_${selectedEmployeeForMonthlyRecap}` : 'detail'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
             console.log('MonthlyRecapModals: PDF exported successfully as image');
         } catch (error) {
             console.error('MonthlyRecapModals: PDF export failed', error);
@@ -253,7 +357,9 @@ const MonthlyRecapModals = ({
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px' }}>
-                    Récapitulatif mensuel {showMonthlyRecapModal ? `- ${selectedShop}` : `de ${selectedEmployeeForMonthlyRecap}`}
+                    {showMonthlyRecapModal ? `Récapitulatif mensuel - ${selectedShop}` :
+                     showEmployeeMonthlyRecap ? `Récapitulatif mensuel de ${selectedEmployeeForMonthlyRecap}` :
+                     `Récapitulatif mensuel détaillé - ${selectedShop}`}
                 </h2>
                 <div className="form-group" style={{ marginBottom: '15px', textAlign: 'center' }}>
                     <label style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '5px', display: 'block' }}>
@@ -274,47 +380,63 @@ const MonthlyRecapModals = ({
                 <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
                     Mois de {format(monthStart, 'MMMM yyyy', { locale: fr })}
                 </p>
-                <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '10px', fontSize: '14px', color: '#333' }}>
-                    Total heures du mois calendaire : {totalMonthCalendarHours.toFixed(1)} h
-                </p>
                 <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '15px', fontSize: '14px', color: '#333' }}>
-                    Total heures du mois réel : {totalMonthRealHours.toFixed(1)} h
+                    Total heures du mois : {totalMonthHours} h
                 </p>
                 <table className="monthly-recap-table">
                     <thead>
                         <tr>
                             <th className="align-left">Employé</th>
-                            <th className="align-left">Semaine</th>
-                            <th>Heures (Calendaire / Réel)</th>
+                            <th className="align-left">{showMonthlyDetailModal ? 'Jour' : 'Semaine'}</th>
+                            <th>Heures</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {recapData.map((employeeData, empIndex) => (
-                            <React.Fragment key={empIndex}>
-                                {employeeData.weeks.map((weekData, weekIndex) => (
-                                    <tr key={`${empIndex}-${weekIndex}`} className={employeeData.colorClass}>
-                                        <td className="align-left">{weekIndex === 0 ? employeeData.employee : ''}</td>
-                                        <td className="align-left">{weekData.week}</td>
-                                        <td>{`${weekData.calendarHours} h / ${weekData.realHours} h`}</td>
+                        {showMonthlyDetailModal ? (
+                            detailData.map((employeeData, empIndex) => (
+                                <React.Fragment key={empIndex}>
+                                    {employeeData.days.map((dayData, dayIndex) => (
+                                        <tr key={`${empIndex}-${dayIndex}`} className={employeeData.colorClass}>
+                                            <td className="align-left">{dayIndex === 0 ? employeeData.employee : ''}</td>
+                                            <td className="align-left">{dayData.day}</td>
+                                            <td>{`${dayData.hours} h`}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className={employeeData.colorClass}>
+                                        <td className="align-left"></td>
+                                        <td className="align-left">Total mois pour {employeeData.employee}</td>
+                                        <td>{`${employeeData.totalHours} h`}</td>
                                     </tr>
-                                ))}
-                                <tr className={employeeData.colorClass}>
-                                    <td className="align-left"></td>
-                                    <td className="align-left">Total mois calendaire pour {employeeData.employee}</td>
-                                    <td>{`${employeeData.totalCalendarHours} h`}</td>
-                                </tr>
-                                <tr className={employeeData.colorClass}>
-                                    <td className="align-left"></td>
-                                    <td className="align-left">Total mois réel pour {employeeData.employee}</td>
-                                    <td>{`${employeeData.totalRealHours} h`}</td>
-                                </tr>
-                                {(empIndex < recapData.length - 1 || !showMonthlyRecapModal) && (
-                                    <tr className="employee-divider">
-                                        <td colSpan="3" style={{ height: '10px', backgroundColor: '#fff' }}></td>
+                                    {empIndex < detailData.length - 1 && (
+                                        <tr className="employee-divider">
+                                            <td colSpan="3" style={{ height: '10px', backgroundColor: '#fff' }}></td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))
+                        ) : (
+                            recapData.map((employeeData, empIndex) => (
+                                <React.Fragment key={empIndex}>
+                                    {employeeData.weeks.map((weekData, weekIndex) => (
+                                        <tr key={`${empIndex}-${weekIndex}`} className={employeeData.colorClass}>
+                                            <td className="align-left">{weekIndex === 0 ? employeeData.employee : ''}</td>
+                                            <td className="align-left">{weekData.week}</td>
+                                            <td>{`${weekData.realHours} h`}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className={employeeData.colorClass}>
+                                        <td className="align-left"></td>
+                                        <td className="align-left">Total mois pour {employeeData.employee}</td>
+                                        <td>{`${employeeData.totalRealHours} h`}</td>
                                     </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
+                                    {(empIndex < recapData.length - 1 || !showMonthlyRecapModal) && (
+                                        <tr className="employee-divider">
+                                            <td colSpan="3" style={{ height: '10px', backgroundColor: '#fff' }}></td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))
+                        )}
                     </tbody>
                 </table>
                 <div className="button-group" style={{ marginTop: '15px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
@@ -330,9 +452,11 @@ const MonthlyRecapModals = ({
                             console.log('MonthlyRecapModals: Closing modal');
                             if (showMonthlyRecapModal) {
                                 setShowMonthlyRecapModal(false);
-                            } else {
+                            } else if (showEmployeeMonthlyRecap) {
                                 setShowEmployeeMonthlyRecap(false);
                                 setSelectedEmployeeForMonthlyRecap('');
+                            } else {
+                                setShowMonthlyDetailModal(false);
                             }
                         }}
                     >

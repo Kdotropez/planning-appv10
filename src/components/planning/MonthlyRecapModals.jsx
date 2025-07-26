@@ -164,7 +164,14 @@ const MonthlyRecapModals = ({
       } else if (slots.some(s => s === true)) {
         // Format booléen avec heures non nulles
         const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-        return ['', '', '', '', `${hours.toFixed(1)} h`];
+        // Si heures non nulles, utiliser des horaires par défaut basés sur les créneaux
+        if (hours > 0) {
+          const startIndex = slots.findIndex(s => s === true);
+          const endIndex = slots.lastIndexOf(true);
+          const startTime = config.timeSlots[startIndex] || '';
+          const endTime = config.timeSlots[endIndex + 1] || '';
+          return [startTime, '', '', endTime, `${hours.toFixed(1)} h`];
+        }
       }
     }
     return ['', '', '', '', '0.0 h'];

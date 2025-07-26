@@ -29,12 +29,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const [showRecapModal, setShowRecapModal] = useState(null);
     const [showMonthlyRecapModal, setShowMonthlyRecapModal] = useState(false);
     const [showEmployeeMonthlyRecap, setShowEmployeeMonthlyRecap] = useState(false);
+    const [showMonthlyDetailModal, setShowMonthlyDetailModal] = useState(false); // Restauré
+    const [showEmployeeMonthlyDetailModal, setShowEmployeeMonthlyDetailModal] = useState(false);
     const [selectedEmployeeForMonthlyRecap, setSelectedEmployeeForMonthlyRecap] = useState('');
     const [availableWeeks, setAvailableWeeks] = useState(loadFromLocalStorage(`available_weeks_${selectedShop}`, []) || []);
     const [error, setError] = useState(null);
     const [currentShop, setCurrentShop] = useState(selectedShop);
     const [currentWeek, setCurrentWeek] = useState(selectedWeek);
-    const [showMonthlyDetailModal, setShowMonthlyDetailModal] = useState(false);
     const [monthlyHours, setMonthlyHours] = useState({ employees: {}, shop: '0.0' });
 
     console.log('PlanningDisplay props:', { config, selectedShop, selectedWeek, selectedEmployees, initialPlanning });
@@ -75,8 +76,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             return;
         }
         if (!config?.timeSlots?.length) {
-            setLocalFeedback('Erreur: Configuration des tranches horaires non valide.');
-            setError({ message: 'Configuration des tranches horaires non valide' });
+            setLocalFeedback('Erreur: Configuration des tranches horaires non définie.');
+            setError({ message: 'Configuration des tranches horaires non définie' });
             return;
         }
         setPlanning(prev => {
@@ -258,8 +259,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
 
     const toggleSlot = useCallback((employee, slotIndex, dayIndex, forceValue = null) => {
         if (!config?.timeSlots?.length) {
-            setLocalFeedback('Erreur: Configuration des tranches horaires non valide.');
-            setError({ message: 'Configuration des tranches horaires non valide' });
+            setLocalFeedback('Erreur: Configuration des tranches horaires non définie.');
+            setError({ message: 'Configuration des tranches horaires non définie' });
             return;
         }
         setPlanning(prev => {
@@ -435,7 +436,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 <Button className="button-primary" onClick={() => {
                     console.log('Opening GlobalDayViewModal');
                     setShowGlobalDayViewModal(true);
-                    }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
+                }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                     Vue globale par jour
                 </Button>
             </div>
@@ -556,6 +557,28 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
                             MOIS ({monthDisplay}) ({monthlyHours.employees[employee] || '0.0'} h)
+                        </Button>
+                        <Button
+                            className="button-recap"
+                            onClick={() => {
+                                console.log('Opening EmployeeMonthlyDetailModal for:', employee);
+                                setSelectedEmployeeForMonthlyRecap(employee);
+                                setShowEmployeeMonthlyDetailModal(true);
+                            }}
+                            style={{
+                                backgroundColor: '#1e88e5',
+                                color: '#fff',
+                                padding: '8px 16px',
+                                fontSize: '11px',
+                                width: '100%',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
+                        >
+                            MOIS DÉTAIL ({monthDisplay})
                         </Button>
                     </div>
                 ))}
@@ -739,7 +762,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     planning={planning}
                 />
             )}
-            {(showMonthlyRecapModal || showEmployeeMonthlyRecap || showMonthlyDetailModal) && (
+            {(showMonthlyRecapModal || showEmployeeMonthlyRecap || showMonthlyDetailModal || showEmployeeMonthlyDetailModal) && (
                 <MonthlyRecapModals
                     config={config}
                     selectedShop={currentShop}
@@ -752,6 +775,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setShowEmployeeMonthlyRecap={setShowEmployeeMonthlyRecap}
                     showMonthlyDetailModal={showMonthlyDetailModal}
                     setShowMonthlyDetailModal={setShowMonthlyDetailModal}
+                    showEmployeeMonthlyDetailModal={showEmployeeMonthlyDetailModal}
+                    setShowEmployeeMonthlyDetailModal={setShowEmployeeMonthlyDetailModal}
                     selectedEmployeeForMonthlyRecap={selectedEmployeeForMonthlyRecap}
                     setSelectedEmployeeForMonthlyRecap={setSelectedEmployeeForMonthlyRecap}
                     calculateEmployeeDailyHours={calculateEmployeeDailyHours}

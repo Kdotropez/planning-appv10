@@ -1,6 +1,6 @@
 // src/components/planning/MonthlyRecapModals.jsx
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, isWithinInterval, addDays, eachDayOfInterval, startOfWeek, addMinutes, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachWeekOfInterval, isMonday, isWithinInterval, addDays, eachDayOfInterval, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage } from '../../utils/localStorage';
 import jsPDF from 'jspdf';
@@ -100,23 +100,17 @@ const MonthlyRecapModals = ({
     const calculateEmployeeMonthlyHours = (employee) => {
         let calendarHours = 0;
         let realHours = 0;
-        const monthStart = startOfMonth(selectedMonth);
-        const monthEnd = endOfMonth(selectedMonth);
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-
         storageKeys.forEach(key => {
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
-            const weekEnd = addDays(weekDate, 6);
-
-            if (weekDate <= monthEnd && weekEnd >= monthStart) {
+            if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, planning);
                 const { calendarHours: weekCalendar, realHours: weekReal } = calculateEmployeeWeeklyHoursInMonth(employee, weekKey, weekPlanning);
                 calendarHours += weekCalendar;
                 realHours += weekReal;
             }
         });
-
         console.log('Monthly hours for', employee, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
         return { calendarHours: calendarHours.toFixed(1), realHours: realHours.toFixed(1) };
     };
@@ -124,16 +118,11 @@ const MonthlyRecapModals = ({
     const calculateShopMonthlyHours = () => {
         let calendarHours = 0;
         let realHours = 0;
-        const monthStart = startOfMonth(selectedMonth);
-        const monthEnd = endOfMonth(selectedMonth);
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-
         storageKeys.forEach(key => {
             const weekKey = key.replace(`planning_${selectedShop}_`, '');
             const weekDate = new Date(weekKey);
-            const weekEnd = addDays(weekDate, 6);
-
-            if (weekDate <= monthEnd && weekEnd >= monthStart) {
+            if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, planning);
                 selectedEmployees.forEach(employee => {
                     const { calendarHours: weekCalendar, realHours: weekReal } = calculateEmployeeWeeklyHoursInMonth(employee, weekKey, weekPlanning);
@@ -142,58 +131,32 @@ const MonthlyRecapModals = ({
                 });
             }
         });
-
         console.log('Shop monthly hours:', { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
         return { calendarHours: calendarHours.toFixed(1), realHours: realHours.toFixed(1) };
     };
 
     const getDailyHoursOrCongé = (employee, dayKey, weekPlanning) => {
         const slots = weekPlanning[employee]?.[dayKey];
-        const timeSlots = config.timeSlots || [];
-
-        if (slots === 'Congé ☀️' || !slots || slots.every(slot => !slot)) {
+        console.log(`getDailyHoursOrCongé for ${employee} on ${dayKey}:`, slots);
+        if (slots === 'Congé ☀️') {
             return ['Congé ☀️', '', '', '', '0.0 h'];
         }
-
-        if (Array.isArray(slots) && slots.some(slot => typeof slot === 'boolean')) {
-            let start = null, pause = null, resume = null, end = null;
-            let inShift = false;
-
-            for (let index = 0; index < timeSlots.length; index++) {
-                const isChecked = slots[index];
-                const slot = timeSlots[index];
-
-                if (isChecked && !inShift && !start) {
-                    start = slot ? `${slot} H` : '-';
-                    inShift = true;
-                } else if (!isChecked && inShift && !pause) {
-                    pause = slot ? `${slot} H` : '-';
-                    inShift = false;
-                } else if (isChecked && !inShift && pause && !resume) {
-                    resume = slot ? `${slot} H` : '-';
-                    inShift = true;
-                } else if (!isChecked && inShift && resume) {
-                    end = slot ? `${slot} H` : '-';
-                    inShift = false;
-                } else if (isChecked && index === timeSlots.length - 1) {
-                    end = format(addMinutes(parse(slot, 'HH:mm', new Date()), 30), 'HH:mm') + ' H';
+        if (Array.isArray(slots)) {
+            if (slots.length === 4 && typeof slots[0] === 'string') {
+                const [entry, pause, resume, exit] = slots;
+                const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                return [entry || '', pause || '', resume || '', exit || '', `${hours.toFixed(1)} h`];
+            } else if (slots.some(s => s === true)) {
+                const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
+                if (hours > 0) {
+                    const startIndex = slots.findIndex(s => s === true);
+                    const endIndex = slots.lastIndexOf(true);
+                    const startTime = config.timeSlots[startIndex] || '';
+                    const endTime = config.timeSlots[endIndex + 1] || '';
+                    return [startTime, '', '', endTime, `${hours.toFixed(1)} h`];
                 }
             }
-
-            if (inShift && !end) {
-                end = format(addMinutes(parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date()), 30), 'HH:mm') + ' H';
-            }
-
-            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-            return [
-                start || '-',
-                pause || '-',
-                resume || '-',
-                end || '-',
-                `${hours.toFixed(1)} h`
-            ];
         }
-
         return ['', '', '', '', '0.0 h'];
     };
 
@@ -265,7 +228,7 @@ const MonthlyRecapModals = ({
             };
             selectedEmployees.forEach(employee => {
                 const [entry, pause, resume, exit, hours] = getDailyHoursOrCongé(employee, dayKey, weekPlanning);
-                row.employees[employee] = { entry, pause, resume, exit, hours };
+                row.employees[employee] = hours === '0.0 h' && !entry ? 'CONGÉ' : hours;
             });
             return row;
         });
@@ -317,11 +280,8 @@ const MonthlyRecapModals = ({
             let body = [];
             if (showMonthlyDetailModal) {
                 body = detailData.map(row => {
-                    const employeeDetails = selectedEmployees.map(employee => {
-                        const { entry, pause, resume, exit, hours } = row.employees[employee];
-                        return hours === '0.0 h' && entry === 'Congé ☀️' ? 'CONGÉ' : `E: ${entry}, P: ${pause}, R: ${resume}, S: ${exit}, ${hours}`;
-                    });
-                    return [row.day, ...employeeDetails];
+                    const employeeHours = selectedEmployees.map(employee => row.employees[employee]);
+                    return [row.day, ...employeeHours];
                 });
                 const totalRow = ['Total mois', ...selectedEmployees.map(employee => `${calculateEmployeeMonthlyHours(employee).calendarHours} h`)];
                 body.push(totalRow);
@@ -329,9 +289,9 @@ const MonthlyRecapModals = ({
                     head: [['Jour', ...selectedEmployees]],
                     body,
                     startY: 50,
-                    styles: { font: 'Helvetica', fontSize: 8, cellPadding: 2, lineHeight: 1 },
-                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-                    bodyStyles: { textColor: [51, 51, 51], fontSize: 8 },
+                    styles: { font: 'Helvetica', fontSize: 10, cellPadding: 2, lineHeight: 1 },
+                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 10 },
+                    bodyStyles: { textColor: [51, 51, 51], fontSize: 10 },
                     columnStyles: {
                         0: { cellWidth: 30, halign: 'left' },
                         ...selectedEmployees.reduce((acc, _, idx) => ({ ...acc, [idx + 1]: { cellWidth: 50, halign: 'center' } }), {})
@@ -564,17 +524,7 @@ const MonthlyRecapModals = ({
                                         <td className="align-left">{row.day}</td>
                                         {selectedEmployees.map(employee => (
                                             <td key={employee} className={`align-center ${getEmployeeColorClass(employee)}`}>
-                                                {row.employees[employee].hours === '0.0 h' && row.employees[employee].entry === 'Congé ☀️' ? (
-                                                    'CONGÉ'
-                                                ) : (
-                                                    <>
-                                                        E: {row.employees[employee].entry}<br />
-                                                        P: {row.employees[employee].pause}<br />
-                                                        R: {row.employees[employee].resume}<br />
-                                                        S: {row.employees[employee].exit}<br />
-                                                        {row.employees[employee].hours}
-                                                    </>
-                                                )}
+                                                {row.employees[employee]}
                                             </td>
                                         ))}
                                     </tr>

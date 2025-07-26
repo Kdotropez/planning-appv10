@@ -1,3 +1,4 @@
+// src/components/planning/PlanningDisplay.jsx
 import { useState, useEffect, useCallback } from 'react';
 import { format, addDays, isMonday, startOfMonth, endOfMonth, isWithinInterval, eachDayOfInterval, startOfWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -33,7 +34,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     const [error, setError] = useState(null);
     const [currentShop, setCurrentShop] = useState(selectedShop);
     const [currentWeek, setCurrentWeek] = useState(selectedWeek);
-    const [showCalendarTotals, setShowCalendarTotals] = useState(false);
     const [showMonthlyDetailModal, setShowMonthlyDetailModal] = useState(false);
 
     console.log('PlanningDisplay props:', { config, selectedShop, selectedWeek, selectedEmployees, initialPlanning });
@@ -178,26 +178,19 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
     };
 
     const calculateEmployeeWeeklyHours = (employee, week, weekPlanning) => {
-        let calendarHours = 0;
         let realHours = 0;
-        const monthStart = startOfMonth(new Date(week));
-        const monthEnd = endOfMonth(new Date(week));
         for (let i = 0; i < 7; i++) {
             const dayKey = format(addDays(new Date(week), i), 'yyyy-MM-dd');
             const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
             realHours += hours;
-            if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                calendarHours += hours;
-            }
         }
-        console.log('Weekly hours for', employee, week, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
-        return { calendarHours, realHours };
+        console.log('Weekly hours for', employee, week, realHours.toFixed(1));
+        return realHours;
     };
 
     const calculateEmployeeMonthlyHours = (employee, monthStart) => {
-        let calendarHours = 0;
         let realHours = 0;
-        const monthEnd = endOfMonth(new Date(monthStart));
+        const monthEnd = endOfMonth(monthStart);
         const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${currentShop}_`));
         console.log('LocalStorage keys for monthly hours:', storageKeys);
         storageKeys.forEach(key => {
@@ -206,41 +199,32 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
                 console.log(`Week planning for ${weekKey}:`, weekPlanning);
-                let weeklyCalendarHours = 0;
                 let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
                     const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
                     const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
                     weeklyRealHours += hours;
-                    if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                        weeklyCalendarHours += hours;
-                    }
                 }
-                calendarHours += weeklyCalendarHours;
                 realHours += weeklyRealHours;
-                console.log(`Weekly hours for ${employee} in ${weekKey}:`, { calendar: weeklyCalendarHours.toFixed(1), real: weeklyRealHours.toFixed(1) });
+                console.log(`Weekly hours for ${employee} in ${weekKey}:`, weeklyRealHours.toFixed(1));
             }
         });
-        console.log('Monthly hours for', employee, { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
-        return { calendarHours, realHours };
+        console.log('Monthly hours for', employee, realHours.toFixed(1));
+        return realHours;
     };
 
     const calculateShopWeeklyHours = () => {
         const storedEmployees = loadFromLocalStorage(`selected_employees_${currentShop}_${currentWeek}`, selectedEmployees || []) || [];
-        const totals = storedEmployees.reduce((sum, employee) => {
-            const { calendarHours, realHours } = calculateEmployeeWeeklyHours(employee, currentWeek, planning);
-            return {
-                calendarHours: sum.calendarHours + calendarHours,
-                realHours: sum.realHours + realHours
-            };
-        }, { calendarHours: 0, realHours: 0 });
-        console.log('Shop weekly hours:', { calendar: totals.calendarHours.toFixed(1), real: totals.realHours.toFixed(1) });
-        return { calendarHours: totals.calendarHours.toFixed(1), realHours: totals.realHours.toFixed(1) };
+        const total = storedEmployees.reduce((sum, employee) => {
+            const realHours = calculateEmployeeWeeklyHours(employee, currentWeek, planning);
+            return sum + realHours;
+        }, 0);
+        console.log('Shop weekly hours:', total.toFixed(1));
+        return total.toFixed(1);
     };
 
     const calculateShopMonthlyHours = () => {
         const storedEmployees = loadFromLocalStorage(`selected_employees_${currentShop}_${currentWeek}`, selectedEmployees || []) || [];
-        let calendarHours = 0;
         let realHours = 0;
         const monthStart = startOfMonth(new Date(currentWeek));
         const monthEnd = endOfMonth(new Date(currentWeek));
@@ -252,23 +236,18 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
             if (weekDate >= addDays(monthStart, -6) && weekDate <= monthEnd) {
                 const weekPlanning = loadFromLocalStorage(key, {});
                 console.log(`Week planning for ${weekKey}:`, weekPlanning);
-                let weeklyCalendarHours = 0;
                 let weeklyRealHours = 0;
                 for (let i = 0; i < 7; i++) {
                     const dayKey = format(addDays(new Date(weekKey), i), 'yyyy-MM-dd');
                     const dailyHours = storedEmployees.reduce((sum, employee) => sum + calculateEmployeeDailyHours(employee, dayKey, weekPlanning), 0);
                     weeklyRealHours += dailyHours;
-                    if (isWithinInterval(new Date(dayKey), { start: monthStart, end: monthEnd })) {
-                        weeklyCalendarHours += dailyHours;
-                    }
                 }
-                calendarHours += weeklyCalendarHours;
                 realHours += weeklyRealHours;
-                console.log(`Shop weekly hours for ${weekKey}:`, { calendar: weeklyCalendarHours.toFixed(1), real: weeklyRealHours.toFixed(1) });
+                console.log(`Shop weekly hours for ${weekKey}:`, weeklyRealHours.toFixed(1));
             }
         });
-        console.log('Shop monthly hours:', { calendar: calendarHours.toFixed(1), real: realHours.toFixed(1) });
-        return { calendarHours: calendarHours.toFixed(1), realHours: realHours.toFixed(1) };
+        console.log('Shop monthly hours:', realHours.toFixed(1));
+        return realHours.toFixed(1);
     };
 
     const toggleSlot = useCallback((employee, slotIndex, dayIndex, forceValue = null) => {
@@ -303,224 +282,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
         setCurrentShop(newShop);
         setPlanning(loadFromLocalStorage(`planning_${newShop}_${format(new Date(currentWeek), 'yyyy-MM-dd')}`, {}) || {});
         setLocalFeedback('');
-    };
-
-    const MonthlyDetailModal = ({ show, setShow }) => {
-        if (!show) return null;
-
-        // Récupérer les mois disponibles à partir des clés de localStorage
-        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${currentShop}_`));
-        const availableMonths = Array.from(new Set(
-            storageKeys.map(key => {
-                const weekKey = key.replace(`planning_${currentShop}_`, '');
-                const weekDate = new Date(weekKey);
-                return format(weekDate, 'yyyy-MM');
-            })
-        )).map(month => {
-            const [year, monthIndex] = month.split('-').map(Number);
-            return new Date(year, monthIndex - 1, 1);
-        }).sort((a, b) => a - b);
-
-        const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date(currentWeek)));
-
-        const monthStart = startOfMonth(selectedMonth);
-        const monthEnd = endOfMonth(selectedMonth);
-        const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const storedEmployees = loadFromLocalStorage(`selected_employees_${currentShop}_${currentWeek}`, selectedEmployees || []) || [];
-
-        const getPlanningForDay = (day) => {
-            const dayKey = format(day, 'yyyy-MM-dd');
-            const weekKey = format(startOfWeek(day, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-            return loadFromLocalStorage(`planning_${currentShop}_${weekKey}`, {});
-        };
-
-        const exportToPDF = () => {
-            try {
-                const doc = new jsPDF({ orientation: 'portrait' });
-                const title = `Récap. mensuel - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
-                doc.setFontSize(10);
-                doc.text(title, 10, 10);
-
-                const tableData = monthDays.map(day => {
-                    const dayKey = format(day, 'yyyy-MM-dd');
-                    const weekPlanning = getPlanningForDay(day);
-                    const row = [format(day, 'dd/MM/yyyy')];
-                    storedEmployees.forEach(employee => {
-                        const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-                        row.push(hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ');
-                    });
-                    return row;
-                });
-
-                const totalRow = ['TOTAL MOIS'];
-                storedEmployees.forEach(employee => {
-                    const { realHours } = calculateEmployeeMonthlyHours(employee, monthStart);
-                    totalRow.push(`${realHours.toFixed(1)} h`);
-                });
-
-                autoTable(doc, {
-                    head: [['Date', ...storedEmployees]],
-                    body: [...tableData, totalRow],
-                    startY: 15,
-                    styles: { fontSize: 8, cellPadding: 1, lineHeight: 0.5 },
-                    headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8 },
-                    columnStyles: storedEmployees.reduce((acc, emp, idx) => ({
-                        ...acc,
-                        [idx + 1]: { fillColor: pastelColors[idx % pastelColors.length] }
-                    }), { 0: { fillColor: [255, 255, 255] } }),
-                    didDrawCell: (data) => {
-                        if (data.section === 'body' && data.row.index === tableData.length) {
-                            data.cell.styles.fontStyle = 'bold';
-                        }
-                    },
-                    margin: { top: 15, left: 10, right: 10 }
-                });
-
-                doc.save(`${title}.pdf`);
-                setLocalFeedback('Succès: Récapitulatif mensuel exporté en PDF.');
-            } catch (error) {
-                console.error('Erreur lors de l\'exportation en PDF:', error);
-                setLocalFeedback('Erreur: Échec de l\'exportation en PDF.');
-            }
-        };
-
-        const exportToPDFImage = async () => {
-            try {
-                const element = document.querySelector('.monthly-detail-modal-content');
-                const canvas = await html2canvas(element, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-                const doc = new jsPDF({ orientation: 'portrait' });
-                const title = `Récap. mensuel - ${currentShop} (${format(monthStart, 'MMMM yyyy', { locale: fr })})`;
-                doc.setFontSize(10);
-                doc.text(title, 10, 10);
-                const imgWidth = 190;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                doc.addImage(imgData, 'PNG', 10, 15, imgWidth, imgHeight);
-                doc.save(`${title}_image.pdf`);
-                setLocalFeedback('Succès: Récapitulatif mensuel exporté en PDF (image fidèle).');
-            } catch (error) {
-                console.error('Erreur lors de l\'exportation en PDF (image fidèle):', error);
-                setLocalFeedback('Erreur: Échec de l\'exportation en PDF (image fidèle).');
-            }
-        };
-
-        return (
-            <div className="modal-overlay" style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 1000
-            }}>
-                <div className="monthly-detail-modal-content" style={{
-                    backgroundColor: '#fff',
-                    padding: '10px',
-                    borderRadius: '8px',
-                    maxWidth: '90%',
-                    maxHeight: '80vh',
-                    overflowY: 'auto',
-                    width: '700px'
-                }}>
-                    <h2 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '10px', fontWeight: '700', fontSize: '12px' }}>
-                        Récap. mensuel - {currentShop} ({format(monthStart, 'MMMM yyyy', { locale: fr })})
-                    </h2>
-                    <select
-                        value={format(selectedMonth, 'yyyy-MM')}
-                        onChange={(e) => {
-                            const [year, month] = e.target.value.split('-').map(Number);
-                            setSelectedMonth(new Date(year, month - 1, 1));
-                        }}
-                        style={{ fontFamily: 'Roboto, sans-serif', padding: '6px', fontSize: '12px', marginBottom: '10px', width: '100%' }}
-                    >
-                        {availableMonths.map(month => (
-                            <option key={format(month, 'yyyy-MM')} value={format(month, 'yyyy-MM')}>
-                                {format(month, 'MMMM yyyy', { locale: fr })}
-                            </option>
-                        ))}
-                    </select>
-                    <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', borderCollapse: 'collapse', marginBottom: '10px', fontSize: '8px' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#f0f0f0' }}>
-                                <th style={{ border: '1px solid #ccc', padding: '4px', fontWeight: '700' }}>Date</th>
-                                {storedEmployees.map((employee, index) => (
-                                    <th key={employee} style={{ border: '1px solid #ccc', padding: '4px', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
-                                        {employee}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {monthDays.map(day => {
-                                const dayKey = format(day, 'yyyy-MM-dd');
-                                const weekPlanning = getPlanningForDay(day);
-                                return (
-                                    <tr key={dayKey}>
-                                        <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
-                                            {format(day, 'dd/MM/yyyy')}
-                                        </td>
-                                        {storedEmployees.map((employee, index) => {
-                                            const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning);
-                                            return (
-                                                <td key={`${employee}-${dayKey}`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', backgroundColor: pastelColors[index % pastelColors.length] }}>
-                                                    {hours > 0 ? `${hours.toFixed(1)} h` : 'CONGÉ'}
-                                                </td>
-                                            );
-                                        })}
-                                    </tr>
-                                );
-                            })}
-                            <tr>
-                                <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700' }}>
-                                    TOTAL MOIS
-                                </td>
-                                {storedEmployees.map((employee, index) => {
-                                    const { realHours } = calculateEmployeeMonthlyHours(employee, monthStart);
-                                    return (
-                                        <td key={`${employee}-total`} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', fontWeight: '700', backgroundColor: pastelColors[index % pastelColors.length] }}>
-                                            {realHours.toFixed(1)} h
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                        <Button
-                            className="button-primary"
-                            onClick={() => setShow(false)}
-                            style={{ backgroundColor: '#e53935', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#c62828'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e53935'}
-                        >
-                            Fermer
-                        </Button>
-                        <Button
-                            className="button-primary"
-                            onClick={exportToPDF}
-                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                        >
-                            Exporter en PDF
-                        </Button>
-                        <Button
-                            className="button-primary"
-                            onClick={exportToPDFImage}
-                            style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '6px 12px', fontSize: '12px' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                        >
-                            Exporter en PDF (image fidèle)
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
     };
 
     if (error !== null && error !== undefined) {
@@ -672,18 +433,6 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                 }} style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}>
                     Vue globale par jour
                 </Button>
-                <Button
-                    className="button-primary"
-                    onClick={() => {
-                        console.log('Toggling calendar totals:', !showCalendarTotals);
-                        setShowCalendarTotals(!showCalendarTotals);
-                    }}
-                    style={{ backgroundColor: '#1e88e5', color: '#fff', padding: '8px 16px', fontSize: '14px' }}
-                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                >
-                    {showCalendarTotals ? 'Masquer totaux calendaires' : 'Afficher totaux calendaires'}
-                </Button>
             </div>
             <div className="day-buttons" style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '15px' }}>
                 {days.map((day, index) => (
@@ -779,31 +528,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            SEMAINE RÉELLE ({calculateEmployeeWeeklyHours(employee, currentWeek, planning).realHours.toFixed(1)} h)
+                            SEMAINE ({calculateEmployeeWeeklyHours(employee, currentWeek, planning).toFixed(1)} h)
                         </Button>
-                        {showCalendarTotals && (
-                            <Button
-                                className="button-recap"
-                                onClick={() => {
-                                    console.log('Opening RecapModal for employee (week):', employee + '_week');
-                                    setShowRecapModal(employee + '_week');
-                                }}
-                                style={{
-                                    backgroundColor: '#1e88e5',
-                                    color: '#fff',
-                                    padding: '8px 16px',
-                                    fontSize: '11px',
-                                    width: '100%',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                            >
-                                SEMAINE CALENDAIRE ({calculateEmployeeWeeklyHours(employee, currentWeek, planning).calendarHours.toFixed(1)} h)
-                            </Button>
-                        )}
                         <Button
                             className="button-recap"
                             onClick={() => {
@@ -824,32 +550,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                         >
-                            MOIS RÉEL ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, new Date(currentWeek)).realHours.toFixed(1)} h)
+                            MOIS ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, new Date(currentWeek)).toFixed(1)} h)
                         </Button>
-                        {showCalendarTotals && (
-                            <Button
-                                className="button-recap"
-                                onClick={() => {
-                                    console.log('Opening EmployeeMonthlyRecap for:', employee);
-                                    setSelectedEmployeeForMonthlyRecap(employee);
-                                    setShowEmployeeMonthlyRecap(true);
-                                }}
-                                style={{
-                                    backgroundColor: '#1e88e5',
-                                    color: '#fff',
-                                    padding: '8px 16px',
-                                    fontSize: '11px',
-                                    width: '100%',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                            >
-                                MOIS CALENDAIRE ({monthDisplay}) ({calculateEmployeeMonthlyHours(employee, new Date(currentWeek)).calendarHours.toFixed(1)} h)
-                            </Button>
-                        )}
                     </div>
                 ))}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: 'fit-content', minWidth: '120px', maxWidth: '300px', alignItems: 'center' }}>
@@ -888,31 +590,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        SEMAINE RÉELLE ({shopWeeklyHours.realHours} h)
+                        SEMAINE ({shopWeeklyHours} h)
                     </Button>
-                    {showCalendarTotals && (
-                        <Button
-                            className="button-recap"
-                            onClick={() => {
-                                console.log('Opening RecapModal for week');
-                                setShowRecapModal('week');
-                            }}
-                            style={{
-                                backgroundColor: '#1e88e5',
-                                color: '#fff',
-                                padding: '8px 16px',
-                                fontSize: '12px',
-                                width: '100%',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                        >
-                            SEMAINE CALENDAIRE ({shopWeeklyHours.calendarHours} h)
-                        </Button>
-                    )}
                     <Button
                         className="button-recap"
                         onClick={() => {
@@ -932,31 +611,8 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
                     >
-                        MENSUEL RÉEL ({monthDisplay}) ({shopMonthlyHours.realHours} h)
+                        MENSUEL ({monthDisplay}) ({shopMonthlyHours} h)
                     </Button>
-                    {showCalendarTotals && (
-                        <Button
-                            className="button-recap"
-                            onClick={() => {
-                                console.log('Opening MonthlyRecapModal');
-                                setShowMonthlyRecapModal(true);
-                            }}
-                            style={{
-                                backgroundColor: '#1e88e5',
-                                color: '#fff',
-                                padding: '8px 16px',
-                                fontSize: '12px',
-                                width: '100%',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1565c0'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#1e88e5'}
-                        >
-                            MENSUEL CALENDAIRE ({monthDisplay}) ({shopMonthlyHours.calendarHours} h)
-                        </Button>
-                    )}
                     <Button
                         className="button-recap"
                         onClick={() => {
@@ -1078,7 +734,7 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     planning={planning}
                 />
             )}
-            {(showMonthlyRecapModal || showEmployeeMonthlyRecap) && (
+            {(showMonthlyRecapModal || showEmployeeMonthlyRecap || showMonthlyDetailModal) && (
                 <MonthlyRecapModals
                     config={config}
                     selectedShop={currentShop}
@@ -1089,16 +745,13 @@ const PlanningDisplay = ({ config, selectedShop, selectedWeek, selectedEmployees
                     setShowMonthlyRecapModal={setShowMonthlyRecapModal}
                     showEmployeeMonthlyRecap={showEmployeeMonthlyRecap}
                     setShowEmployeeMonthlyRecap={setShowEmployeeMonthlyRecap}
+                    showMonthlyDetailModal={showMonthlyDetailModal}
+                    setShowMonthlyDetailModal={setShowMonthlyDetailModal}
                     selectedEmployeeForMonthlyRecap={selectedEmployeeForMonthlyRecap}
                     setSelectedEmployeeForMonthlyRecap={setSelectedEmployeeForMonthlyRecap}
                     calculateEmployeeDailyHours={calculateEmployeeDailyHours}
-                    calculateEmployeeWeeklyHours={calculateEmployeeWeeklyHours}
                 />
             )}
-            <MonthlyDetailModal
-                show={showMonthlyDetailModal}
-                setShow={setShowMonthlyDetailModal}
-            />
         </div>
     );
 };

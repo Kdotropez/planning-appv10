@@ -3,10 +3,8 @@
 
 // Types de licences
 export const LICENSE_TYPES = {
-  TRIAL: 'trial',
-  DEMO: 'demo',
-  EVALUATION: 'evaluation',
-  FULL: 'full'
+  PROVISIONAL: 'provisional',  // 7 jours renouvelable
+  UNLIMITED: 'unlimited'       // Illimitée jusqu'à révocation
 };
 
 // Structure d'une licence
@@ -34,10 +32,8 @@ const generateLicenseId = () => {
 };
 
 // Générer une clé de licence numérique
-export const generateLicenseKey = (type, duration) => {
-  const prefix = type === LICENSE_TYPES.FULL ? 'FULL' : 
-                 type === LICENSE_TYPES.TRIAL ? 'TRIAL' : 
-                 type === LICENSE_TYPES.EVALUATION ? 'EVAL' : 'DEMO';
+export const generateLicenseKey = (type, duration = 7) => {
+  const prefix = type === LICENSE_TYPES.UNLIMITED ? 'UNLIMITED' : 'PROVISIONAL';
   
   const durationCode = duration.toString().padStart(3, '0');
   const timestamp = Date.now().toString().slice(-6);
@@ -58,10 +54,8 @@ export const validateLicenseKey = (key) => {
   // Vérifier le préfixe
   let type;
   switch (prefix) {
-    case 'FULL': type = LICENSE_TYPES.FULL; break;
-    case 'TRIAL': type = LICENSE_TYPES.TRIAL; break;
-    case 'EVAL': type = LICENSE_TYPES.EVALUATION; break;
-    case 'DEMO': type = LICENSE_TYPES.DEMO; break;
+    case 'UNLIMITED': type = LICENSE_TYPES.UNLIMITED; break;
+    case 'PROVISIONAL': type = LICENSE_TYPES.PROVISIONAL; break;
     default: return null;
   }
   
@@ -106,44 +100,28 @@ export const createLicenseFromKey = (key, clientName, email) => {
 // Fonctionnalités selon le type de licence
 const getFeaturesForType = (type) => {
   switch (type) {
-    case LICENSE_TYPES.TRIAL:
+    case LICENSE_TYPES.PROVISIONAL:
       return {
         maxShops: 2,
-        maxEmployees: 5,
-        maxWeeks: 4,
+        maxEmployees: 8,
+        maxWeeks: 6,
         exportEnabled: true,
         fullFeatures: true,
-        watermark: true
+        watermark: true,
+        renewable: true
       };
-    case LICENSE_TYPES.DEMO:
-      return {
-        maxShops: 1,
-        maxEmployees: 3,
-        maxWeeks: 2,
-        exportEnabled: false,
-        fullFeatures: false,
-        watermark: true
-      };
-    case LICENSE_TYPES.EVALUATION:
-      return {
-        maxShops: 3,
-        maxEmployees: 10,
-        maxWeeks: 8,
-        exportEnabled: true,
-        fullFeatures: true,
-        watermark: true
-      };
-    case LICENSE_TYPES.FULL:
+    case LICENSE_TYPES.UNLIMITED:
       return {
         maxShops: -1, // illimité
         maxEmployees: -1, // illimité
         maxWeeks: -1, // illimité
         exportEnabled: true,
         fullFeatures: true,
-        watermark: false
+        watermark: false,
+        renewable: false
       };
     default:
-      return getFeaturesForType(LICENSE_TYPES.DEMO);
+      return getFeaturesForType(LICENSE_TYPES.PROVISIONAL);
   }
 };
 
@@ -260,9 +238,8 @@ export const removeLicense = () => {
 // Créer des licences d'exemple
 export const createSampleLicenses = () => {
   return {
-    trial: createLicense(LICENSE_TYPES.TRIAL, 30, 'Client Test', 'test@example.com'),
-    demo: createLicense(LICENSE_TYPES.DEMO, 7, 'Démo', 'demo@example.com'),
-    evaluation: createLicense(LICENSE_TYPES.EVALUATION, 60, 'Évaluation', 'eval@example.com')
+    provisional: createLicense(LICENSE_TYPES.PROVISIONAL, 7, 'Client Provisoire', 'provisoire@example.com'),
+    unlimited: createLicense(LICENSE_TYPES.UNLIMITED, 36500, 'Client Illimité', 'unlimited@example.com')
   };
 };
 
@@ -299,10 +276,8 @@ export const validateLicenseKeyWithMessage = (key) => {
   // Vérifier le préfixe
   let type;
   switch (prefix) {
-    case 'FULL': type = LICENSE_TYPES.FULL; break;
-    case 'TRIAL': type = LICENSE_TYPES.TRIAL; break;
-    case 'EVAL': type = LICENSE_TYPES.EVALUATION; break;
-    case 'DEMO': type = LICENSE_TYPES.DEMO; break;
+    case 'UNLIMITED': type = LICENSE_TYPES.UNLIMITED; break;
+    case 'PROVISIONAL': type = LICENSE_TYPES.PROVISIONAL; break;
     default: return { valid: false, message: 'Type de licence invalide' };
   }
   
@@ -343,5 +318,56 @@ export const resetUsedKeys = () => {
   } catch (error) {
     console.error('Erreur lors de la réinitialisation des clés utilisées:', error);
     return false;
+  }
+};
+
+// Renouveler une licence provisoire
+export const renewProvisionalLicense = (license) => {
+  if (!license || license.type !== LICENSE_TYPES.PROVISIONAL) {
+    return { success: false, message: 'Licence non renouvelable' };
+  }
+
+  const now = new Date();
+  const currentExpiry = new Date(license.expiryDate);
+  
+  // Si la licence n'est pas encore expirée, ajouter 7 jours à la date d'expiration actuelle
+  // Sinon, créer une nouvelle expiration à partir d'aujourd'hui
+  const newExpiryDate = now < currentExpiry 
+    ? new Date(currentExpiry.getTime() + (7 * 24 * 60 * 60 * 1000))
+    : new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+
+  const renewedLicense = {
+    ...license,
+    expiryDate: newExpiryDate.toISOString(),
+    renewedAt: now.toISOString()
+  };
+
+  if (saveLicense(renewedLicense)) {
+    return { 
+      success: true, 
+      message: 'Licence renouvelée avec succès',
+      newExpiryDate: newExpiryDate.toLocaleDateString('fr-FR')
+    };
+  } else {
+    return { success: false, message: 'Erreur lors du renouvellement' };
+  }
+};
+
+// Révocher une licence illimitée
+export const revokeUnlimitedLicense = (license) => {
+  if (!license || license.type !== LICENSE_TYPES.UNLIMITED) {
+    return { success: false, message: 'Licence non révocable' };
+  }
+
+  const revokedLicense = {
+    ...license,
+    isActive: false,
+    revokedAt: new Date().toISOString()
+  };
+
+  if (saveLicense(revokedLicense)) {
+    return { success: true, message: 'Licence révoquée avec succès' };
+  } else {
+    return { success: false, message: 'Erreur lors de la révocation' };
   }
 }; 

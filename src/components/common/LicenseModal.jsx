@@ -7,6 +7,8 @@ import {
   saveLicense,
   createLicenseFromKey,
   validateLicenseKeyWithMessage,
+  renewProvisionalLicense,
+  revokeUnlimitedLicense,
   LICENSE_TYPES 
 } from '../../utils/licenseManager';
 
@@ -17,22 +19,22 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
   const [message, setMessage] = useState('');
   const [showKeyActivation, setShowKeyActivation] = useState(false);
 
-  const handleActivateLicense = () => {
+  const handleProvisionalLicense = () => {
     if (!clientName || !clientEmail) {
       setMessage('Veuillez remplir tous les champs');
       return;
     }
 
-    // Créer une licence d'essai de 30 jours
+    // Créer une licence provisoire de 7 jours
     const license = createLicense(
-      LICENSE_TYPES.TRIAL,
-      30,
+      LICENSE_TYPES.PROVISIONAL,
+      7,
       clientName,
       clientEmail
     );
 
     if (saveLicense(license)) {
-      setMessage('Licence activée avec succès !');
+      setMessage('Licence provisoire activée ! (7 jours renouvelable)');
       setTimeout(() => {
         onLicenseValid();
         onClose();
@@ -42,43 +44,22 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
     }
   };
 
-  const handleDemoMode = () => {
-    // Créer une licence de démo de 7 jours
-    const demoLicense = createLicense(
-      LICENSE_TYPES.DEMO,
-      7,
-      'Utilisateur Démo',
-      'demo@planning-app.com'
-    );
-
-    if (saveLicense(demoLicense)) {
-      setMessage('Mode démo activé (7 jours)');
-      setTimeout(() => {
-        onLicenseValid();
-        onClose();
-      }, 2000);
-    } else {
-      setMessage('Erreur lors de l\'activation du mode démo');
+  const handleRenewLicense = () => {
+    const currentLicense = loadLicense();
+    if (!currentLicense) {
+      setMessage('Aucune licence active à renouveler');
+      return;
     }
-  };
 
-  const handleFullLicense = () => {
-    // Créer une licence complète pour Nicolas Lefevre
-    const fullLicense = createLicense(
-      LICENSE_TYPES.FULL,
-      36500, // 100 ans
-      'Nicolas Lefevre',
-      'nicolas@planning-app.com'
-    );
-
-    if (saveLicense(fullLicense)) {
-      setMessage('Licence complète activée ! (Illimitée)');
+    const result = renewProvisionalLicense(currentLicense);
+    if (result.success) {
+      setMessage(`✅ ${result.message} - Expire le ${result.newExpiryDate}`);
       setTimeout(() => {
         onLicenseValid();
         onClose();
       }, 2000);
     } else {
-      setMessage('Erreur lors de l\'activation de la licence complète');
+      setMessage(`❌ ${result.message}`);
     }
   };
 
@@ -187,7 +168,7 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
                  fontWeight: !showKeyActivation ? 'bold' : 'normal'
                }}
              >
-               📝 Licence d'Essai
+                               📝 Licence Provisoire
              </button>
              <button
                onClick={() => setShowKeyActivation(true)}
@@ -246,23 +227,23 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
                  />
                </div>
 
-               <button
-                 onClick={handleActivateLicense}
-                 style={{
-                   backgroundColor: '#27ae60',
-                   color: 'white',
-                   border: 'none',
-                   padding: '12px 24px',
-                   borderRadius: '5px',
-                   cursor: 'pointer',
-                   fontSize: '14px',
-                   fontWeight: 'bold',
-                   width: '100%',
-                   marginBottom: '10px'
-                 }}
-               >
-                 🚀 Activer Licence d'Essai (30 jours)
-               </button>
+                               <button
+                  onClick={handleProvisionalLicense}
+                  style={{
+                    backgroundColor: '#27ae60',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    width: '100%',
+                    marginBottom: '10px'
+                  }}
+                >
+                  🚀 Activer Licence Provisoire (7 jours renouvelable)
+                </button>
              </>
            ) : (
              // Mode Clé de Licence
@@ -347,47 +328,19 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
            )}
         </div>
 
-        <div style={{ 
-          borderTop: '1px solid #ddd', 
-          paddingTop: '20px',
-          marginBottom: '20px'
-        }}>
-          <h3>Mode Démo</h3>
-          <p style={{ color: '#666', marginBottom: '15px' }}>
-            Testez l'application avec des fonctionnalités limitées :
-          </p>
-          <button
-            onClick={handleDemoMode}
-            style={{
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              width: '100%'
-            }}
-          >
-                         🎯 Essayer en Mode Démo (7 jours)
-           </button>
-         </div>
-
-         {/* Bouton secret pour licence complète - Nicolas Lefevre */}
-         <div style={{ 
+                 <div style={{ 
            borderTop: '1px solid #ddd', 
            paddingTop: '20px',
            marginBottom: '20px'
          }}>
-           <h3>Licence Développeur</h3>
+           <h3>Renouveler Licence Provisoire</h3>
            <p style={{ color: '#666', marginBottom: '15px' }}>
-             Accès complet pour le développeur :
+             Renouvelez votre licence provisoire de 7 jours supplémentaires :
            </p>
            <button
-             onClick={handleFullLicense}
+             onClick={handleRenewLicense}
              style={{
-               backgroundColor: '#e74c3c',
+               backgroundColor: '#3498db',
                color: 'white',
                border: 'none',
                padding: '12px 24px',
@@ -398,7 +351,7 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
                width: '100%'
              }}
            >
-             🔓 Licence Complète (Illimitée)
+             🔄 Renouveler Licence (7 jours supplémentaires)
            </button>
          </div>
 

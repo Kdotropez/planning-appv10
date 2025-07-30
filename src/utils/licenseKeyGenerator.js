@@ -6,25 +6,17 @@ import { generateLicenseKey, LICENSE_TYPES, getUsedKeys, resetUsedKeys } from '.
 // Générer des clés de licence pour les tests
 export const generateTestKeys = () => {
   const keys = {
-    // Clé de démo (7 jours)
-    demo: generateLicenseKey(LICENSE_TYPES.DEMO, 7),
+    // Clé provisoire (7 jours renouvelable)
+    provisional: generateLicenseKey(LICENSE_TYPES.PROVISIONAL, 7),
     
-    // Clé d'essai (30 jours)
-    trial: generateLicenseKey(LICENSE_TYPES.TRIAL, 30),
-    
-    // Clé d'évaluation (60 jours)
-    evaluation: generateLicenseKey(LICENSE_TYPES.EVALUATION, 60),
-    
-    // Clé complète (365 jours)
-    full: generateLicenseKey(LICENSE_TYPES.FULL, 365)
+    // Clé illimitée (jusqu'à révocation)
+    unlimited: generateLicenseKey(LICENSE_TYPES.UNLIMITED, 36500)
   };
   
   console.log('🗝️ Clés de licence générées :');
   console.log('--------------------------------');
-  console.log(`Démo (7 jours):     ${keys.demo}`);
-  console.log(`Essai (30 jours):   ${keys.trial}`);
-  console.log(`Évaluation (60 j):  ${keys.evaluation}`);
-  console.log(`Complète (365 j):   ${keys.full}`);
+  console.log(`Provisoire (7 j):   ${keys.provisional}`);
+  console.log(`Illimitée:         ${keys.unlimited}`);
   console.log('--------------------------------');
   
   return keys;
@@ -73,6 +65,7 @@ window.clearUsedKeys = clearUsedKeys;
 console.log('🔑 Générateur de clés de licence activé !');
 console.log('Pour générer des clés de test :');
 console.log('1. generateTestKeys() - Génère toutes les clés de test');
-console.log('2. generateSpecificKey("trial", 30) - Génère une clé spécifique');
-console.log('3. listUsedKeys() - Affiche les clés déjà utilisées');
-console.log('4. clearUsedKeys() - Réinitialise les clés utilisées (tests)'); 
+console.log('2. generateSpecificKey("provisional", 7) - Génère une clé provisoire');
+console.log('3. generateSpecificKey("unlimited", 36500) - Génère une clé illimitée');
+console.log('4. listUsedKeys() - Affiche les clés déjà utilisées');
+console.log('5. clearUsedKeys() - Réinitialise les clés utilisées (tests)'); 

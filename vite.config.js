@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/planning-appv9/', // Pour GitHub Pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

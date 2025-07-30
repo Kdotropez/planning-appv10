@@ -1,5 +1,5 @@
 // Système de protection propriétaire - Planning App v9
-// Copyright (c) 2025 Planning App v9. Tous droits réservés.
+// Copyright (c) 2025 [VOTRE NOM]. Tous droits réservés.
 
 // Protection contre l'inspection du code
 export const enableProtection = () => {
@@ -79,7 +79,7 @@ export const checkEnvironment = () => {
 
 // Message de copyright
 export const getCopyrightMessage = () => {
-  return `© 2025 Planning App v9 - Logiciel Propriétaire
+  return `© 2025 [VOTRE NOM] - Logiciel Propriétaire
 Tous droits réservés. Utilisation non autorisée interdite.`;
 };
 

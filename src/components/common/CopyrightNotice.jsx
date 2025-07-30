@@ -14,7 +14,7 @@ const CopyrightNotice = () => {
       zIndex: 1000,
       fontFamily: 'monospace'
     }}>
-      © 2025 Planning App v9 - Propriétaire
+             © 2025 [VOTRE NOM] - Propriétaire
     </div>
   );
 };

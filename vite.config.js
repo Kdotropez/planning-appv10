@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/planning-appv9/', // Pour GitHub Pages
+  base: '/', // Pour Vercel
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

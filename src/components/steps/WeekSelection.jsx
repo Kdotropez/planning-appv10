@@ -1,54 +1,100 @@
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isMonday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isMonday, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
+import { loadFromLocalStorage } from '../../utils/localStorage';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
-const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop }) => {
+const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop, planningData }) => {
     const [month, setMonth] = useState(selectedWeek ? format(new Date(selectedWeek), 'yyyy-MM') : format(new Date(), 'yyyy-MM'));
+    const [savedWeeksMonth, setSavedWeeksMonth] = useState(selectedWeek ? format(new Date(selectedWeek), 'yyyy-MM') : format(new Date(), 'yyyy-MM'));
     const [currentWeek, setCurrentWeek] = useState(selectedWeek || '');
     const [savedWeeks, setSavedWeeks] = useState([]);
     const [feedback, setFeedback] = useState('');
 
     useEffect(() => {
         console.log('Fetching saved weeks for shop:', selectedShop);
-        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-        console.log('Found storage keys:', storageKeys);
+        
+        if (!planningData || !selectedShop) {
+            setSavedWeeks([]);
+            return;
+        }
 
-        const weeks = storageKeys
-            .map(key => {
-                const weekKey = key.replace(`planning_${selectedShop}_`, '');
-                console.log('Processing key:', key, 'Extracted weekKey:', weekKey);
+        // Trouver la boutique dans planningData
+        const shop = planningData.shops.find(s => s.id === selectedShop);
+        if (!shop || !shop.weeks) {
+            setSavedWeeks([]);
+            return;
+        }
+
+        // Récupérer toutes les semaines avec des données
+        const weeks = Object.keys(shop.weeks)
+            .map(weekKey => {
+                console.log('Processing weekKey:', weekKey);
                 try {
                     const weekDate = new Date(weekKey);
-                    const weekPlanning = loadFromLocalStorage(key);
-                    console.log(`Week data for ${weekKey}:`, weekPlanning);
-                    if (!isNaN(weekDate.getTime()) && isMonday(weekDate) && weekPlanning && Object.keys(weekPlanning).length > 0) {
-                        return {
-                            key: weekKey,
-                            display: `Lundi ${format(weekDate, 'd MMMM', { locale: fr })} au Dimanche ${format(addDays(weekDate, 6), 'd MMMM yyyy', { locale: fr })}`
-                        };
+                    const weekData = shop.weeks[weekKey];
+                    console.log(`Week data for ${weekKey}:`, weekData);
+                    
+                    // Vérifier si la semaine a des données de planning
+                    if (!isNaN(weekDate.getTime()) && isMonday(weekDate) && weekData && weekData.planning && Object.keys(weekData.planning).length > 0) {
+                        // Vérifier si au moins un employé a des créneaux cochés
+                        const hasPlanningData = Object.values(weekData.planning).some(employeeData => {
+                            return Object.values(employeeData).some(daySlots => 
+                                Array.isArray(daySlots) && daySlots.some(slot => slot === true)
+                            );
+                        });
+                        
+                        if (hasPlanningData) {
+                            return {
+                                key: weekKey,
+                                date: weekDate,
+                                display: `Lundi ${format(weekDate, 'd MMMM', { locale: fr })} au Dimanche ${format(addDays(weekDate, 6), 'd MMMM yyyy', { locale: fr })}`
+                            };
+                        }
                     }
-                    console.log(`Skipping ${weekKey}: Invalid date or empty planning`);
+                    console.log(`Skipping ${weekKey}: Invalid date or no planning data`);
                     return null;
                 } catch (e) {
-                    console.error(`Invalid date format for key ${key}:`, e);
+                    console.error(`Invalid date format for weekKey ${weekKey}:`, e);
                     return null;
                 }
             })
             .filter(week => week !== null);
 
-        // Supprimer les doublons en utilisant un Set
+        // Filtrer par mois et supprimer les doublons
+        const monthStart = startOfMonth(new Date(savedWeeksMonth));
+        const monthEnd = endOfMonth(new Date(savedWeeksMonth));
         const uniqueWeeks = Array.from(new Set(weeks.map(w => w.key)))
             .map(key => weeks.find(w => w.key === key))
-            .sort((a, b) => new Date(a.key) - new Date(b.key));
+            .filter(week => {
+                // Utiliser la même logique que getWeeksInMonth : inclure les semaines qui se terminent dans le mois
+                const weekEnd = addDays(week.date, 6);
+                return isWithinInterval(weekEnd, { start: monthStart, end: monthEnd });
+            })
+            .sort((a, b) => b.date - a.date) // Tri décroissant pour les plus récentes en premier
+            .slice(0, 10); // Limiter à 10 semaines maximum
         console.log('Processed saved weeks:', uniqueWeeks);
         setSavedWeeks(uniqueWeeks);
-    }, [selectedShop]);
+    }, [selectedShop, savedWeeksMonth, planningData]);
+
+    // Mettre à jour le mois des semaines sauvegardées quand selectedWeek change
+    useEffect(() => {
+        if (selectedWeek) {
+            const weekMonth = format(new Date(selectedWeek), 'yyyy-MM');
+            setSavedWeeksMonth(weekMonth);
+            console.log('Mise à jour du mois des semaines sauvegardées vers:', weekMonth);
+        }
+    }, [selectedWeek]);
 
     const handleMonthChange = (e) => {
         setMonth(e.target.value);
+        setCurrentWeek('');
+        setFeedback('');
+    };
+
+    const handleSavedWeeksMonthChange = (e) => {
+        setSavedWeeksMonth(e.target.value);
         setCurrentWeek('');
         setFeedback('');
     };
@@ -141,7 +187,7 @@ const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop }) 
                 </p>
             )}
             <div className="month-selector" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '10px' }}>Mois</h3>
+                <h3 style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '10px' }}>Mois pour semaines du mois</h3>
                 <input
                     type="month"
                     value={month}
@@ -188,9 +234,18 @@ const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop }) 
             </div>
             <div className="saved-weeks" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ fontFamily: 'Roboto, sans-serif', fontSize: '16px', marginBottom: '10px' }}>Semaines sauvegardées</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '10px' }}>
+                    <h4 style={{ fontFamily: 'Roboto, sans-serif', fontSize: '14px', marginBottom: '5px' }}>Mois pour semaines sauvegardées</h4>
+                    <input
+                        type="month"
+                        value={savedWeeksMonth}
+                        onChange={handleSavedWeeksMonthChange}
+                        style={{ padding: '8px', fontSize: '14px', width: '200px' }}
+                    />
+                </div>
                 {savedWeeks.length === 0 ? (
                     <p style={{ fontFamily: 'Roboto, sans-serif', color: '#e53935', textAlign: 'center' }}>
-                        Aucune semaine sauvegardée pour cette boutique.
+                        Aucune semaine sauvegardée pour ce mois.
                     </p>
                 ) : (
                     <table style={{ fontFamily: 'Roboto, sans-serif', width: '100%', maxWidth: '600px', borderCollapse: 'collapse' }}>

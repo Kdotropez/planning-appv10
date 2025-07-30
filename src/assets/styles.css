@@ -684,3 +684,47 @@ body {
         line-height: 1.2;
     }
 }
+
+/* Styles pour l'impression */
+@media print {
+    body {
+        background-color: white !important;
+        color: black !important;
+    }
+    
+    .modal-overlay {
+        background-color: white !important;
+        position: static !important;
+    }
+    
+    .modal-content {
+        max-height: none !important;
+        overflow: visible !important;
+        background-color: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    
+    .modal-close,
+    .button-group {
+        display: none !important;
+    }
+    
+    /* Optimisation du tableau pour l'impression A4 */
+    table {
+        font-size: 8px !important;
+        line-height: 1.2 !important;
+    }
+    
+    th, td {
+        padding: 1px 2px !important;
+        font-size: 8px !important;
+    }
+    
+    /* Réduction des marges pour maximiser l'espace */
+    @page {
+        margin: 10mm;
+        size: A4 portrait;
+    }
+}

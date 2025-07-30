@@ -1,192 +1,261 @@
-import { format } from 'date-fns';
 import { saveToLocalStorage, loadFromLocalStorage } from './localStorage';
+import { format, addMinutes, parse } from 'date-fns';
 
-export const exportAllData = async (setFeedback) => {
-    try {
-        console.log('exportAllData called');
-        const shopsRaw = localStorage.getItem('shops');
-        console.log('Raw shops data from localStorage:', shopsRaw);
-        const shops = loadFromLocalStorage('shops', []);
-        console.log('Parsed shops from localStorage:', shops);
-        const timeSlotConfig = loadFromLocalStorage('timeSlotConfig', {});
-        console.log('TimeSlotConfig retrieved:', timeSlotConfig);
+export const exportAllData = (setFeedback) => {
+  console.log('exportAllData called');
+  try {
+    const shops = loadFromLocalStorage('shops', []);
+    const config = loadFromLocalStorage('config', {});
+    const data = { shops: [], config };
 
-        if (!shops || !Array.isArray(shops) || shops.length === 0) {
-            setFeedback('Erreur: Aucune boutique créée. Veuillez créer une boutique avant d’exporter.');
-            console.log('Export failed: No shops found');
-            return;
-        }
-
-        const exportData = {
-            shops: [],
-            timeSlotConfig
-        };
-
-        shops.forEach(shop => {
-            if (!shop || shop === 'DEFAULT') {
-                console.log(`Skipping invalid shop: ${shop}`);
-                return;
-            }
-            const shopData = {
-                shop,
-                employees: loadFromLocalStorage(`employees_${shop}`, []),
-                weeks: {}
-            };
-            console.log(`Processing shop: ${shop}, employees:`, shopData.employees);
-
-            const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${shop}_`));
-            console.log(`Storage keys for ${shop}:`, storageKeys);
-
-            storageKeys.forEach(key => {
-                const weekKey = key.replace(`planning_${shop}_`, '');
-                try {
-                    const weekDate = new Date(weekKey);
-                    if (!isNaN(weekDate.getTime())) {
-                        const planning = loadFromLocalStorage(key, {});
-                        const selectedEmployees = loadFromLocalStorage(`selected_employees_${shop}_${weekKey}`, []);
-                        console.log(`Week ${weekKey} for ${shop}: planning=`, planning, 'selectedEmployees=', selectedEmployees);
-                        shopData.weeks[weekKey] = {
-                            planning,
-                            selectedEmployees
-                        };
-                    } else {
-                        console.log(`Skipping invalid weekKey: ${weekKey}`);
-                    }
-                } catch (e) {
-                    console.error(`Error processing weekKey ${weekKey} for shop ${shop}:`, e);
-                }
-            });
-
-            exportData.shops.push(shopData);
-            console.log(`Added shop to exportData: ${shop}`);
-        });
-
-        console.log('Export data prepared:', JSON.stringify(exportData, null, 2));
-
-        if (typeof document !== 'undefined') {
-            try {
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `planning_all_shops_${format(new Date(), 'yyyy-MM-dd_HHmm')}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                console.log('Exported to local file via download link');
-                setFeedback('Succès: Données exportées avec succès.');
-            } catch (error) {
-                console.error('Export error:', error);
-                setFeedback('Erreur: Échec de l’exportation : ' + error.message);
-            }
-        } else {
-            setFeedback('Erreur: Environnement client non disponible pour l’exportation.');
-            console.log('Export failed: Client environment not available');
-        }
-    } catch (error) {
-        setFeedback('Erreur lors de l’exportation : ' + error.message);
-        console.error('Export error:', error);
+    if (!Array.isArray(shops)) {
+      throw new Error('Les boutiques ne sont pas un tableau valide');
     }
+
+    shops.forEach(shop => {
+      const shopData = {
+        id: shop.id,
+        name: shop.name,
+        hours: shop.hours,
+        employees: loadFromLocalStorage(`employees_${shop.id}`, []),
+        weeks: {}
+      };
+      const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${shop.id}_`));
+      storageKeys.forEach(key => {
+        const weekKey = key.replace(`planning_${shop.id}_`, '');
+        const weekPlanning = loadFromLocalStorage(key, {});
+        const weekEmployees = [];
+        const selectedEmployees = loadFromLocalStorage(`selected_employees_${shop.id}_${weekKey}`, []);
+        if (Array.isArray(selectedEmployees)) {
+          selectedEmployees.forEach(employee => {
+            const schedule = {};
+            if (weekPlanning[employee]) {
+              Object.keys(weekPlanning[employee]).forEach(dayKey => {
+                const slots = weekPlanning[employee][dayKey];
+                schedule[dayKey] = convertSlotsToTimeRanges(slots, config.timeSlots, config.interval);
+              });
+              weekEmployees.push({ id: employee, schedule });
+            }
+          });
+          shopData.weeks[weekKey] = { timeSlots: config.timeSlots, employees: weekEmployees };
+        }
+      });
+      data.shops.push(shopData);
+    });
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `planning_all_shops_${format(new Date(), 'yyyy-MM-dd_HHmm')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setFeedback('Succès: Données exportées.');
+    console.log('Data exported successfully:', data);
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    setFeedback('Erreur lors de l’exportation: ' + error.message);
+  }
 };
 
-export const importAllData = async (setFeedback, setShops, setSelectedShop, setConfig) => {
+export const importAllData = (setFeedback, setShops, setSelectedShop, setConfig) => {
+  console.log('importAllData called');
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (event) => {
     try {
-        console.log('importAllData called');
-        if (typeof document === 'undefined') {
-            setFeedback('Erreur: Environnement client non disponible pour l’importation.');
-            console.log('Import failed: Client environment not available');
-            return;
-        }
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (event) => {
-            try {
-                const file = event.target.files[0];
-                if (!file) {
-                    setFeedback('Erreur: Aucun fichier sélectionné.');
-                    console.log('Import failed: No file selected');
-                    return;
-                }
-                const text = await file.text();
-                const importData = JSON.parse(text);
-                console.log('Imported data:', importData);
+      const file = event.target.files[0];
+      if (!file) throw new Error('Aucun fichier sélectionné');
+      const text = await file.text();
+      const data = JSON.parse(text);
 
-                if (!importData.shops || !Array.isArray(importData.shops)) {
-                    setFeedback('Erreur: Format de fichier JSON invalide. Attendu un tableau "shops".');
-                    console.log('Import failed: Invalid JSON format', importData);
-                    return;
-                }
+      if (!data || typeof data !== 'object') {
+        throw new Error('Données importées invalides');
+      }
 
-                localStorage.clear();
-                console.log('Cleared localStorage before import');
+      // Vérification robuste pour data.shops
+      if (!Array.isArray(data.shops)) {
+        console.warn('importAllData: data.shops n’est pas un tableau, initialisation à []');
+        data.shops = [];
+      }
 
-                const shopNames = [];
-                importData.shops.forEach(shopData => {
-                    const shop = shopData.shop ? shopData.shop.trim().toUpperCase() : null;
-                    if (!shop || shop === 'DEFAULT') {
-                        console.log(`Skipping invalid shop: ${shop}`);
-                        return;
-                    }
-                    shopNames.push(shop);
-
-                    saveToLocalStorage(`employees_${shop}`, shopData.employees || []);
-                    console.log(`Restored employees for ${shop}:`, shopData.employees);
-
-                    Object.keys(shopData.weeks || {}).forEach(weekKey => {
-                        saveToLocalStorage(`planning_${shop}_${weekKey}`, shopData.weeks[weekKey].planning || {});
-                        saveToLocalStorage(`selected_employees_${shop}_${weekKey}`, shopData.weeks[weekKey].selectedEmployees || []);
-                        console.log(`Restored week ${weekKey} for ${shop}: planning=`, shopData.weeks[weekKey].planning, 'selectedEmployees=', shopData.weeks[weekKey].selectedEmployees);
-                    });
-
-                    const latestWeek = Object.keys(shopData.weeks || {}).sort().pop();
-                    if (latestWeek) {
-                        saveToLocalStorage(`lastPlanning_${shop}`, {
-                            week: latestWeek,
-                            planning: shopData.weeks[latestWeek].planning || {}
-                        });
-                        console.log(`Restored lastPlanning for ${shop}:`, { week: latestWeek });
-                    }
-                });
-
-                setShops(shopNames);
-                saveToLocalStorage('shops', shopNames);
-                console.log('Restored shops:', shopNames);
-
-                if (shopNames.length > 0) {
-                    const firstShop = shopNames[0];
-                    const firstWeek = importData.shops.find(s => s.shop === firstShop)?.weeks
-                        ? Object.keys(importData.shops.find(s => s.shop === firstShop).weeks).sort().pop()
-                        : null;
-                    setSelectedShop(firstShop);
-                    saveToLocalStorage('lastPlanning', { shop: firstShop, week: firstWeek });
-                    console.log('Selected first shop:', firstShop, 'week:', firstWeek);
-                } else {
-                    setSelectedShop('');
-                    saveToLocalStorage('lastPlanning', {});
-                    console.log('No shops to select');
-                }
-
-                if (importData.timeSlotConfig) {
-                    setConfig(importData.timeSlotConfig);
-                    saveToLocalStorage('timeSlotConfig', importData.timeSlotConfig);
-                    console.log('Restored timeSlotConfig:', importData.timeSlotConfig);
-                } else {
-                    setFeedback('Erreur: timeSlotConfig manquant dans le fichier JSON.');
-                    console.log('Import failed: Missing timeSlotConfig');
-                }
-
-                setFeedback('Succès: Sauvegarde de toutes les boutiques restaurée avec succès.');
-                console.log('Import completed successfully');
-            } catch (fileError) {
-                setFeedback('Erreur lors de l’importation : ' + fileError.message);
-                console.error('File input import error:', fileError);
+      // Nettoyer les clés de date non standardisées et supprimer les doublons d'employés
+      const cleanedShops = data.shops.map(shop => ({
+        ...shop,
+        weeks: Object.keys(shop.weeks || {}).reduce((acc, weekKey) => {
+          let cleanedWeekKey = weekKey;
+          try {
+            const parsedDate = parse(weekKey, 'd MMMM', new Date(2025, 0, 1));
+            if (!isNaN(parsedDate.getTime())) {
+              cleanedWeekKey = format(parsedDate, 'yyyy-MM-dd');
             }
-        };
-        input.click();
+          } catch (e) {
+            console.warn(`importAllData: Clé de semaine non standardisée: ${weekKey}`);
+          }
+          acc[cleanedWeekKey] = shop.weeks[weekKey];
+          return acc;
+        }, {})
+      }));
+
+      const uniqueShops = cleanedShops.reduce((acc, shop) => {
+        const existingShop = acc.find(s => s.id === shop.id);
+        if (!existingShop) {
+          acc.push({
+            ...shop,
+            weeks: Object.keys(shop.weeks || {}).reduce((weekAcc, weekKey) => {
+              const weekData = shop.weeks[weekKey];
+              const uniqueEmployees = [];
+              const seenEmployeeIds = new Set();
+              if (Array.isArray(weekData.employees)) {
+                weekData.employees.forEach(emp => {
+                  if (!seenEmployeeIds.has(emp.id)) {
+                    uniqueEmployees.push(emp);
+                    seenEmployeeIds.add(emp.id);
+                  }
+                });
+              }
+              weekAcc[weekKey] = { ...weekData, employees: uniqueEmployees };
+              return weekAcc;
+            }, {})
+          });
+        }
+        return acc;
+      }, []);
+
+      localStorage.clear();
+      saveToLocalStorage('shops', uniqueShops);
+      saveToLocalStorage('config', data.config || {});
+      uniqueShops.forEach(shop => {
+        if (!shop.id) {
+          console.warn('importAllData: Boutique sans id, ignorée');
+          return;
+        }
+        saveToLocalStorage(`employees_${shop.id}`, shop.employees || []);
+        if (shop.weeks && typeof shop.weeks === 'object') {
+          Object.keys(shop.weeks).forEach(weekKey => {
+            const weekData = shop.weeks[weekKey];
+            const weekPlanning = {};
+            if (Array.isArray(weekData.employees)) {
+              weekData.employees.forEach(employee => {
+                weekPlanning[employee.id] = {};
+                if (employee.schedule && typeof employee.schedule === 'object') {
+                  Object.keys(employee.schedule).forEach(dayKey => {
+                    let cleanedDayKey = dayKey;
+                    try {
+                      const parsedDate = parse(dayKey, 'd MMMM', new Date(2025, 0, 1));
+                      if (!isNaN(parsedDate.getTime())) {
+                        cleanedDayKey = format(parsedDate, 'yyyy-MM-dd');
+                      }
+                    } catch (e) {
+                      console.warn(`importAllData: Clé de jour non standardisée: ${dayKey}`);
+                    }
+                    const slots = convertTimeRangesToSlots(
+                      employee.schedule[dayKey],
+                      weekData.timeSlots || data.config.timeSlots || [],
+                      data.config.interval || 30
+                    );
+                    if (slots.some(slot => slot)) {
+                      weekPlanning[employee.id][cleanedDayKey] = slots;
+                    }
+                  });
+                }
+              });
+              saveToLocalStorage(`planning_${shop.id}_${weekKey}`, weekPlanning);
+              saveToLocalStorage(`selected_employees_${shop.id}_${weekKey}`, weekData.employees.map(emp => emp.id) || []);
+            }
+          });
+        }
+      });
+
+      setShops(uniqueShops);
+      setSelectedShop(uniqueShops[0]?.id || '');
+      setConfig(data.config || {});
+      setFeedback('Succès: Données importées.');
+      console.log('Data imported successfully:', uniqueShops);
     } catch (error) {
-        setFeedback('Erreur lors de l’importation : ' + error.message);
-        console.error('Import error:', error);
+      console.error('Error importing data:', error);
+      setFeedback('Erreur lors de l’importation: ' + error.message);
     }
+  };
+  input.click();
+};
+
+const convertSlotsToTimeRanges = (slots, timeSlots, interval) => {
+  if (!Array.isArray(slots) || !Array.isArray(timeSlots)) {
+    console.warn('convertSlotsToTimeRanges: Invalid input', { slots, timeSlots });
+    return [];
+  }
+
+  const ranges = [];
+  let start = null;
+  let pauseStart = null;
+  let resume = null;
+
+  for (let i = 0; i < slots.length && i < timeSlots.length; i++) {
+    if (slots[i] && !start) {
+      start = timeSlots[i];
+    } else if (!slots[i] && start && !pauseStart) {
+      pauseStart = timeSlots[i];
+      ranges.push(start);
+      if (i < slots.length) {
+        ranges.push(`${start}-${timeSlots[i]}`);
+      }
+    } else if (slots[i] && pauseStart && !resume) {
+      resume = timeSlots[i];
+    } else if (!slots[i] && resume) {
+      ranges.push(resume);
+      ranges.push(`${resume}-${timeSlots[i]}`);
+      start = null;
+      pauseStart = null;
+      resume = null;
+    } else if (slots[i] && i === slots.length - 1) {
+      ranges.push(start || timeSlots[i]);
+      ranges.push(`${start || timeSlots[i]}-${getEndTime(timeSlots[i], interval)}`);
+    }
+  }
+
+  if (start && !pauseStart && !resume) {
+    ranges.push(start);
+    ranges.push(`${start}-${getEndTime(timeSlots[slots.length - 1], interval)}`);
+  }
+
+  console.log('Converted slots to time ranges:', { slots, timeSlots, ranges });
+  return ranges;
+};
+
+const convertTimeRangesToSlots = (ranges, timeSlots, interval) => {
+  if (!Array.isArray(ranges) || !Array.isArray(timeSlots)) {
+    console.warn('convertTimeRangesToSlots: Invalid input', { ranges, timeSlots });
+    return Array(timeSlots?.length || 0).fill(false);
+  }
+
+  const slots = Array(timeSlots.length).fill(false);
+  ranges.forEach((range, index) => {
+    if (typeof range === 'string' && range.includes('-')) {
+      const [rangeStart, rangeEnd] = range.split('-');
+      const startIndex = timeSlots.indexOf(rangeStart);
+      const endIndex = timeSlots.indexOf(rangeEnd) !== -1 ? timeSlots.indexOf(rangeEnd) : timeSlots.indexOf(getEndTime(rangeStart, interval));
+      if (startIndex >= 0 && endIndex >= 0 && endIndex > startIndex) {
+        for (let j = startIndex; j < endIndex; j++) {
+          slots[j] = true;
+        }
+      }
+    } else if (typeof range === 'string') {
+      const startIndex = timeSlots.indexOf(range);
+      if (startIndex >= 0) {
+        slots[startIndex] = true;
+      }
+    }
+  });
+
+  console.log('Converted time ranges to slots:', { ranges, timeSlots, slots });
+  return slots;
+};
+
+const getEndTime = (startTime, interval) => {
+  if (!startTime) return '-';
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const date = new Date(2025, 0, 1, hours, minutes);
+  return format(addMinutes(date, interval), 'HH:mm');
 };

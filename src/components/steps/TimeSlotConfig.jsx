@@ -32,6 +32,29 @@ const TimeSlotConfig = ({ config, setConfig, setStep, setFeedback, selectedShop 
         return slots;
     };
 
+    const updateExistingPlannings = (newTimeSlots) => {
+        const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
+        console.log('Updating existing plannings for new timeSlots:', storageKeys);
+        storageKeys.forEach(key => {
+            const weekPlanning = loadFromLocalStorage(key, {});
+            const updatedPlanning = { ...weekPlanning };
+            Object.keys(weekPlanning).forEach(employee => {
+                Object.keys(weekPlanning[employee]).forEach(dayKey => {
+                    const existingSlots = weekPlanning[employee][dayKey];
+                    if (Array.isArray(existingSlots)) {
+                        const newSlots = Array(newTimeSlots.length).fill(false);
+                        for (let i = 0; i < Math.min(existingSlots.length, newTimeSlots.length); i++) {
+                            newSlots[i] = existingSlots[i];
+                        }
+                        updatedPlanning[employee][dayKey] = newSlots;
+                    }
+                });
+            });
+            console.log(`Updating planning for ${key}:`, updatedPlanning);
+            saveToLocalStorage(key, updatedPlanning);
+        });
+    };
+
     const handleNext = () => {
         if (!config.startTime || !config.endTime) {
             setFeedback('Erreur: Veuillez sélectionner une heure de début et de fin.');
@@ -57,7 +80,8 @@ const TimeSlotConfig = ({ config, setConfig, setStep, setFeedback, selectedShop 
             return;
         }
         const updatedConfig = { ...config, timeSlots, startTime, endTime };
-        saveToLocalStorage('timeSlotConfig', updatedConfig);
+        updateExistingPlannings(timeSlots);
+        saveToLocalStorage(`timeSlotConfig_${selectedShop}`, updatedConfig);
         setConfig(updatedConfig);
         setStep(2);
         setFeedback('Succès: Configuration des tranches enregistrée.');
@@ -72,8 +96,9 @@ const TimeSlotConfig = ({ config, setConfig, setStep, setFeedback, selectedShop 
             startTimeCustom: '', 
             endTimeCustom: '' 
         };
+        updateExistingPlannings(defaultConfig.timeSlots);
         setConfig(defaultConfig);
-        saveToLocalStorage('timeSlotConfig', defaultConfig);
+        saveToLocalStorage(`timeSlotConfig_${selectedShop}`, defaultConfig);
         setFeedback('Succès: Configuration réinitialisée.');
     };
 

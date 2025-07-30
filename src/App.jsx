@@ -3,7 +3,9 @@ import { format } from 'date-fns';
 import { loadFromLocalStorage, saveToLocalStorage } from './utils/localStorage';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import CopyrightNotice from './components/common/CopyrightNotice';
+import LicenseModal from './components/common/LicenseModal';
 import { enableProtection } from './utils/protection';
+import { loadLicense, isLicenseValid, checkLicenseLimits } from './utils/licenseManager';
 import StartupScreen from './components/StartupScreen';
 import ShopCreation from './components/steps/ShopCreation';
 import ShopConfig from './components/steps/ShopConfig';
@@ -35,6 +37,10 @@ const App = () => {
   const [selectedWeek, setSelectedWeek] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [planning, setPlanning] = useState({});
+
+  // États pour la gestion des licences
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [licenseError, setLicenseError] = useState('');
 
   useEffect(() => {
     try {
@@ -97,6 +103,41 @@ const App = () => {
     enableProtection();
   }, []);
 
+  // Vérification de la licence au démarrage
+  useEffect(() => {
+    const checkLicense = () => {
+      const license = loadLicense();
+      
+      if (!license) {
+        // Aucune licence trouvée - mode démo
+        setLicenseError('Aucune licence active. Mode démo limité.');
+        setShowLicenseModal(true);
+        return;
+      }
+
+      if (!isLicenseValid(license)) {
+        // Licence expirée
+        setLicenseError('Licence expirée. Veuillez renouveler votre licence.');
+        setShowLicenseModal(true);
+        return;
+      }
+
+      // Vérifier les limites de la licence
+      const limits = checkLicenseLimits(license, planningData);
+      if (!limits.valid) {
+        setLicenseError(`Limite de licence atteinte: ${limits.message}`);
+        setShowLicenseModal(true);
+        return;
+      }
+
+      // Licence valide
+      setShowLicenseModal(false);
+      setLicenseError('');
+    };
+
+    checkLicense();
+  }, [planningData]);
+
   // Gestion du démarrage
   const handleNewPlanning = () => {
     // Réinitialiser complètement les données pour éviter l'accumulation
@@ -109,6 +150,12 @@ const App = () => {
     setCurrentStep(1);
     setCurrentShopIndex(0);
     setFeedback('');
+  };
+
+  // Gestion de la licence
+  const handleLicenseValid = () => {
+    setShowLicenseModal(false);
+    setLicenseError('');
   };
 
   const handleImportPlanning = async (file) => {
@@ -382,6 +429,12 @@ const App = () => {
           onClearLocalStorage={handleClearLocalStorage}
         />
         <CopyrightNotice />
+        <LicenseModal
+          isOpen={showLicenseModal}
+          onClose={() => setShowLicenseModal(false)}
+          error={licenseError}
+          onLicenseValid={handleLicenseValid}
+        />
       </ErrorBoundary>
     );
   }
@@ -437,6 +490,12 @@ const App = () => {
           )}
           <CopyrightNotice />
         </div>
+        <LicenseModal
+          isOpen={showLicenseModal}
+          onClose={() => setShowLicenseModal(false)}
+          error={licenseError}
+          onLicenseValid={handleLicenseValid}
+        />
       </ErrorBoundary>
     );
   }
@@ -488,6 +547,12 @@ const App = () => {
           />
           <CopyrightNotice />
         </div>
+        <LicenseModal
+          isOpen={showLicenseModal}
+          onClose={() => setShowLicenseModal(false)}
+          error={licenseError}
+          onLicenseValid={handleLicenseValid}
+        />
       </ErrorBoundary>
     );
   }

@@ -1,144 +1,159 @@
 import { useState } from 'react';
-import { format, addDays, addMinutes } from 'date-fns';
+import { format, addDays, addMinutes, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { calculateEmployeeDailyHours } from '../../utils/planningUtils';
 import '../../assets/styles.css';
 
-const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, toggleSlot, currentDay, calculateEmployeeDailyHours }) => {
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState(null);
-    const [dragValue, setDragValue] = useState(null);
-    let clickTimeout = null;
+const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, onToggleSlot, currentDay, currentShopEmployees }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState(null);
+  const [dragValue, setDragValue] = useState(null);
+  let clickTimeout = null;
 
-    const getEndTime = (startTime, interval) => {
-        if (!startTime) return '-';
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const date = new Date(2025, 0, 1, hours, minutes);
-        return format(addMinutes(date, interval), 'HH:mm');
-    };
+  const getEndTime = (startTime, interval) => {
+    if (!startTime) return '-';
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const date = new Date(2025, 0, 1, hours, minutes);
+    return format(addMinutes(date, interval), 'HH:mm');
+  };
 
-    const handleMouseDown = (employee, slotIndex, dayIndex, event) => {
-        if (event.type !== 'mousedown') return;
-        console.log('handleMouseDown called:', { employee, slotIndex, dayIndex });
-        setIsDragging(true);
-        setDragStart({ employee, slotIndex, dayIndex });
+  const handleMouseDown = (employeeId, slotIndex, dayIndex, event) => {
+    if (event.type !== 'mousedown') return;
+    console.log('handleMouseDown called:', { employeeId, slotIndex, dayIndex });
+    setIsDragging(true);
+    setDragStart({ employeeId, slotIndex, dayIndex });
 
-        const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
-        const currentValue = planning[employee]?.[dayKey]?.[slotIndex] || false;
-        setDragValue(!currentValue);
+    const validWeek = selectedWeek && !isNaN(new Date(selectedWeek).getTime()) ? selectedWeek : format(new Date(), 'yyyy-MM-dd');
+    const dayKey = format(addDays(new Date(validWeek), dayIndex), 'yyyy-MM-dd');
+    const currentValue = planning?.[employeeId]?.[dayKey]?.[slotIndex] || false;
+    setDragValue(!currentValue);
 
-        clickTimeout = setTimeout(() => {
-            if (typeof toggleSlot === 'function') {
-                console.log('Simulating single click:', { employee, slotIndex, dayIndex, currentValue });
-                toggleSlot(employee, slotIndex, dayIndex, !currentValue);
-            } else {
-                console.error('toggleSlot is not a function:', toggleSlot);
-            }
-        }, 100);
-    };
+    clickTimeout = setTimeout(() => {
+      if (typeof onToggleSlot === 'function') {
+        console.log('Simulating single click:', { employeeId, slotIndex, dayIndex, currentValue });
+        onToggleSlot(employeeId, slotIndex, dayIndex, !currentValue);
+      } else {
+        console.error('onToggleSlot is not a function:', onToggleSlot);
+      }
+    }, 100);
+  };
 
-    const handleMouseMove = (employee, slotIndex, dayIndex, event) => {
-        if (!isDragging || !dragStart || event.type !== 'mousemove') return;
-        if (employee !== dragStart.employee || dayIndex !== dragStart.dayIndex) return;
-        clearTimeout(clickTimeout);
-        console.log('handleMouseMove called:', { employee, slotIndex, dayIndex, dragValue });
-        if (typeof toggleSlot === 'function') {
-            toggleSlot(employee, slotIndex, dayIndex, dragValue);
-        } else {
-            console.error('toggleSlot is not a function:', toggleSlot);
-        }
-    };
+  const handleMouseMove = (employeeId, slotIndex, dayIndex, event) => {
+    if (!isDragging || !dragStart || event.type !== 'mousemove') return;
+    if (employeeId !== dragStart.employeeId || dayIndex !== dragStart.dayIndex) return;
+    clearTimeout(clickTimeout);
+    console.log('handleMouseMove called:', { employeeId, slotIndex, dayIndex, dragValue });
+    if (typeof onToggleSlot === 'function') {
+      onToggleSlot(employeeId, slotIndex, dayIndex, dragValue);
+    } else {
+      console.error('onToggleSlot is not a function:', onToggleSlot);
+    }
+  };
 
-    const handleMouseUp = () => {
-        console.log('handleMouseUp called');
-        clearTimeout(clickTimeout);
-        setIsDragging(false);
-        setDragStart(null);
-        setDragValue(null);
-    };
+  const handleMouseUp = () => {
+    console.log('handleMouseUp called');
+    clearTimeout(clickTimeout);
+    setIsDragging(false);
+    setDragStart(null);
+    setDragValue(null);
+  };
 
-    const handleTouchStart = (employee, slotIndex, dayIndex, event) => {
-        console.log('handleTouchStart called:', { employee, slotIndex, dayIndex });
-        event.preventDefault();
-        if (typeof toggleSlot !== 'function') {
-            console.error('toggleSlot is not a function:', toggleSlot);
-            return;
-        }
-        if (!planning || !selectedWeek || currentDay === undefined || !selectedEmployees) {
-            console.error('Invalid props:', { planning, selectedWeek, currentDay, selectedEmployees });
-            return;
-        }
-        const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
-        const currentValue = planning[employee]?.[dayKey]?.[slotIndex] || false;
-        console.log('Toggling slot:', { employee, dayKey, slotIndex, currentValue });
-        toggleSlot(employee, slotIndex, dayIndex, !currentValue);
-    };
+  const handleTouchStart = (employeeId, slotIndex, dayIndex, event) => {
+    console.log('handleTouchStart called:', { employeeId, slotIndex, dayIndex });
+    event.preventDefault();
+    if (typeof onToggleSlot !== 'function') {
+      console.error('onToggleSlot is not a function:', onToggleSlot);
+      return;
+    }
+    if (!planning || !selectedWeek || currentDay === undefined || !selectedEmployees) {
+      console.error('Invalid props:', { planning, selectedWeek, currentDay, selectedEmployees });
+      return;
+    }
+    const validWeek = selectedWeek && !isNaN(new Date(selectedWeek).getTime()) ? selectedWeek : format(new Date(), 'yyyy-MM-dd');
+    const dayKey = format(addDays(new Date(validWeek), dayIndex), 'yyyy-MM-dd');
+    const currentValue = planning?.[employeeId]?.[dayKey]?.[slotIndex] || false;
+    console.log('Toggling slot:', { employeeId, dayKey, slotIndex, currentValue });
+    onToggleSlot(employeeId, slotIndex, dayIndex, !currentValue);
+  };
 
-    const days = Array.from({ length: 7 }, (_, i) => ({
-        name: format(addDays(new Date(selectedWeek), i), 'EEEE', { locale: fr }),
-        date: format(addDays(new Date(selectedWeek), i), 'd MMMM', { locale: fr }),
-    }));
+  // Validation de selectedWeek
+  const validWeek = selectedWeek && !isNaN(new Date(selectedWeek).getTime()) ? selectedWeek : format(new Date(), 'yyyy-MM-dd');
+  
+  const days = Array.from({ length: 7 }, (_, i) => ({
+    name: format(addDays(new Date(validWeek), i), 'EEEE', { locale: fr }),
+    date: format(addDays(new Date(validWeek), i), 'd MMMM', { locale: fr }),
+  }));
 
-    const getEmployeeColorClass = (index) => {
-        const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
-        return colors[index % colors.length];
-    };
+  const getEmployeeColorClass = (index) => {
+    const colors = ['employee-0', 'employee-1', 'employee-2', 'employee-3', 'employee-4', 'employee-5', 'employee-6'];
+    return colors[index % colors.length];
+  };
 
-    console.log('PlanningTable props:', { config, selectedWeek, planning, selectedEmployees, currentDay });
+  console.log('PlanningTable props:', { config, selectedWeek, planning, selectedEmployees, currentDay, currentShopEmployees });
+  console.log('PlanningTable - selectedEmployees length:', selectedEmployees?.length);
+  console.log('PlanningTable - currentShopEmployees length:', currentShopEmployees?.length);
 
-    return (
-        <div className="table-container" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-            <table className="planning-table">
-                <thead>
-                    <tr>
-                        <th className="fixed-col header">DE</th>
-                        {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col header">
-                                {typeof slot === 'string' ? slot : slot.start}
-                            </th>
-                        ))}
-                    </tr>
-                    <tr>
-                        <th className="fixed-col header">À</th>
-                        {(config.timeSlots || []).map((slot, index) => (
-                            <th key={slot} className="scrollable-col header">
-                                {index < config.timeSlots.length - 1
-                                    ? (typeof config.timeSlots[index + 1] === 'string' ? config.timeSlots[index + 1] : config.timeSlots[index + 1].start)
-                                    : getEndTime(typeof slot === 'string' ? slot : slot.start, config.interval || 30)}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {(selectedEmployees || []).map((employee, employeeIndex) => {
-                        const dayKey = format(addDays(new Date(selectedWeek), currentDay), 'yyyy-MM-dd');
-                        const hours = calculateEmployeeDailyHours(employee, dayKey, planning);
-                        console.log('Employee hours:', { employee, dayKey, hours });
-                        return (
-                            <tr key={employee}>
-                                <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`}>
-                                    {employee} {hours !== undefined && hours !== null ? `(${hours.toFixed(1)} h)` : '(0.0 h)'}
-                                </td>
-                                {(config.timeSlots || []).map((_, slotIndex) => {
-                                    const isChecked = planning[employee]?.[dayKey]?.[slotIndex] || false;
-                                    return (
-                                        <td
-                                            key={slotIndex}
-                                            className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
-                                            onTouchStart={(e) => handleTouchStart(employee, slotIndex, currentDay, e)}
-                                            onMouseDown={(e) => handleMouseDown(employee, slotIndex, currentDay, e)}
-                                            onMouseMove={(e) => handleMouseMove(employee, slotIndex, currentDay, e)}
-                                        >
-                                            {isChecked ? '✅' : ''}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-        </div>
-    );
+  return (
+    <div className="table-container" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+      <table className="planning-table">
+        <thead>
+          <tr>
+            <th className="fixed-col header">DE</th>
+            {(config?.timeSlots || []).map((slot, index) => (
+              <th key={slot.start || slot} className="scrollable-col header">
+                {typeof slot === 'string' ? slot : slot.start}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            <th className="fixed-col header">À</th>
+            {(config?.timeSlots || []).map((slot, index) => (
+              <th key={slot.start || slot} className="scrollable-col header">
+                {index < (config?.timeSlots?.length || 0) - 1
+                  ? (typeof config.timeSlots[index + 1] === 'string' ? config.timeSlots[index + 1] : config.timeSlots[index + 1]?.start || '')
+                  : getEndTime(typeof slot === 'string' ? slot : slot.start, config?.interval || 30)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(selectedEmployees || []).map((employeeId, employeeIndex) => {
+            const dayKey = format(addDays(new Date(validWeek), currentDay), 'yyyy-MM-dd');
+            const employeeSlots = planning?.[employeeId]?.[dayKey] || Array(config?.timeSlots?.length || 0).fill(false);
+            const hours = calculateEmployeeDailyHours(employeeId, dayKey, planning, config);
+            
+            // Trouver l'employé dans currentShopEmployees pour récupérer son nom
+            const employee = currentShopEmployees?.find(emp => emp.id === employeeId);
+            const employeeName = employee?.name || employeeId;
+            
+            console.log('Rendering employee:', { employeeId, employeeName, dayKey, employeeSlots, hours, configInterval: config?.interval });
+            return (
+              <tr key={employeeId}>
+                <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`}>
+                  {employeeName} ({hours.toFixed(1)} h)
+                </td>
+                {(config?.timeSlots || []).map((_, slotIndex) => {
+                  const isChecked = employeeSlots[slotIndex] === true;
+                  console.log('Slot check:', { employeeId, slotIndex, isChecked, slotValue: employeeSlots[slotIndex] });
+                  return (
+                    <td
+                      key={slotIndex}
+                      className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
+                      onTouchStart={(e) => handleTouchStart(employeeId, slotIndex, currentDay, e)}
+                      onMouseDown={(e) => handleMouseDown(employeeId, slotIndex, currentDay, e)}
+                      onMouseMove={(e) => handleMouseMove(employeeId, slotIndex, currentDay, e)}
+                    >
+                      {isChecked && <span className="checkmark">✅</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default PlanningTable;

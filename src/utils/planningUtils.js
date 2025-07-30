@@ -1,242 +1,166 @@
-import { format, addDays, startOfMonth, endOfMonth, isWithinInterval, isMonday, isSameMonth, addMinutes } from 'date-fns';
+import { loadFromLocalStorage } from './localStorage';
+import { parse, differenceInMinutes, format, addDays, startOfMonth, endOfMonth, isMonday, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { loadFromLocalStorage, saveToLocalStorage } from './localStorage';
 
-export const isValidDate = (dateString) => {
-    return dateString && /^\d{4}-\d{2}-\d{2}$/.test(dateString) && !isNaN(new Date(dateString).getTime());
+export const calculateEmployeeDailyHours = (employee, dayKey, planning, config) => {
+  console.log(`calculateEmployeeDailyHours for ${employee} on ${dayKey}:`, { planning, config });
+  
+  // Vérifier si les données sont valides
+  if (!planning || !config?.timeSlots || !Array.isArray(config.timeSlots)) {
+    console.warn(`calculateEmployeeDailyHours: Invalid config for ${employee} on ${dayKey}`, { planning, config });
+    return 0;
+  }
+  
+  // Chercher les données de l'employé dans le planning
+  const employeeData = planning[employee];
+  if (!employeeData || !employeeData[dayKey]) {
+    // console.warn(`calculateEmployeeDailyHours: No data for ${employee} on ${dayKey}`, { planning });
+    return 0;
+  }
+  
+  const slots = employeeData[dayKey];
+  
+  // Vérifier que les slots sont un tableau valide
+  if (!Array.isArray(slots)) {
+    console.warn(`calculateEmployeeDailyHours: Invalid slots for ${employee} on ${dayKey}`, { slots });
+    return 0;
+  }
+  const interval = config.interval || 30;
+  let totalMinutes = 0;
+  let inShift = false;
+  let shiftStartIndex = null;
+
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i] && !inShift) {
+      inShift = true;
+      shiftStartIndex = i;
+    } else if (!slots[i] && inShift) {
+      inShift = false;
+      const startTime = config.timeSlots[shiftStartIndex];
+      const endTime = config.timeSlots[i];
+      if (startTime && endTime) {
+        try {
+          const start = parse(startTime, 'HH:mm', new Date());
+          const end = parse(endTime, 'HH:mm', new Date());
+          totalMinutes += differenceInMinutes(end, start);
+        } catch (e) {
+          console.warn(`calculateEmployeeDailyHours: Error parsing times for ${employee} on ${dayKey}`, { startTime, endTime, error: e });
+        }
+      }
+      shiftStartIndex = null;
+    }
+  }
+
+  if (inShift && shiftStartIndex !== null) {
+    const startTime = config.timeSlots[shiftStartIndex];
+    const endTime = config.timeSlots[config.timeSlots.length - 1];
+    if (startTime && endTime) {
+      try {
+        const start = parse(startTime, 'HH:mm', new Date());
+        const end = parse(endTime, 'HH:mm', new Date());
+        totalMinutes += differenceInMinutes(end, start);
+      } catch (e) {
+        console.warn(`calculateEmployeeDailyHours: Error parsing times for ${employee} on ${dayKey}`, { startTime, endTime, error: e });
+      }
+    }
+  }
+
+  const hours = totalMinutes / 60;
+  console.log(`calculateEmployeeDailyHours: Result for ${employee} on ${dayKey}:`, { slots, interval, hours });
+  return hours;
 };
 
-export const generateDays = (selectedWeek) => {
-    if (!isValidDate(selectedWeek)) return [];
-    return Array.from({ length: 7 }, (_, i) => {
-        const date = addDays(new Date(selectedWeek), i);
-        return {
-            name: format(date, 'EEEE', { locale: fr }),
-            date: format(date, 'd MMMM', { locale: fr }),
+export const getTimeSlotsWithBreaks = (employee, dayKey, weekPlanning, config) => {
+  console.log(`getTimeSlotsWithBreaks for ${employee} on ${dayKey}`, { weekPlanning, config });
+  
+  // Chercher les données de l'employé dans le planning
+  const employeeData = weekPlanning[employee];
+  const slots = employeeData?.[dayKey] || [];
+  console.log(`getTimeSlotsWithBreaks: Slots for ${employee} on ${dayKey}`, JSON.stringify(slots, null, 2));
+  const timeSlots = config?.timeSlots || [];
+  const ranges = [];
+  let currentRange = null;
+  let breaks = [];
+
+  if (!slots.some(slot => slot)) {
+    return { status: 'Congé ☀️', ranges: [], breaks: [], hours: 0, columns: ['ENTRÉE'], values: ['Congé ☀️'] };
+  }
+
+  for (let i = 0; i < slots.length && i < timeSlots.length; i++) {
+    if (!timeSlots[i]) {
+      console.warn(`getTimeSlotsWithBreaks: timeSlots[${i}] is undefined for ${employee} on ${dayKey}`);
+      continue;
+    }
+    if (slots[i]) {
+      if (!currentRange) {
+        currentRange = { 
+          start: timeSlots[i],
+          end: timeSlots[i]
         };
-    });
-};
-
-export const calculateDailyHours = (dayIndex, selectedWeek, selectedShop, planning, config, selectedEmployees) => {
-    if (!isValidDate(selectedWeek) || !selectedShop) return 0;
-    const dayKey = format(addDays(new Date(selectedWeek), dayIndex), 'yyyy-MM-dd');
-    let totalHours = 0;
-    const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-    (storedSelectedEmployees || []).forEach(employee => {
-        const slots = planning[employee]?.[dayKey] || [];
-        const hours = (slots.filter(slot => slot).length * (config?.interval || 0)) / 60;
-        totalHours += hours;
-    });
-    return totalHours;
-};
-
-export const calculateEmployeeDailyHours = (employee, dayKey, weekPlanning, config) => {
-    const slots = weekPlanning[employee]?.[dayKey] || [];
-    console.log(`Calcul des heures quotidiennes pour ${employee} le ${dayKey}:`, { slots });
-    return (slots.filter(slot => slot).length * (config?.interval || 0)) / 60;
-};
-
-export const calculateEmployeeWeeklyHours = (employee, weekStart, weekPlanning, config, targetMonth = null) => {
-    if (!isValidDate(weekStart)) return 0;
-    let totalHours = 0;
-    for (let i = 0; i < 7; i++) {
-        const dayDate = addDays(new Date(weekStart), i);
-        const dayKey = format(dayDate, 'yyyy-MM-dd');
-        if (targetMonth && !isSameMonth(dayDate, new Date(targetMonth))) {
-            continue;
-        }
-        totalHours += calculateEmployeeDailyHours(employee, dayKey, weekPlanning, config);
-    }
-    console.log(`Calcul des heures hebdomadaires pour ${employee} à partir de ${weekStart}:`, { totalHours });
-    return totalHours;
-};
-
-export const calculateShopWeeklyHours = (selectedWeek, selectedShop, planning, config, selectedEmployees) => {
-    let totalHours = 0;
-    const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-    (storedSelectedEmployees || []).forEach(employee => {
-        totalHours += calculateEmployeeWeeklyHours(employee, selectedWeek, planning, config);
-    });
-    return totalHours.toFixed(1);
-};
-
-export const calculateShopMonthlyHours = (selectedWeek, selectedShop, planning, config, selectedEmployees) => {
-    const weeks = getMonthlyWeeks(selectedWeek, selectedShop, planning);
-    let totalHours = 0;
-    const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-    
-    weeks.forEach(({ weekStart, planning: weekPlanning }) => {
-        (storedSelectedEmployees || []).forEach(employee => {
-            totalHours += calculateEmployeeWeeklyHours(employee, weekStart, weekPlanning, config, selectedWeek);
+      } else {
+        currentRange.end = timeSlots[i];
+      }
+    } else if (currentRange && breaks.length < 1) {
+      ranges.push(currentRange);
+      if (i < slots.length) {
+        breaks.push({ 
+          start: currentRange.end, 
+          end: timeSlots[i] || '-' 
         });
-    });
-    
-    console.log(`Calcul des heures mensuelles pour ${selectedShop} dans le mois de ${selectedWeek}:`, { totalHours });
-    return totalHours.toFixed(1);
+      }
+      currentRange = null;
+    }
+  }
+  if (currentRange) {
+    ranges.push(currentRange);
+  }
+
+  const columns = breaks.length === 0 ? ['ENTRÉE', 'SORTIE'] : ['ENTRÉE', 'PAUSE', 'RETOUR', 'SORTIE'];
+  const values = [];
+
+  if (breaks.length === 0 && ranges[0]) {
+    values.push(ranges[0].start, ranges[0].end);
+  } else if (ranges[0] && breaks[0]) {
+    values.push(ranges[0].start, breaks[0].start, ranges[1]?.start || '-', ranges[ranges.length - 1]?.end || '-');
+  }
+
+  const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning, config);
+  console.log(`getTimeSlotsWithBreaks: Result for ${employee} on ${dayKey}:`, JSON.stringify({ slots, ranges, breaks, hours, columns, values }, null, 2));
+  return { status: null, ranges, breaks, hours, columns, values };
 };
 
-export const getEndTime = (startTime, interval) => {
-    if (!startTime) return '-';
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const date = new Date(2025, 0, 1, hours, minutes);
-    return format(addMinutes(date, interval), 'HH:mm');
-};
+export const getEmployeeMonthlySummaryData = (employee, selectedWeek, shops, config) => {
+  console.log(`getEmployeeMonthlySummaryData for ${employee}`, { selectedWeek, shops });
+  const start = startOfMonth(new Date(selectedWeek));
+  const end = endOfMonth(new Date(selectedWeek));
+  let monthlyTotal = 0;
+  const weeklySummaries = [];
 
-export const getAvailableWeeks = (selectedShop) => {
-    if (!selectedShop) return [];
-    const weeks = [];
-    const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-    console.log('Clés de stockage disponibles:', storageKeys);
-
+  shops.forEach(shop => {
+    const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${shop.id}_`));
     storageKeys.forEach(key => {
-        const weekKey = key.replace(`planning_${selectedShop}_`, '');
-        try {
-            const weekDate = new Date(weekKey);
-            if (!isNaN(weekDate.getTime()) && isMonday(weekDate)) {
-                const weekPlanning = loadFromLocalStorage(key, {});
-                if (weekPlanning && Object.keys(weekPlanning).length > 0) {
-                    weeks.push({
-                        key: weekKey,
-                        date: weekDate,
-                        display: `Semaine du ${format(weekDate, 'd MMMM yyyy', { locale: fr })}`
-                    });
-                    console.log(`Données de la semaine pour ${key}:`, weekPlanning);
-                }
-            }
-        } catch (e) {
-            console.error(`Format de date invalide pour la clé ${key}:`, e);
+      const weekKey = key.replace(`planning_${shop.id}_`, '');
+      const weekStart = new Date(weekKey);
+      if (isWithinInterval(weekStart, { start, end }) && isMonday(weekStart)) {
+        const weekPlanning = loadFromLocalStorage(`planning_${shop.id}_${weekKey}`, {});
+        let weekTotal = 0;
+        for (let i = 0; i < 7; i++) {
+          const dayKey = format(addDays(weekStart, i), 'yyyy-MM-dd');
+          const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning, config);
+          weekTotal += hours;
         }
-    });
-
-    weeks.sort((a, b) => a.date - b.date);
-    console.log('Semaines disponibles:', weeks);
-    return weeks;
-};
-
-export const getMonthlyWeeks = (selectedWeek, selectedShop, planning) => {
-    if (!isValidDate(selectedWeek) || !selectedShop) return [];
-    const monthStart = startOfMonth(new Date(selectedWeek));
-    const monthEnd = endOfMonth(new Date(selectedWeek));
-    const weeks = [];
-    const currentWeekKey = format(new Date(selectedWeek), 'yyyy-MM-dd');
-
-    const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`));
-    console.log('Clés de stockage disponibles:', storageKeys);
-
-    storageKeys.forEach(key => {
-        const weekKey = key.replace(`planning_${selectedShop}_`, '');
-        try {
-            const weekDate = new Date(weekKey);
-            if (!isNaN(weekDate.getTime()) && isMonday(weekDate)) {
-                const weekEnd = addDays(weekDate, 6);
-                if (isWithinInterval(weekDate, { start: monthStart, end: monthEnd }) ||
-                    isWithinInterval(weekEnd, { start: monthStart, end: monthEnd }) ||
-                    (weekDate < monthStart && weekEnd > monthEnd)) {
-                    const weekPlanning = loadFromLocalStorage(key, {});
-                    if (weekPlanning && Object.keys(weekPlanning).length > 0) {
-                        weeks.push({ weekStart: weekKey, planning: weekPlanning });
-                        console.log(`Données de la semaine pour ${key}:`, weekPlanning);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error(`Format de date invalide pour la clé ${key}:`, e);
+        if (weekTotal > 0) {
+          weeklySummaries.push({
+            week: `Semaine du ${format(weekStart, 'd MMMM', { locale: fr })} au ${format(addDays(weekStart, 6), 'd MMMM yyyy', { locale: fr })}`,
+            shop: shop.name,
+            hours: weekTotal.toFixed(1)
+          });
+          monthlyTotal += weekTotal;
         }
+      }
     });
+  });
 
-    if (isMonday(new Date(selectedWeek)) && Object.keys(planning).length > 0) {
-        const weekExists = weeks.some(week => week.weekStart === currentWeekKey);
-        if (!weekExists) {
-            saveToLocalStorage(`planning_${selectedShop}_${currentWeekKey}`, planning);
-            weeks.push({ weekStart: currentWeekKey, planning });
-            console.log(`Ajout des données de la semaine actuelle pour ${currentWeekKey}:`, planning);
-        }
-    }
-
-    weeks.sort((a, b) => new Date(a.weekStart) - new Date(b.weekStart));
-    console.log('Semaines triées pour le mois:', weeks);
-    return weeks;
-};
-
-export const getMonthlyRecapData = (selectedEmployees, selectedWeek, selectedShop, planning, config) => {
-    const weeks = getMonthlyWeeks(selectedWeek, selectedShop, planning);
-    const monthlyTotals = {};
-    const weeklyRecaps = [];
-
-    if (weeks.length === 0) {
-        console.log('Aucune semaine trouvée pour le récapitulatif mensuel');
-        const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-        (storedSelectedEmployees || []).forEach(employee => {
-            monthlyTotals[employee] = 0;
-            weeklyRecaps.push({
-                employee,
-                week: isValidDate(selectedWeek) ? `Semaine du ${format(new Date(selectedWeek), 'd MMMM', { locale: fr })} au ${format(addDays(new Date(selectedWeek), 6), 'd MMMM yyyy', { locale: fr })}` : 'Semaine invalide',
-                hours: '0.0'
-            });
-        });
-        return { monthlyTotals, weeklyRecaps };
-    }
-
-    const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-    (storedSelectedEmployees || []).forEach(employee => {
-        monthlyTotals[employee] = 0;
-    });
-
-    weeks.forEach(({ weekStart, planning: weekPlanning }) => {
-        console.log(`Traitement de la semaine ${weekStart}:`, weekPlanning);
-        (storedSelectedEmployees || []).forEach(employee => {
-            if (!weekPlanning[employee]) {
-                console.log(`Aucune donnée pour l'employé ${employee} dans la semaine ${weekStart}`);
-                weeklyRecaps.push({
-                    employee,
-                    week: `Semaine du ${format(new Date(weekStart), 'd MMMM', { locale: fr })} au ${format(addDays(new Date(weekStart), 6), 'd MMMM yyyy', { locale: fr })}`,
-                    hours: '0.0'
-                });
-                return;
-            }
-
-            const weekTotalHours = calculateEmployeeWeeklyHours(employee, weekStart, weekPlanning, config, selectedWeek);
-            monthlyTotals[employee] += weekTotalHours;
-            weeklyRecaps.push({
-                employee,
-                week: `Semaine du ${format(new Date(weekStart), 'd MMMM', { locale: fr })} au ${format(addDays(new Date(weekStart), 6), 'd MMMM yyyy', { locale: fr })}`,
-                hours: weekTotalHours.toFixed(1)
-            });
-        });
-    });
-
-    console.log('Données du récapitulatif mensuel:', { monthlyTotals, weeklyRecaps });
-    return { monthlyTotals, weeklyRecaps };
-};
-
-export const getEmployeeMonthlyRecapData = (employee, selectedWeek, selectedShop, config) => {
-    const weeks = getMonthlyWeeks(selectedWeek, selectedShop);
-    const weeklyRecaps = [];
-    let monthlyTotal = 0;
-
-    if (weeks.length === 0) {
-        console.log(`Aucune semaine trouvée pour le récapitulatif mensuel de l'employé ${employee}`);
-        return { monthlyTotal: 0, weeklyRecaps };
-    }
-
-    weeks.forEach(({ weekStart, planning: weekPlanning }) => {
-        if (!weekPlanning[employee]) {
-            console.log(`Aucune donnée pour l'employé ${employee} dans la semaine ${weekStart}`);
-            weeklyRecaps.push({
-                week: `Semaine du ${format(new Date(weekStart), 'd MMMM', { locale: fr })} au ${format(addDays(new Date(weekStart), 6), 'd MMMM yyyy', { locale: fr })}`,
-                hours: '0.0'
-            });
-            return;
-        }
-
-        const weekTotalHours = calculateEmployeeWeeklyHours(employee, weekStart, weekPlanning, config, selectedWeek);
-        monthlyTotal += weekTotalHours;
-        weeklyRecaps.push({
-            week: `Semaine du ${format(new Date(weekStart), 'd MMMM', { locale: fr })} au ${format(addDays(new Date(weekStart), 6), 'd MMMM yyyy', { locale: fr })}`,
-            hours: weekTotalHours.toFixed(1)
-        });
-    });
-
-    console.log(`Données du récapitulatif mensuel pour ${employee}:`, { monthlyTotal, weeklyRecaps });
-    return { monthlyTotal, weeklyRecaps };
+  console.log(`getEmployeeMonthlySummaryData: Result for ${employee}:`, { monthlyTotal, weeklySummaries });
+  return { monthlyTotal, weeklySummaries };
 };

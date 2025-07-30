@@ -1,219 +1,188 @@
 import React, { useState } from 'react';
-import { format, addDays, isMonday } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { saveToLocalStorage, loadFromLocalStorage } from '../../utils/localStorage';
 import Button from '../common/Button';
 import '@/assets/styles.css';
 
-const ResetModal = ({ showResetModal, setShowResetModal, config, selectedShop, selectedWeek, selectedEmployees, planning, setPlanning, setFeedback, setAvailableWeeks, resetSource }) => {
-    const [resetOption, setResetOption] = useState('');
+const ResetModal = ({
+  show,
+  onClose,
+  onReset,
+  currentShop,
+  currentWeek,
+  employees
+}) => {
+  const [resetOption, setResetOption] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('');
 
-    const getOptions = () => {
-        if (resetSource === 'shops') {
-            return [
-                { value: '', label: 'Choisir une option' },
-                { value: 'shops', label: 'Toutes les boutiques' }
-            ];
-        } else if (resetSource === 'employees') {
-            return [
-                { value: '', label: 'Choisir une option' },
-                { value: 'all', label: 'Tous les employés' },
-                ...(loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []) || []).map(employee => ({
-                    value: employee,
-                    label: employee
-                }))
-            ];
-        } else if (resetSource === 'planning') {
-            return [
-                { value: '', label: 'Choisir une option' },
-                { value: 'planning', label: 'Planning actuel' }
-            ];
-        } else if (resetSource === 'week') {
-            return [
-                { value: '', label: 'Choisir une option' },
-                { value: 'week', label: `Semaine du ${selectedWeek ? format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr }) : 'sélectionnée'}` },
-                { value: 'all_weeks', label: 'Toutes les semaines de la boutique' }
-            ];
-        } else {
-            return [
-                { value: '', label: 'Choisir une option' },
-                { value: 'shops', label: 'Toutes les boutiques' },
-                { value: 'all', label: 'Tous les employés' },
-                { value: 'planning', label: 'Planning actuel' },
-                { value: 'week', label: 'Semaine sélectionnée' },
-                { value: 'all_weeks', label: 'Toutes les semaines de la boutique' }
-            ];
-        }
-    };
+  const handleReset = () => {
+    if (resetOption === 'all') {
+      onReset('all');
+    } else if (resetOption === 'employee' && selectedEmployee) {
+      onReset('employee', selectedEmployee);
+    }
+    onClose();
+    setResetOption('');
+    setSelectedEmployee('');
+  };
 
-    const handleReset = () => {
-        console.log('Confirm reset:', { resetOption, resetSource, selectedShop, selectedWeek });
-        if (!resetOption) {
-            setFeedback('Erreur: Veuillez sélectionner une option.');
-            console.log('Reset failed: No option selected');
-            return;
-        }
-        try {
-            if (resetOption === 'shops') {
-                saveToLocalStorage('shops', []);
-                saveToLocalStorage('lastPlanning', {});
-                setFeedback('Succès: Liste des boutiques réinitialisée.');
-            } else if (resetOption === 'all') {
-                if (!config?.timeSlots?.length) {
-                    setFeedback('Erreur: Configuration des tranches horaires non valide.');
-                    console.log('Reset failed: Invalid time slots configuration');
-                    return;
-                }
-                if (!selectedEmployees || selectedEmployees.length === 0) {
-                    setFeedback('Erreur: Aucun employé sélectionné.');
-                    console.log('Reset failed: No employees selected');
-                    return;
-                }
-                setPlanning(prev => {
-                    const updatedPlanning = { ...prev };
-                    const storedSelectedEmployees = loadFromLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, selectedEmployees || []);
-                    storedSelectedEmployees.forEach(employee => {
-                        updatedPlanning[employee] = {};
-                        for (let i = 0; i < 7; i++) {
-                            const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
-                            updatedPlanning[employee][dayKey] = Array(config.timeSlots.length).fill(false);
-                        }
-                    });
-                    console.log('Reset planning for all employees:', updatedPlanning);
-                    saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, updatedPlanning);
-                    setFeedback('Succès: Planning réinitialisé pour tous les employés.');
-                    setAvailableWeeks(prev => {
-                        const weeks = prev.slice();
-                        const currentWeekKey = format(new Date(selectedWeek), 'yyyy-MM-dd');
-                        if (isMonday(new Date(selectedWeek))) {
-                            saveToLocalStorage(`planning_${selectedShop}_${currentWeekKey}`, updatedPlanning);
-                            const weekExists = weeks.some(week => week.key === currentWeekKey);
-                            if (!weekExists) {
-                                weeks.push({
-                                    key: currentWeekKey,
-                                    date: new Date(selectedWeek),
-                                    display: `Semaine du ${format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })}`
-                                });
-                            }
-                        }
-                        weeks.sort((a, b) => a.date - b.date);
-                        console.log('Available weeks:', weeks);
-                        return weeks;
-                    });
-                    return updatedPlanning;
-                });
-            } else if (resetOption === 'planning') {
-                setPlanning({});
-                setAvailableWeeks([]);
-                saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
-                setFeedback('Succès: Planning réinitialisé.');
-            } else if (resetOption === 'week') {
-                if (!selectedWeek) {
-                    setFeedback('Erreur: Aucune semaine sélectionnée.');
-                    console.log('Reset failed: No week selected');
-                    return;
-                }
-                saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, {});
-                saveToLocalStorage(`selected_employees_${selectedShop}_${selectedWeek}`, []);
-                setAvailableWeeks(prev => prev.filter(week => week.key !== selectedWeek));
-                setFeedback(`Succès: Semaine du ${format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })} réinitialisée.`);
-            } else if (resetOption === 'all_weeks') {
-                if (!selectedShop) {
-                    setFeedback('Erreur: Aucune boutique sélectionnée.');
-                    console.log('Reset failed: No shop selected');
-                    return;
-                }
-                const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${selectedShop}_`) || key.startsWith(`selected_employees_${selectedShop}_`));
-                storageKeys.forEach(key => localStorage.removeItem(key));
-                setAvailableWeeks([]);
-                setFeedback('Succès: Toutes les semaines de la boutique réinitialisées.');
-            } else {
-                if (!config?.timeSlots?.length) {
-                    setFeedback('Erreur: Configuration des tranches horaires non valide.');
-                    console.log('Reset failed: Invalid time slots configuration');
-                    return;
-                }
-                setPlanning(prev => {
-                    const updatedPlanning = { ...prev };
-                    updatedPlanning[resetOption] = {};
-                    for (let i = 0; i < 7; i++) {
-                        const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
-                        updatedPlanning[resetOption][dayKey] = Array(config.timeSlots.length).fill(false);
-                    }
-                    console.log('Reset planning for employee:', resetOption, updatedPlanning);
-                    saveToLocalStorage(`planning_${selectedShop}_${selectedWeek}`, updatedPlanning);
-                    setFeedback(`Succès: Planning réinitialisé pour ${resetOption}.`);
-                    setAvailableWeeks(prev => {
-                        const weeks = prev.slice();
-                        const currentWeekKey = format(new Date(selectedWeek), 'yyyy-MM-dd');
-                        if (isMonday(new Date(selectedWeek))) {
-                            saveToLocalStorage(`planning_${selectedShop}_${currentWeekKey}`, updatedPlanning);
-                            const weekExists = weeks.some(week => week.key === currentWeekKey);
-                            if (!weekExists) {
-                                weeks.push({
-                                    key: currentWeekKey,
-                                    date: new Date(selectedWeek),
-                                    display: `Semaine du ${format(new Date(selectedWeek), 'd MMMM yyyy', { locale: fr })}`
-                                });
-                            }
-                        }
-                        weeks.sort((a, b) => a.date - b.date);
-                        console.log('Available weeks:', weeks);
-                        return weeks;
-                    });
-                    return updatedPlanning;
-                });
-            }
-            console.log('Closing modal after reset');
-            setShowResetModal(false);
-            setResetOption('');
-            console.log('Reset completed');
-        } catch (error) {
-            console.error('Error during reset:', error);
-            setFeedback('Erreur lors de la réinitialisation: ' + error.message);
-            setShowResetModal(false); // Ensure modal closes even on error
-        }
-    };
+  const handleClose = () => {
+    onClose();
+    setResetOption('');
+    setSelectedEmployee('');
+  };
 
-    const handleClose = () => {
-        console.log('Closing ResetModal, showResetModal:', showResetModal);
-        setShowResetModal(false);
-        setResetOption('');
-    };
+  if (!show) return null;
 
-    if (!showResetModal) return null;
+  return (
+    <div className="modal-overlay" style={{ 
+      position: 'fixed', 
+      top: 0, 
+      left: 0, 
+      right: 0, 
+      bottom: 0, 
+      backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      zIndex: 1000,
+      pointerEvents: 'auto' 
+    }}>
+      <div className="modal-content" style={{
+        backgroundColor: 'white',
+        padding: '30px',
+        borderRadius: '10px',
+        maxWidth: '500px',
+        width: '90%',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+      }}>
+        <h3 style={{ 
+          fontFamily: 'Roboto, sans-serif', 
+          textAlign: 'center',
+          marginBottom: '20px',
+          color: '#333'
+        }}>
+          Réinitialisation des clics
+        </h3>
+        
+        <p style={{ 
+          fontFamily: 'Roboto, sans-serif', 
+          textAlign: 'center', 
+          marginBottom: '20px',
+          color: '#666'
+        }}>
+          Que souhaitez-vous effacer ?
+        </p>
 
-    return (
-        <div className="modal-overlay" style={{ pointerEvents: 'auto' }}>
-            <div className="modal-content">
-                <button className="modal-close" onClick={handleClose} style={{ color: '#dc3545', fontSize: '18px' }}>
-                    ✕
-                </button>
-                <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center' }}>
-                    Confirmer la réinitialisation
-                </h3>
-                <div className="form-group">
-                    <label>Réinitialiser</label>
-                    <select value={resetOption} onChange={(e) => {
-                        console.log('Reset option changed:', e.target.value);
-                        setResetOption(e.target.value);
-                    }}>
-                        {getOptions().map(option => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="button-group">
-                    <Button className="button-primary" onClick={handleReset}>
-                        Confirmer
-                    </Button>
-                    <Button className="button-retour" onClick={handleClose}>
-                        Annuler
-                    </Button>
-                </div>
-            </div>
+        <p style={{ 
+          fontFamily: 'Roboto, sans-serif', 
+          textAlign: 'center', 
+          marginBottom: '20px',
+          color: '#999',
+          fontSize: '14px'
+        }}>
+          Boutique : {currentShop}<br/>
+          Semaine : {currentWeek}
+        </p>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '15px', fontFamily: 'Roboto, sans-serif' }}>
+            <input
+              type="radio"
+              name="resetOption"
+              value="all"
+              checked={resetOption === 'all'}
+              onChange={(e) => setResetOption(e.target.value)}
+              style={{ marginRight: '10px' }}
+            />
+            <strong>Effacer tous les clics</strong> - Tous les employés
+          </label>
+          
+          <label style={{ display: 'block', marginBottom: '15px', fontFamily: 'Roboto, sans-serif' }}>
+            <input
+              type="radio"
+              name="resetOption"
+              value="employee"
+              checked={resetOption === 'employee'}
+              onChange={(e) => setResetOption(e.target.value)}
+              style={{ marginRight: '10px' }}
+            />
+            <strong>Effacer les clics d'un employé</strong> - Choisir un employé
+          </label>
         </div>
-    );
+
+        {resetOption === 'employee' && (
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ 
+              fontFamily: 'Roboto, sans-serif', 
+              marginBottom: '10px',
+              color: '#666',
+              fontSize: '14px'
+            }}>
+              Sélectionnez l'employé :
+            </p>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '5px',
+                border: '1px solid #ddd',
+                fontFamily: 'Roboto, sans-serif',
+                fontSize: '14px'
+              }}
+            >
+              <option value="">-- Choisir un employé --</option>
+              {employees && employees.map((employee, index) => (
+                <option key={index} value={employee}>
+                  {employee}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="button-group" style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '15px',
+          marginTop: '20px' 
+        }}>
+          <Button 
+            className="button-retour" 
+            onClick={handleClose}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Annuler
+          </Button>
+          
+          <Button 
+            className="button-reinitialiser" 
+            onClick={handleReset}
+            disabled={!resetOption || (resetOption === 'employee' && !selectedEmployee)}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: (resetOption && (resetOption !== 'employee' || selectedEmployee)) ? '#e53935' : '#ccc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: (resetOption && (resetOption !== 'employee' || selectedEmployee)) ? 'pointer' : 'not-allowed'
+            }}
+          >
+            Effacer
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ResetModal;

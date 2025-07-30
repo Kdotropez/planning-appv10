@@ -4,6 +4,7 @@ import { loadFromLocalStorage, saveToLocalStorage } from './utils/localStorage';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import CopyrightNotice from './components/common/CopyrightNotice';
 import LicenseModal from './components/common/LicenseModal';
+import LicenseManager from './components/admin/LicenseManager';
 import { enableProtection } from './utils/protection';
 import { loadLicense, isLicenseValid, checkLicenseLimits } from './utils/licenseManager';
 import './utils/createFullLicense.js';
@@ -44,6 +45,7 @@ const App = () => {
   // États pour la gestion des licences
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [licenseError, setLicenseError] = useState('');
+  const [showLicenseManager, setShowLicenseManager] = useState(false);
 
   useEffect(() => {
     try {
@@ -108,6 +110,15 @@ const App = () => {
 
   // Vérification de la licence au démarrage
   useEffect(() => {
+    // Vérifier si l'utilisateur veut accéder au gestionnaire de licences
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminMode = urlParams.get('admin');
+    
+    if (adminMode === 'licenses') {
+      setShowLicenseManager(true);
+      return;
+    }
+
     const checkLicense = () => {
       const license = loadLicense();
       
@@ -597,6 +608,16 @@ const App = () => {
            />
           <CopyrightNotice />
         </div>
+      </ErrorBoundary>
+    );
+  }
+
+  // Mode gestionnaire de licences
+  if (showLicenseManager) {
+    return (
+      <ErrorBoundary>
+        <LicenseManager />
+        <CopyrightNotice />
       </ErrorBoundary>
     );
   }

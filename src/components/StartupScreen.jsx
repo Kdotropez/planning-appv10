@@ -130,6 +130,23 @@ const StartupScreen = ({ onNewPlanning, onImportPlanning, onExit, onClearLocalSt
           >
             🗑️ Effacer toutes les données
           </Button>
+
+          {/* Bouton secret pour accéder au gestionnaire de licences */}
+          <Button
+            onClick={() => window.location.href = window.location.origin + '?admin=licenses'}
+            style={{
+              padding: '10px 20px',
+              fontSize: '1rem',
+              backgroundColor: '#9C27B0',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              opacity: '0.8'
+            }}
+          >
+            🗝️ Gestionnaire de Licences
+          </Button>
         </div>
       </div>
     </div>

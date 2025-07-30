@@ -6,7 +6,7 @@
 
 ```bash
 # Dans LICENSE
-Copyright (c) 2025 [VOTRE NOM]. Tous droits réservés.
+Copyright (c) 2025 Nicolas Lefevre. Tous droits réservés.
 
 # Dans package.json
 "author": "[VOTRE NOM]",
@@ -21,7 +21,7 @@ Copyright (c) 2025 [VOTRE NOM]. Tous droits réservés.
 ### **2. Exemple avec un nom réel :**
 ```bash
 # Remplacez [VOTRE NOM] par votre nom réel, par exemple :
-Copyright (c) 2025 Jean Dupont. Tous droits réservés.
+Copyright (c) 2025 Nicolas Lefevre. Tous droits réservés.
 ```
 
 ## **Comment octroyer des licences provisoires :**
@@ -190,4 +190,4 @@ console.log(`Jours restants: ${licenseInfo.daysLeft}`);
 
 ---
 
-**© 2025 [VOTRE NOM] - Tous droits réservés** 
+**© 2025 Nicolas Lefevre - Tous droits réservés** 

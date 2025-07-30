@@ -1,5 +1,5 @@
 // Système de gestion des licences - Planning App v9
-// Copyright (c) 2025 [VOTRE NOM]. Tous droits réservés.
+// Copyright (c) 2025 Nicolas Lefevre. Tous droits réservés.
 
 // Types de licences
 export const LICENSE_TYPES = {

@@ -14,7 +14,7 @@ const CopyrightNotice = () => {
       zIndex: 1000,
       fontFamily: 'monospace'
     }}>
-             © 2025 [VOTRE NOM] - Propriétaire
+             © 2025 Nicolas Lefevre - Propriétaire
     </div>
   );
 };

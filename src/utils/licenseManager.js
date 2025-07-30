@@ -33,6 +33,65 @@ const generateLicenseId = () => {
   return `LIC-${timestamp}-${random}`.toUpperCase();
 };
 
+// Générer une clé de licence numérique
+export const generateLicenseKey = (type, duration) => {
+  const prefix = type === LICENSE_TYPES.FULL ? 'FULL' : 
+                 type === LICENSE_TYPES.TRIAL ? 'TRIAL' : 
+                 type === LICENSE_TYPES.EVALUATION ? 'EVAL' : 'DEMO';
+  
+  const durationCode = duration.toString().padStart(3, '0');
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.random().toString().slice(2, 6);
+  
+  return `${prefix}-${durationCode}-${timestamp}-${random}`.toUpperCase();
+};
+
+// Valider une clé de licence
+export const validateLicenseKey = (key) => {
+  if (!key || typeof key !== 'string') return null;
+  
+  const parts = key.split('-');
+  if (parts.length !== 4) return null;
+  
+  const [prefix, durationCode, timestamp, random] = parts;
+  
+  // Vérifier le préfixe
+  let type;
+  switch (prefix) {
+    case 'FULL': type = LICENSE_TYPES.FULL; break;
+    case 'TRIAL': type = LICENSE_TYPES.TRIAL; break;
+    case 'EVAL': type = LICENSE_TYPES.EVALUATION; break;
+    case 'DEMO': type = LICENSE_TYPES.DEMO; break;
+    default: return null;
+  }
+  
+  // Vérifier la durée
+  const duration = parseInt(durationCode);
+  if (isNaN(duration) || duration <= 0) return null;
+  
+  // Vérifier le timestamp (doit être récent, max 1 an)
+  const keyDate = new Date(parseInt(timestamp + '000'));
+  const now = new Date();
+  const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
+  
+  if (keyDate < oneYearAgo) return null;
+  
+  return { type, duration, key };
+};
+
+// Créer une licence à partir d'une clé
+export const createLicenseFromKey = (key, clientName, email) => {
+  const validation = validateLicenseKey(key);
+  if (!validation) return null;
+  
+  return createLicense(
+    validation.type,
+    validation.duration,
+    clientName,
+    email
+  );
+};
+
 // Fonctionnalités selon le type de licence
 const getFeaturesForType = (type) => {
   switch (type) {

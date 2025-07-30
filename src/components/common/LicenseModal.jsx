@@ -5,6 +5,8 @@ import {
   getLicenseInfo,
   createLicense,
   saveLicense,
+  createLicenseFromKey,
+  validateLicenseKey,
   LICENSE_TYPES 
 } from '../../utils/licenseManager';
 
@@ -13,6 +15,7 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [showKeyActivation, setShowKeyActivation] = useState(false);
 
   const handleActivateLicense = () => {
     if (!clientName || !clientEmail) {
@@ -79,6 +82,42 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
     }
   };
 
+  const handleActivateWithKey = () => {
+    if (!licenseKey.trim()) {
+      setMessage('Veuillez saisir une clé de licence');
+      return;
+    }
+
+    if (!clientName || !clientEmail) {
+      setMessage('Veuillez remplir votre nom et email');
+      return;
+    }
+
+    // Valider la clé
+    const validation = validateLicenseKey(licenseKey);
+    if (!validation) {
+      setMessage('Clé de licence invalide ou expirée');
+      return;
+    }
+
+    // Créer la licence à partir de la clé
+    const license = createLicenseFromKey(licenseKey, clientName, clientEmail);
+    if (!license) {
+      setMessage('Erreur lors de la création de la licence');
+      return;
+    }
+
+    if (saveLicense(license)) {
+      setMessage(`Licence activée avec succès ! (${validation.duration} jours)`);
+      setTimeout(() => {
+        onLicenseValid();
+        onClose();
+      }, 2000);
+    } else {
+      setMessage('Erreur lors de l\'activation de la licence');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -124,67 +163,188 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
           </div>
         )}
 
-        <div style={{ marginBottom: '20px' }}>
-          <h3>Activer une Licence</h3>
-          <p style={{ color: '#666', marginBottom: '15px' }}>
-            Pour utiliser l'application complète, veuillez saisir vos informations :
-          </p>
+                 <div style={{ marginBottom: '20px' }}>
+           <h3>Activer une Licence</h3>
+           <p style={{ color: '#666', marginBottom: '15px' }}>
+             Pour utiliser l'application complète, veuillez saisir vos informations :
+           </p>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Nom complet :
-            </label>
-            <input
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                borderRadius: '5px',
-                border: '1px solid #ddd',
-                fontSize: '14px'
-              }}
-              placeholder="Votre nom complet"
-            />
-          </div>
+           {/* Onglets pour choisir le mode d'activation */}
+           <div style={{ 
+             display: 'flex', 
+             marginBottom: '20px',
+             borderBottom: '1px solid #ddd'
+           }}>
+             <button
+               onClick={() => setShowKeyActivation(false)}
+               style={{
+                 flex: 1,
+                 padding: '10px',
+                 border: 'none',
+                 backgroundColor: !showKeyActivation ? '#f8f9fa' : 'transparent',
+                 borderBottom: !showKeyActivation ? '2px solid #007bff' : 'none',
+                 cursor: 'pointer',
+                 fontWeight: !showKeyActivation ? 'bold' : 'normal'
+               }}
+             >
+               📝 Licence d'Essai
+             </button>
+             <button
+               onClick={() => setShowKeyActivation(true)}
+               style={{
+                 flex: 1,
+                 padding: '10px',
+                 border: 'none',
+                 backgroundColor: showKeyActivation ? '#f8f9fa' : 'transparent',
+                 borderBottom: showKeyActivation ? '2px solid #007bff' : 'none',
+                 cursor: 'pointer',
+                 fontWeight: showKeyActivation ? 'bold' : 'normal'
+               }}
+             >
+               🔑 Clé de Licence
+             </button>
+           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              Email :
-            </label>
-            <input
-              type="email"
-              value={clientEmail}
-              onChange={(e) => setClientEmail(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                borderRadius: '5px',
-                border: '1px solid #ddd',
-                fontSize: '14px'
-              }}
-              placeholder="votre@email.com"
-            />
-          </div>
+                     {!showKeyActivation ? (
+             // Mode Licence d'Essai
+             <>
+               <div style={{ marginBottom: '15px' }}>
+                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                   Nom complet :
+                 </label>
+                 <input
+                   type="text"
+                   value={clientName}
+                   onChange={(e) => setClientName(e.target.value)}
+                   style={{
+                     width: '100%',
+                     padding: '10px',
+                     borderRadius: '5px',
+                     border: '1px solid #ddd',
+                     fontSize: '14px'
+                   }}
+                   placeholder="Votre nom complet"
+                 />
+               </div>
 
-          <button
-            onClick={handleActivateLicense}
-            style={{
-              backgroundColor: '#27ae60',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              width: '100%',
-              marginBottom: '10px'
-            }}
-          >
-            🚀 Activer Licence d'Essai (30 jours)
-          </button>
+               <div style={{ marginBottom: '20px' }}>
+                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                   Email :
+                 </label>
+                 <input
+                   type="email"
+                   value={clientEmail}
+                   onChange={(e) => setClientEmail(e.target.value)}
+                   style={{
+                     width: '100%',
+                     padding: '10px',
+                     borderRadius: '5px',
+                     border: '1px solid #ddd',
+                     fontSize: '14px'
+                   }}
+                   placeholder="votre@email.com"
+                 />
+               </div>
+
+               <button
+                 onClick={handleActivateLicense}
+                 style={{
+                   backgroundColor: '#27ae60',
+                   color: 'white',
+                   border: 'none',
+                   padding: '12px 24px',
+                   borderRadius: '5px',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   fontWeight: 'bold',
+                   width: '100%',
+                   marginBottom: '10px'
+                 }}
+               >
+                 🚀 Activer Licence d'Essai (30 jours)
+               </button>
+             </>
+           ) : (
+             // Mode Clé de Licence
+             <>
+               <div style={{ marginBottom: '15px' }}>
+                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                   Clé de licence :
+                 </label>
+                 <input
+                   type="text"
+                   value={licenseKey}
+                   onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                   style={{
+                     width: '100%',
+                     padding: '10px',
+                     borderRadius: '5px',
+                     border: '1px solid #ddd',
+                     fontSize: '14px',
+                     fontFamily: 'monospace',
+                     letterSpacing: '1px'
+                   }}
+                   placeholder="XXXX-XXX-XXXXXX-XXXX"
+                 />
+               </div>
+
+               <div style={{ marginBottom: '15px' }}>
+                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                   Nom complet :
+                 </label>
+                 <input
+                   type="text"
+                   value={clientName}
+                   onChange={(e) => setClientName(e.target.value)}
+                   style={{
+                     width: '100%',
+                     padding: '10px',
+                     borderRadius: '5px',
+                     border: '1px solid #ddd',
+                     fontSize: '14px'
+                   }}
+                   placeholder="Votre nom complet"
+                 />
+               </div>
+
+               <div style={{ marginBottom: '20px' }}>
+                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                   Email :
+                 </label>
+                 <input
+                   type="email"
+                   value={clientEmail}
+                   onChange={(e) => setClientEmail(e.target.value)}
+                   style={{
+                     width: '100%',
+                     padding: '10px',
+                     borderRadius: '5px',
+                     border: '1px solid #ddd',
+                     fontSize: '14px'
+                   }}
+                   placeholder="votre@email.com"
+                 />
+               </div>
+
+               <button
+                 onClick={handleActivateWithKey}
+                 style={{
+                   backgroundColor: '#9b59b6',
+                   color: 'white',
+                   border: 'none',
+                   padding: '12px 24px',
+                   borderRadius: '5px',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   fontWeight: 'bold',
+                   width: '100%',
+                   marginBottom: '10px'
+                 }}
+               >
+                 🔑 Activer avec la Clé
+               </button>
+             </>
+           )}
         </div>
 
         <div style={{ 

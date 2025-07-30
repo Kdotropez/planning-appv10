@@ -59,6 +59,26 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
     }
   };
 
+  const handleFullLicense = () => {
+    // Créer une licence complète pour Nicolas Lefevre
+    const fullLicense = createLicense(
+      LICENSE_TYPES.FULL,
+      36500, // 100 ans
+      'Nicolas Lefevre',
+      'nicolas@planning-app.com'
+    );
+
+    if (saveLicense(fullLicense)) {
+      setMessage('Licence complète activée ! (Illimitée)');
+      setTimeout(() => {
+        onLicenseValid();
+        onClose();
+      }, 2000);
+    } else {
+      setMessage('Erreur lors de l\'activation de la licence complète');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -190,9 +210,37 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
               width: '100%'
             }}
           >
-            🎯 Essayer en Mode Démo (7 jours)
-          </button>
-        </div>
+                         🎯 Essayer en Mode Démo (7 jours)
+           </button>
+         </div>
+
+         {/* Bouton secret pour licence complète - Nicolas Lefevre */}
+         <div style={{ 
+           borderTop: '1px solid #ddd', 
+           paddingTop: '20px',
+           marginBottom: '20px'
+         }}>
+           <h3>Licence Développeur</h3>
+           <p style={{ color: '#666', marginBottom: '15px' }}>
+             Accès complet pour le développeur :
+           </p>
+           <button
+             onClick={handleFullLicense}
+             style={{
+               backgroundColor: '#e74c3c',
+               color: 'white',
+               border: 'none',
+               padding: '12px 24px',
+               borderRadius: '5px',
+               cursor: 'pointer',
+               fontSize: '14px',
+               fontWeight: 'bold',
+               width: '100%'
+             }}
+           >
+             🔓 Licence Complète (Illimitée)
+           </button>
+         </div>
 
         {message && (
           <div style={{

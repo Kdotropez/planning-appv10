@@ -6,6 +6,7 @@ import CopyrightNotice from './components/common/CopyrightNotice';
 import LicenseModal from './components/common/LicenseModal';
 import { enableProtection } from './utils/protection';
 import { loadLicense, isLicenseValid, checkLicenseLimits } from './utils/licenseManager';
+import './utils/createFullLicense.js';
 import StartupScreen from './components/StartupScreen';
 import ShopCreation from './components/steps/ShopCreation';
 import ShopConfig from './components/steps/ShopConfig';

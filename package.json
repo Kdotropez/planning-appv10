@@ -1,7 +1,10 @@
 {
-  "name": "planning-appv8",
-  "private": true,
-  "version": "0.0.0",
+  "name": "planning-appv9",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Application de gestion de planning pour boutiques avec fonctionnalités avancées d'export et de récapitulatif",
+  "author": "Planning App v9",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +18,8 @@
     "jspdf-autotable": "^3.8.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "react-icons": "^5.3.0"
+    "react-icons": "^5.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.2",

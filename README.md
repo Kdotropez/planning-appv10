@@ -2,6 +2,8 @@
 
 Application de gestion de planning pour boutiques avec fonctionnalités avancées d'export et de récapitulatif.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## 🚀 Déploiement
 
 ### Vercel (Recommandé)
@@ -61,4 +63,8 @@ npm run build
 
 ## 📄 Licence
 
-Projet privé - Tous droits réservés
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+---
+
+**Planning App v9** - Application de gestion de planning moderne et intuitive.

@@ -2,7 +2,7 @@
 
 Application de gestion de planning pour boutiques avec fonctionnalités avancées d'export et de récapitulatif.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 ## 🚀 Déploiement
 
@@ -63,7 +63,8 @@ npm run build
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Ce projet est sous licence propriétaire. Tous droits réservés à Planning App v9.
+Voir le fichier [LICENSE](LICENSE) pour les conditions d'utilisation complètes.
 
 ---
 

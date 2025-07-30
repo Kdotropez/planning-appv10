@@ -6,7 +6,7 @@ import {
   createLicense,
   saveLicense,
   createLicenseFromKey,
-  validateLicenseKey,
+  validateLicenseKeyWithMessage,
   LICENSE_TYPES 
 } from '../../utils/licenseManager';
 
@@ -93,10 +93,10 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
       return;
     }
 
-    // Valider la clé
-    const validation = validateLicenseKey(licenseKey);
-    if (!validation) {
-      setMessage('Clé de licence invalide ou expirée');
+    // Valider la clé avec message détaillé
+    const validation = validateLicenseKeyWithMessage(licenseKey);
+    if (!validation.valid) {
+      setMessage(`❌ ${validation.message}`);
       return;
     }
 
@@ -108,7 +108,7 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
     }
 
     if (saveLicense(license)) {
-      setMessage(`Licence activée avec succès ! (${validation.duration} jours)`);
+      setMessage(`✅ Licence activée avec succès ! (${validation.duration} jours)`);
       setTimeout(() => {
         onLicenseValid();
         onClose();

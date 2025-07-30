@@ -76,6 +76,11 @@ export const validateLicenseKey = (key) => {
   
   if (keyDate < oneYearAgo) return null;
   
+  // Vérifier si la clé a déjà été utilisée
+  if (isKeyUsed(key)) {
+    return null; // Clé déjà utilisée
+  }
+  
   return { type, duration, key };
 };
 
@@ -83,6 +88,12 @@ export const validateLicenseKey = (key) => {
 export const createLicenseFromKey = (key, clientName, email) => {
   const validation = validateLicenseKey(key);
   if (!validation) return null;
+  
+  // Marquer la clé comme utilisée
+  if (!saveUsedKey(key)) {
+    console.error('Erreur lors de la sauvegarde de la clé utilisée');
+    return null;
+  }
   
   return createLicense(
     validation.type,
@@ -194,6 +205,36 @@ export const saveLicense = (license) => {
   }
 };
 
+// Sauvegarder une clé utilisée
+export const saveUsedKey = (key) => {
+  try {
+    const usedKeys = getUsedKeys();
+    usedKeys.push(key);
+    localStorage.setItem('planningAppUsedKeys', JSON.stringify(usedKeys));
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde de la clé utilisée:', error);
+    return false;
+  }
+};
+
+// Récupérer les clés déjà utilisées
+export const getUsedKeys = () => {
+  try {
+    const usedKeys = localStorage.getItem('planningAppUsedKeys');
+    return usedKeys ? JSON.parse(usedKeys) : [];
+  } catch (error) {
+    console.error('Erreur lors du chargement des clés utilisées:', error);
+    return [];
+  }
+};
+
+// Vérifier si une clé a déjà été utilisée
+export const isKeyUsed = (key) => {
+  const usedKeys = getUsedKeys();
+  return usedKeys.includes(key);
+};
+
 // Charger une licence
 export const loadLicense = () => {
   try {
@@ -240,4 +281,67 @@ export const getLicenseInfo = (license) => {
     isExpired: daysLeft <= 0,
     features: license.features
   };
+};
+
+// Valider une clé avec message d'erreur détaillé
+export const validateLicenseKeyWithMessage = (key) => {
+  if (!key || typeof key !== 'string') {
+    return { valid: false, message: 'Clé de licence invalide' };
+  }
+  
+  const parts = key.split('-');
+  if (parts.length !== 4) {
+    return { valid: false, message: 'Format de clé incorrect' };
+  }
+  
+  const [prefix, durationCode, timestamp, random] = parts;
+  
+  // Vérifier le préfixe
+  let type;
+  switch (prefix) {
+    case 'FULL': type = LICENSE_TYPES.FULL; break;
+    case 'TRIAL': type = LICENSE_TYPES.TRIAL; break;
+    case 'EVAL': type = LICENSE_TYPES.EVALUATION; break;
+    case 'DEMO': type = LICENSE_TYPES.DEMO; break;
+    default: return { valid: false, message: 'Type de licence invalide' };
+  }
+  
+  // Vérifier la durée
+  const duration = parseInt(durationCode);
+  if (isNaN(duration) || duration <= 0) {
+    return { valid: false, message: 'Durée de licence invalide' };
+  }
+  
+  // Vérifier le timestamp (doit être récent, max 1 an)
+  const keyDate = new Date(parseInt(timestamp + '000'));
+  const now = new Date();
+  const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
+  
+  if (keyDate < oneYearAgo) {
+    return { valid: false, message: 'Clé de licence expirée' };
+  }
+  
+  // Vérifier si la clé a déjà été utilisée
+  if (isKeyUsed(key)) {
+    return { valid: false, message: 'Cette clé a déjà été utilisée' };
+  }
+  
+  return { 
+    valid: true, 
+    type, 
+    duration, 
+    key,
+    message: 'Clé valide'
+  };
+};
+
+// Réinitialiser les clés utilisées (pour les tests)
+export const resetUsedKeys = () => {
+  try {
+    localStorage.removeItem('planningAppUsedKeys');
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la réinitialisation des clés utilisées:', error);
+    return false;
+  }
 }; 

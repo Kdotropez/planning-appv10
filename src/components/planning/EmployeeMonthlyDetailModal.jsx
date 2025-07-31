@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
@@ -9,17 +9,22 @@ import Button from '../common/Button';
 import { calculateEmployeeDailyHours } from '../../utils/planningUtils';
 import '@/assets/styles.css';
 
-const EmployeeMonthlyDetailModal = ({
+const EmployeeMonthlyDetailModal = ({ 
   showEmployeeMonthlyDetail,
   setShowEmployeeMonthlyDetail,
-  config,
+  config, 
   selectedShop,
   selectedWeek,
   selectedEmployeeForMonthlyDetail,
   shops,
   employees,
-  planningData
+  planningData,
+  forceRefresh,
+  onForceRefresh
 }) => {
+  // État pour forcer le rafraîchissement des données
+  const [localForceRefresh, setLocalForceRefresh] = React.useState(0);
+  
   console.log('EmployeeMonthlyDetailModal: Rendered with props', {
     showEmployeeMonthlyDetail,
     selectedShop,
@@ -58,12 +63,18 @@ const EmployeeMonthlyDetailModal = ({
     const employeeShops = new Map();
     planningData.shops.forEach(shop => {
       if (shop.weeks) {
-        // Vérifier si l'employé a des données de planning dans cette boutique
+        // Vérifier si l'employé a des données de planning avec des créneaux sélectionnés dans cette boutique
         let hasPlanningData = false;
         Object.keys(shop.weeks).forEach(weekKey => {
           const weekData = shop.weeks[weekKey];
           if (weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
-            hasPlanningData = true;
+            // Vérifier si l'employé a des créneaux sélectionnés dans cette semaine
+            Object.keys(weekData.planning[selectedEmployeeForMonthlyDetail]).forEach(dayStr => {
+              const slots = weekData.planning[selectedEmployeeForMonthlyDetail][dayStr];
+              if (Array.isArray(slots) && slots.some(slot => slot === true)) {
+                hasPlanningData = true;
+              }
+            });
           }
         });
         
@@ -81,20 +92,38 @@ const EmployeeMonthlyDetailModal = ({
   
 
   // Obtenir les données de planning pour cet employé (toutes les boutiques)
-  const getAllEmployeePlanning = () => {
+  const getAllEmployeePlanning = useCallback(() => {
     const allPlanning = {};
     
-    planningData?.shops?.forEach(shop => {
-      if (shop.weeks) {
+    if (!planningData?.shops || !Array.isArray(planningData.shops)) {
+      console.warn('Invalid planningData or shops in EmployeeMonthlyDetailModal');
+      return allPlanning;
+    }
+    
+    planningData.shops.forEach(shop => {
+      if (shop && shop.weeks && typeof shop.weeks === 'object') {
         Object.keys(shop.weeks).forEach(weekKey => {
           const weekData = shop.weeks[weekKey];
-          if (weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
-            // Ajouter l'ID de la boutique aux données
+          if (weekData && weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
+            // Ajouter l'ID de la boutique aux données seulement si l'employé a des créneaux sélectionnés
             Object.keys(weekData.planning[selectedEmployeeForMonthlyDetail]).forEach(dayStr => {
-              if (!allPlanning[dayStr]) {
-                allPlanning[dayStr] = {};
+              // Vérifier que le jour appartient au mois en cours
+              const dayDate = new Date(dayStr);
+              const monthStart = startOfMonth(new Date(selectedWeek));
+              const monthEnd = endOfMonth(new Date(selectedWeek));
+              
+
+              
+              if (dayDate >= monthStart && dayDate <= monthEnd) {
+                const slots = weekData.planning[selectedEmployeeForMonthlyDetail][dayStr];
+                // Validation des slots et vérification qu'il y a au moins un créneau sélectionné
+                if (Array.isArray(slots) && slots.some(slot => slot === true)) {
+                  if (!allPlanning[dayStr]) {
+                    allPlanning[dayStr] = {};
+                  }
+                  allPlanning[dayStr][shop.id] = slots;
+                }
               }
-              allPlanning[dayStr][shop.id] = weekData.planning[selectedEmployeeForMonthlyDetail][dayStr];
             });
           }
         });
@@ -102,9 +131,12 @@ const EmployeeMonthlyDetailModal = ({
     });
     
     return allPlanning;
-  };
+  }, [planningData, selectedEmployeeForMonthlyDetail, selectedWeek, localForceRefresh, forceRefresh]);
 
-  const allEmployeePlanning = getAllEmployeePlanning();
+  // FORCER LE RECALCUL À CHAQUE RENDU POUR ÉVITER LE CACHE
+  const allEmployeePlanning = React.useMemo(() => {
+    return getAllEmployeePlanning();
+  }, [getAllEmployeePlanning, localForceRefresh, planningData, forceRefresh]);
 
   // Calculer les heures totales du mois (toutes boutiques)
   const calculateTotalMonthHours = () => {
@@ -159,21 +191,28 @@ const EmployeeMonthlyDetailModal = ({
     if (!dayPlanning) return false;
     
     // Vérifier dans toutes les boutiques du jour
-    return Object.values(dayPlanning).some(slots => slots && slots[slotIndex]);
+    return Object.values(dayPlanning).some(slots => {
+      return slots && Array.isArray(slots) && slots[slotIndex];
+    });
   };
 
   // Calculer les heures d'un jour
   const calculateDayHours = (date) => {
     const dayStr = format(date, 'yyyy-MM-dd');
     const dayPlanning = allEmployeePlanning[dayStr];
-    if (!dayPlanning) return 0;
+    
+    if (!dayPlanning) {
+      return 0;
+    }
     
     let totalHours = 0;
     Object.values(dayPlanning).forEach(slots => {
       if (slots) {
-        totalHours += calculateEmployeeDailyHours(selectedEmployeeForMonthlyDetail, dayStr, { [selectedEmployeeForMonthlyDetail]: { [dayStr]: slots } }, config);
+        const hours = calculateEmployeeDailyHours(selectedEmployeeForMonthlyDetail, dayStr, { [selectedEmployeeForMonthlyDetail]: { [dayStr]: slots } }, config);
+        totalHours += hours;
       }
     });
+    
     return totalHours;
   };
 
@@ -186,38 +225,69 @@ const EmployeeMonthlyDetailModal = ({
 
   // Calculer les heures de travail pour un jour
   const calculateWorkHours = (date) => {
-    if (isDayOff(date)) return { entry: null, pause: null, return: null, exit: null, hours: 0 };
-    
+    const dateKey = format(date, 'yyyy-MM-dd');
     const selectedSlots = [];
-    for (let i = 0; i < config.timeSlots.length; i++) {
-      if (isSlotSelected(date, i)) {
-        selectedSlots.push({
-          index: i,
-          start: config.timeSlots[i].split('-')[0],
-          end: config.timeSlots[i].split('-')[1]
-        });
+    
+    // Récupérer tous les créneaux sélectionnés pour cette date
+    config.timeSlots.forEach((time, index) => {
+      if (isSlotSelected(date, index)) {
+        selectedSlots.push({ time, index });
       }
-    }
+    });
     
     if (selectedSlots.length === 0) return { entry: null, pause: null, return: null, exit: null, hours: 0 };
     
     // Trier par index pour avoir l'ordre chronologique
     selectedSlots.sort((a, b) => a.index - b.index);
     
-    const entry = selectedSlots[0].start;
-    const exit = selectedSlots[selectedSlots.length - 1].end;
+    const entry = selectedSlots[0].time;
     
-    // Détecter les pauses (gaps entre créneaux)
+    // Calculer l'heure de fin (dernier créneau + intervalle)
+    const lastSlotIndex = selectedSlots[selectedSlots.length - 1].index;
+    const lastTime = config.timeSlots[lastSlotIndex];
+    
+    // Validation pour éviter l'erreur de date invalide
+    if (!lastTime) {
+      console.warn('Invalid lastTime for date:', dateKey, 'lastSlotIndex:', lastSlotIndex);
+      return { entry, pause: null, return: null, exit: null, hours: calculateDayHours(date) };
+    }
+    
+    const interval = config.interval || 30;
+    const lastTimeDate = new Date(`2000-01-01T${lastTime}:00`);
+    
+    // Validation supplémentaire pour la date
+    if (isNaN(lastTimeDate.getTime())) {
+      console.warn('Invalid date created from lastTime:', lastTime, 'for date:', dateKey);
+      return { entry, pause: null, return: null, exit: null, hours: calculateDayHours(date) };
+    }
+    
+    const endTimeDate = new Date(lastTimeDate.getTime() + interval * 60 * 1000);
+    const exit = format(endTimeDate, 'HH:mm');
+    
+    // Détecter les pauses (gaps dans les créneaux sélectionnés)
     let pause = null;
     let returnTime = null;
     
     for (let i = 0; i < selectedSlots.length - 1; i++) {
-      const currentEnd = selectedSlots[i].end;
-      const nextStart = selectedSlots[i + 1].start;
+      const currentIndex = selectedSlots[i].index;
+      const nextIndex = selectedSlots[i + 1].index;
       
-      if (currentEnd !== nextStart) {
-        pause = currentEnd;
-        returnTime = nextStart;
+      // Si il y a un gap entre les créneaux sélectionnés
+      if (nextIndex > currentIndex + 1) {
+        // L'heure de pause est l'heure de fin du créneau actuel
+        const currentTime = config.timeSlots[currentIndex];
+        
+        // Validation pour currentTime
+        if (currentTime) {
+          const currentTimeDate = new Date(`2000-01-01T${currentTime}:00`);
+          if (!isNaN(currentTimeDate.getTime())) {
+            const pauseTimeDate = new Date(currentTimeDate.getTime() + interval * 60 * 1000);
+            pause = format(pauseTimeDate, 'HH:mm');
+          }
+        }
+        
+        // L'heure de retour est l'heure de début du prochain créneau
+        returnTime = config.timeSlots[nextIndex];
         break;
       }
     }
@@ -281,13 +351,13 @@ const EmployeeMonthlyDetailModal = ({
      // Total général
      body.push(['Total mois', '', '', '', '', '', `${calculateTotalMonthHours()} H`]);
     
-    doc.autoTable({
-      head: [columns],
-      body: body,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [30, 136, 229] }
-    });
+         doc.autoTable({
+       head: [columns],
+       body: body,
+       startY: 40,
+       styles: { fontSize: 7, fontStyle: 'bold' },
+       headStyles: { fillColor: [30, 136, 229], fontSize: 8, fontStyle: 'bold' }
+     });
     doc.save(`monthly_detail_${employeeName}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     console.log('EmployeeMonthlyDetailModal: PDF exported successfully');
   };
@@ -409,12 +479,12 @@ const EmployeeMonthlyDetailModal = ({
   };
 
   if (!config?.timeSlots?.length) {
-    return (
+  return (
       <div className="modal-overlay" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-        <div className="modal-content">
-          <button
-            className="modal-close"
-            onClick={() => {
+      <div className="modal-content">
+        <button 
+          className="modal-close" 
+          onClick={() => { 
               console.log('EmployeeMonthlyDetailModal: Closing modal via cross');
               setShowEmployeeMonthlyDetail(false);
             }}
@@ -515,159 +585,270 @@ const EmployeeMonthlyDetailModal = ({
         >
           ✕
         </button>
-                 <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center' }}>
-           Récapitulatif mensuel détaillé pour {employeeName} ({calculateTotalMonthHours()} H)
-         </h3>
-         <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px' }}>
-           Mois de {format(firstDayOfMonth, 'MMMM yyyy', { locale: fr })}
-         </p>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                   <div></div>
+                   <h3 style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', margin: 0 }}>
+                     Récapitulatif mensuel détaillé pour {employeeName} ({calculateTotalMonthHours()} H)
+                   </h3>
+                   <button 
+                     onClick={() => {
+                       setLocalForceRefresh(prev => prev + 1);
+                     }} 
+                     style={{ 
+                       padding: '6px 12px', 
+                       backgroundColor: '#007bff', 
+                       color: 'white', 
+                       border: 'none', 
+                       borderRadius: '4px', 
+                       cursor: 'pointer',
+                       fontSize: '11px',
+                       fontWeight: 'bold'
+                     }}
+                     title="Rafraîchir les données"
+                   >
+                     🔄 Actualiser
+                   </button>
+                 </div>
+                 <p style={{ fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginBottom: '20px' }}>
+                   Mois de {format(firstDayOfMonth, 'MMMM yyyy', { locale: fr })}
+                 </p>
         
                                    <table style={{ 
-                    fontFamily: 'Roboto, sans-serif', 
-                    width: '100%', 
-                    borderCollapse: 'collapse', 
-                    fontSize: '10px',
-                    tableLayout: 'fixed'
-                  }}>
-                        <thead>
-               <tr style={{ backgroundColor: '#f0f0f0' }}>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '15%' }}>Jour</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '20%' }}>BOUTIQUE</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '12%' }}>ENTRÉE</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '12%' }}>PAUSE</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '12%' }}>RETOUR</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '12%' }}>SORTIE</th>
-                 <th style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '700', fontSize: '9px', width: '17%' }}>Heures</th>
-               </tr>
-             </thead>
-           <tbody>
-             {(() => {
-               // Grouper les jours par semaine
-               const weeks = {};
-               allDaysOfMonth.forEach((date, index) => {
-                 const weekNumber = getWeekOfDate(date);
-                 if (!weeks[weekNumber]) {
-                   weeks[weekNumber] = [];
-                 }
-                 weeks[weekNumber].push({ date, index });
-               });
+                     fontFamily: 'Roboto, sans-serif', 
+                     width: '100%', 
+                     borderCollapse: 'collapse', 
+                     fontSize: '11px',
+                     tableLayout: 'fixed',
+                     fontWeight: 'bold'
+                   }}>
+          <thead>
+                <tr style={{ backgroundColor: '#f0f0f0' }}>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '12%' }}>Jour</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '18%' }}>BOUTIQUE</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '12%' }}>ENTRÉE</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '12%' }}>PAUSE</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '12%' }}>RETOUR</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '12%' }}>SORTIE</th>
+                  <th style={{ border: '1px solid #ddd', padding: '3px 4px', fontWeight: '700', fontSize: '10px', width: '22%' }}>Heures</th>
+            </tr>
+          </thead>
+          <tbody>
+              {(() => {
+                // Grouper les jours par semaine
+                const weeks = {};
+                allDaysOfMonth.forEach((date, index) => {
+                  const weekNumber = getWeekOfDate(date);
+                  if (!weeks[weekNumber]) {
+                    weeks[weekNumber] = [];
+                  }
+                  weeks[weekNumber].push({ date, index });
+                });
 
-               const rows = [];
-               Object.keys(weeks).sort((a, b) => parseInt(a) - parseInt(b)).forEach(weekNumber => {
-                 const weekDays = weeks[weekNumber];
-                 const weekColor = weekColors[parseInt(weekNumber) % weekColors.length];
-                 const weekTitle = getWeekTitle(weekDays[0].date);
-                 
-                                                     // Calculer le total de la semaine
-                  const weekTotal = weekDays.reduce((total, { date }) => {
-                    return total + calculateDayHours(date);
-                  }, 0);
+                const rows = [];
+                Object.keys(weeks).sort((a, b) => parseInt(a) - parseInt(b)).forEach(weekNumber => {
+                  const weekDays = weeks[weekNumber];
+                  const weekColor = weekColors[parseInt(weekNumber) % weekColors.length];
+                  const weekTitle = getWeekTitle(weekDays[0].date);
                   
-                                     // Ajouter une ligne d'en-tête pour la semaine
-                   rows.push(
-                     <tr key={`week-${weekNumber}`} style={{ backgroundColor: weekColor }}>
-                                               <td 
-                          colSpan="6" 
-                          style={{ 
-                            border: '1px solid #ddd', 
-                            padding: '3px 4px', 
-                            fontWeight: '700', 
-                            fontSize: '10px',
-                            textAlign: 'center',
-                            color: '#333'
-                          }}
-                        >
-                          {weekTitle}
-                        </td>
-                        <td 
-                          style={{ 
-                            border: '1px solid #ddd', 
-                            padding: '3px 4px', 
-                            fontWeight: '700', 
-                            fontSize: '10px',
-                            textAlign: 'center',
-                            color: '#333',
-                            backgroundColor: '#f0f0f0'
-                          }}
-                        >
-                          {weekTotal.toFixed(1)} h
-                        </td>
-                     </tr>
-                   );
-                  
-                                     // Ajouter les jours de la semaine
-                   weekDays.forEach(({ date, index }) => {
-                     const dayName = getDayName(date);
-                     const dayDate = format(date, 'dd/MM', { locale: fr });
-                     const isOff = isDayOff(date);
-                     const workHours = calculateWorkHours(date);
-                     const shopForDay = getShopForDay(date);
-                     
-                                          rows.push(
-                        <tr key={index} style={{
-                          backgroundColor: weekColor
-                        }}>
-                                                    <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontWeight: '600', fontSize: '9px' }}>
-                             {dayName} {dayDate}
-                           </td>
-                           <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontSize: '9px' }}>
-                             {isOff ? (
-                               <span style={{ color: '#FF9800', fontWeight: '600', fontSize: '8px' }}>
-                                 Congé ☀️
-                               </span>
-                             ) : (
-                               shopForDay ? shopForDay.name : '-'
-                             )}
-                           </td>
-                           <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontSize: '9px' }}>
-                             {isOff ? '-' : (workHours.entry ? `${workHours.entry} H` : '-')}
-                           </td>
-                           <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontSize: '9px' }}>
-                             {isOff ? '-' : (workHours.pause ? `${workHours.pause} H` : '-')}
-                           </td>
-                           <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontSize: '9px' }}>
-                             {isOff ? '-' : (workHours.return ? `${workHours.return} H` : '-')}
-                           </td>
-                           <td style={{ border: '1px solid #ddd', padding: '1px 2px', fontSize: '9px' }}>
-                             {isOff ? '-' : (workHours.exit ? `${workHours.exit} H` : '-')}
-                           </td>
-                           <td style={{ 
+                                                      // Calculer le total de la semaine
+                   const weekTotal = weekDays.reduce((total, { date }) => {
+                     return total + calculateDayHours(date);
+                   }, 0);
+                   
+                                      // Ajouter une ligne d'en-tête pour la semaine
+                    rows.push(
+                      <tr key={`week-${weekNumber}`} style={{ backgroundColor: weekColor }}>
+                                                <td 
+                           colSpan="6" 
+                           style={{ 
                              border: '1px solid #ddd', 
-                             padding: '1px 2px', 
-                             fontWeight: '600',
-                             fontSize: '9px',
-                             color: isOff ? '#FF9800' : '#333'
-                           }}>
-                             {isOff ? '0.0 h' : `${workHours.hours} h`}
-                           </td>
-                        </tr>
-                      );
-                   });
-               });
-               
-               return rows;
-             })()}
-                                          {/* Totaux par boutique */}
-                               {employeeShops.map((shop) => (
-                  <tr key={`total-${shop.id}`} style={{ backgroundColor: '#f0f0f0', fontWeight: '700' }}>
-                    <td colSpan="6" style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px' }}>
-                      TOTAL {shop.name}
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px' }}>
-                      {calculateShopHours(shop.id)} H
-                    </td>
-                  </tr>
-                ))}
+                             padding: '3px 4px', 
+                             fontWeight: '700', 
+                             fontSize: '10px',
+                             textAlign: 'center',
+                             color: '#333'
+                           }}
+                         >
+                           {weekTitle}
+                         </td>
+                         <td 
+                           style={{ 
+                             border: '1px solid #ddd', 
+                             padding: '3px 4px', 
+                             fontWeight: '700', 
+                             fontSize: '10px',
+                             textAlign: 'center',
+                             color: '#333',
+                             backgroundColor: weekColor
+                           }}
+                         >
+                           {weekTotal.toFixed(1)} h
+                         </td>
+                      </tr>
+                    );
+                   
+                                      // Ajouter les jours de la semaine
+                    weekDays.forEach(({ date, index }) => {
+                      const dayName = getDayName(date);
+                      const dayDate = format(date, 'dd/MM', { locale: fr });
+                      const isOff = isDayOff(date);
+                      const workHours = calculateWorkHours(date);
+                      const shopForDay = getShopForDay(date);
+                      
+                                           rows.push(
+                         <tr key={index} style={{
+                           backgroundColor: weekColor
+                         }}>
+                                                     <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontWeight: '600', fontSize: '10px' }}>
+                              {dayName} {dayDate}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '10px', fontWeight: '600' }}>
+                              {isOff ? (
+                                <span style={{ color: '#FF9800', fontWeight: '600', fontSize: '9px' }}>
+                                  Congé ☀️
+                                </span>
+                              ) : (
+                                shopForDay ? shopForDay.name : '-'
+                              )}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '10px', fontWeight: '600' }}>
+                              {isOff ? '-' : (workHours.entry ? `${workHours.entry} H` : '-')}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '10px', fontWeight: '600' }}>
+                              {isOff ? '-' : (workHours.pause ? `${workHours.pause} H` : '-')}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '10px', fontWeight: '600' }}>
+                              {isOff ? '-' : (workHours.return ? `${workHours.return} H` : '-')}
+                            </td>
+                            <td style={{ border: '1px solid #ddd', padding: '2px 3px', fontSize: '10px', fontWeight: '600' }}>
+                              {isOff ? '-' : (workHours.exit ? `${workHours.exit} H` : '-')}
+                            </td>
+                            <td style={{ 
+                              border: '1px solid #ddd', 
+                              padding: '2px 3px', 
+                              fontWeight: '600',
+                              fontSize: '10px',
+                              color: isOff ? '#FF9800' : '#333'
+                            }}>
+                              {isOff ? '0.0 h' : `${workHours.hours} h`}
+                            </td>
+                         </tr>
+                       );
+                    });
+                });
                 
-                {/* Total général */}
-                <tr style={{ backgroundColor: '#e0e0e0', fontWeight: '700' }}>
-                  <td colSpan="6" style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px' }}>Total mois</td>
-                  <td style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px' }}>{calculateTotalMonthHours()} H</td>
-                </tr>
-           </tbody>
-         </table>
+                return rows;
+              })()}
+                                           {/* Totaux par boutique */}
+                                {employeeShops.map((shop) => (
+                   <tr key={`total-${shop.id}`} style={{ backgroundColor: '#f0f0f0', fontWeight: '700' }}>
+                     <td colSpan="6" style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px', fontWeight: '700' }}>
+                       TOTAL {shop.name}
+                     </td>
+                     <td style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px', fontWeight: '700' }}>
+                       {calculateShopHours(shop.id)} H
+                     </td>
+              </tr>
+            ))}
+                 
+                 {/* Total général */}
+                 <tr style={{ backgroundColor: '#e0e0e0', fontWeight: '700' }}>
+                   <td colSpan="6" style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px', fontWeight: '700' }}>Total mois</td>
+                   <td style={{ border: '1px solid #ddd', padding: '3px 4px', fontSize: '10px', fontWeight: '700' }}>{calculateTotalMonthHours()} H</td>
+                 </tr>
+          </tbody>
+        </table>
         
-                                                                       <div className="button-group" style={{ display: 'flex', justifyContent: 'center', marginTop: '15px', flexWrap: 'wrap', gap: '10px' }}>
+        {/* Cases de signature */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          marginTop: '30px', 
+          marginBottom: '20px',
+          gap: '20px'
+        }}>
+          {/* Signature de l'employé */}
+          <div style={{ 
+            flex: 1, 
+            border: '2px solid #ddd', 
+            borderRadius: '8px', 
+            padding: '15px',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              fontSize: '14px',
+              color: '#333'
+            }}>
+              Signature de l'employé
+            </div>
+            <div style={{ 
+              height: '60px', 
+              border: '1px dashed #ccc', 
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '12px'
+            }}>
+              {employeeName}
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: '5px',
+              fontSize: '11px',
+              color: '#666'
+            }}>
+              Date: {format(new Date(), 'dd/MM/yyyy')}
+            </div>
+          </div>
+          
+          {/* Signature du responsable */}
+          <div style={{ 
+            flex: 1, 
+            border: '2px solid #ddd', 
+            borderRadius: '8px', 
+            padding: '15px',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              fontSize: '14px',
+              color: '#333'
+            }}>
+              Signature du responsable
+            </div>
+            <div style={{ 
+              height: '60px', 
+              border: '1px dashed #ccc', 
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '12px'
+            }}>
+              Responsable {selectedShop}
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: '5px',
+              fontSize: '11px',
+              color: '#666'
+            }}>
+              Date: {format(new Date(), 'dd/MM/yyyy')}
+            </div>
+          </div>
+        </div>
+        
+        <div className="button-group" style={{ display: 'flex', justifyContent: 'center', marginTop: '15px', flexWrap: 'wrap', gap: '10px' }}>
                            <Button className="button-pdf" onClick={() => {
                 // Masquer les boutons avant l'impression
                 const buttonGroup = document.querySelector('.button-group');
@@ -705,14 +886,16 @@ const EmployeeMonthlyDetailModal = ({
                           font-family: 'Roboto', sans-serif;
                           width: 100%;
                           border-collapse: collapse;
-                          font-size: 10px;
+                          font-size: 9px;
                           table-layout: fixed;
+                          font-weight: bold;
                         }
                         th, td {
                           border: 1px solid #ddd;
-                          padding: 1px 2px;
+                          padding: 2px 3px;
                           font-size: 8px;
                           line-height: 1.2;
+                          font-weight: bold;
                         }
                         th {
                           background-color: #f0f0f0;
@@ -723,6 +906,7 @@ const EmployeeMonthlyDetailModal = ({
                         h3, p {
                           text-align: center;
                           margin: 10px 0;
+                          font-weight: bold;
                         }
                         @page {
                           margin: 10mm;
@@ -772,19 +956,19 @@ const EmployeeMonthlyDetailModal = ({
              <Button className="button-pdf" onClick={() => exportAsImagePdf()}>
                Exporter en PDF (image fidèle)
              </Button>
-             <Button
+        <Button
                className="button-retour"
-               onClick={() => {
+          onClick={() => { 
                  console.log('EmployeeMonthlyDetailModal: Closing modal via button');
                  setShowEmployeeMonthlyDetail(false);
-               }}
-             >
-               Fermer
-             </Button>
+          }}
+        >
+          Fermer
+        </Button>
            </div>
       </div>
     </div>
   );
 };
 
-export default EmployeeMonthlyDetailModal; 
+export default EmployeeMonthlyDetailModal;

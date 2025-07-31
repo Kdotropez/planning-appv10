@@ -197,10 +197,43 @@ export const saveWeekPlanningForEmployee = (planningData, employeeId, weekKey, p
 
 // Export/Import
 export const exportPlanningData = (planningData) => {
-  const exportData = {
-    ...planningData,
-    exportDate: new Date().toISOString()
-  };
+  // Diagnostic avant export
+  console.log('🔍 Diagnostic avant export:');
+  diagnoseDataState(planningData);
+  
+  // Créer une copie profonde des données pour éviter les modifications
+  const exportData = JSON.parse(JSON.stringify(planningData));
+  
+  // Ajouter la date d'export
+  exportData.exportDate = new Date().toISOString();
+  
+  // Vérifier et nettoyer les données avant export
+  if (exportData.shops && Array.isArray(exportData.shops)) {
+    exportData.shops = exportData.shops.map(shop => {
+      // S'assurer que chaque boutique a une structure weeks valide
+      if (!shop.weeks || typeof shop.weeks !== 'object') {
+        shop.weeks = {};
+      }
+      
+      // Nettoyer les semaines vides ou invalides
+      const cleanedWeeks = {};
+      Object.keys(shop.weeks).forEach(weekKey => {
+        const weekData = shop.weeks[weekKey];
+        if (weekData && typeof weekData === 'object') {
+          // Vérifier que la semaine a des données valides
+          if (weekData.planning && typeof weekData.planning === 'object' && 
+              Object.keys(weekData.planning).length > 0) {
+            cleanedWeeks[weekKey] = weekData;
+          }
+        }
+      });
+      shop.weeks = cleanedWeeks;
+      
+      return shop;
+    });
+  }
+  
+  console.log('📤 Export des données:', exportData);
   
   const blob = new Blob([JSON.stringify(exportData, null, 2)], {
     type: 'application/json'
@@ -213,6 +246,109 @@ export const exportPlanningData = (planningData) => {
   a.click();
   
   URL.revokeObjectURL(url);
+  
+  return exportData;
+};
+
+// Fonction de sauvegarde forcée qui récupère toutes les données du localStorage
+export const forceSaveAllData = (planningData) => {
+  const updatedPlanningData = { ...planningData };
+  
+  // Récupérer toutes les clés du localStorage qui contiennent des données de planning
+  const localStorageKeys = Object.keys(localStorage);
+  const planningKeys = localStorageKeys.filter(key => key.startsWith('planning_'));
+  const employeeKeys = localStorageKeys.filter(key => key.startsWith('selected_employees_'));
+  
+  console.log('Clés de planning trouvées:', planningKeys);
+  console.log('Clés d\'employés trouvées:', employeeKeys);
+  
+  // Traiter chaque clé de planning
+  planningKeys.forEach(planningKey => {
+    try {
+      // Extraire shop et week de la clé (format: planning_SHOP_WEEK)
+      const parts = planningKey.split('_');
+      if (parts.length >= 3) {
+        const shopId = parts[1];
+        const weekKey = parts.slice(2).join('_'); // En cas de date avec underscore
+        
+        // Récupérer les données de planning
+        const planningData = JSON.parse(localStorage.getItem(planningKey) || '{}');
+        
+        // Récupérer les employés sélectionnés
+        const employeeKey = `selected_employees_${shopId}_${weekKey}`;
+        const selectedEmployees = JSON.parse(localStorage.getItem(employeeKey) || '[]');
+        
+        // Sauvegarder dans planningData
+        updatedPlanningData = saveWeekPlanning(
+          updatedPlanningData, 
+          shopId, 
+          weekKey, 
+          planningData, 
+          selectedEmployees
+        );
+        
+        console.log(`Données sauvegardées pour ${shopId} - ${weekKey}:`, planningData);
+      }
+    } catch (error) {
+      console.error(`Erreur lors du traitement de la clé ${planningKey}:`, error);
+    }
+  });
+  
+  return updatedPlanningData;
+};
+
+// Fonction de diagnostic pour vérifier l'état des données
+export const diagnoseDataState = (planningData) => {
+  const diagnosis = {
+    totalShops: planningData.shops?.length || 0,
+    shopsWithWeeks: 0,
+    totalWeeks: 0,
+    localStorageKeys: [],
+    localStorageData: {}
+  };
+  
+  // Analyser les boutiques et leurs semaines
+  if (planningData.shops && Array.isArray(planningData.shops)) {
+    planningData.shops.forEach(shop => {
+      const weekCount = shop.weeks ? Object.keys(shop.weeks).length : 0;
+      if (weekCount > 0) {
+        diagnosis.shopsWithWeeks++;
+        diagnosis.totalWeeks += weekCount;
+      }
+    });
+  }
+  
+  // Analyser le localStorage
+  const localStorageKeys = Object.keys(localStorage);
+  const planningKeys = localStorageKeys.filter(key => key.startsWith('planning_'));
+  const employeeKeys = localStorageKeys.filter(key => key.startsWith('selected_employees_'));
+  
+  diagnosis.localStorageKeys = {
+    planning: planningKeys,
+    employees: employeeKeys,
+    total: planningKeys.length + employeeKeys.length
+  };
+  
+  // Analyser les données du localStorage
+  planningKeys.forEach(key => {
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      diagnosis.localStorageData[key] = {
+        hasData: Object.keys(data).length > 0,
+        employeeCount: Object.keys(data).length,
+        totalSlots: Object.values(data).reduce((total, empData) => {
+          return total + Object.values(empData).reduce((empTotal, daySlots) => {
+            return empTotal + (Array.isArray(daySlots) ? daySlots.length : 0);
+          }, 0);
+        }, 0)
+      };
+    } catch (error) {
+      diagnosis.localStorageData[key] = { error: error.message };
+    }
+  });
+  
+  console.log('🔍 Diagnostic des données:', diagnosis);
+  return diagnosis;
 };
 
 export const importPlanningData = (file) => {
@@ -231,7 +367,10 @@ export const importPlanningData = (file) => {
         // Migration si nécessaire
         const migratedData = migrateDataIfNeeded(data);
         
-        resolve(migratedData);
+        // Nettoyer et valider les données
+        const cleanedData = cleanAndValidateData(migratedData);
+        
+        resolve(cleanedData);
       } catch (error) {
         reject(new Error(`Erreur d'import : ${error.message}`));
       }
@@ -243,6 +382,50 @@ export const importPlanningData = (file) => {
     
     reader.readAsText(file);
   });
+};
+
+// Fonction de nettoyage et validation des données
+const cleanAndValidateData = (data) => {
+  const cleanedData = { ...data };
+  
+  // Nettoyer les boutiques
+  if (cleanedData.shops && Array.isArray(cleanedData.shops)) {
+    cleanedData.shops = cleanedData.shops
+      .filter(shop => shop && typeof shop === 'object' && shop.id && shop.name)
+      .map(shop => ({
+        id: String(shop.id),
+        name: String(shop.name),
+        canWorkIn: Array.isArray(shop.canWorkIn) ? shop.canWorkIn.map(String) : [],
+        employees: Array.isArray(shop.employees) ? shop.employees
+          .filter(emp => emp && typeof emp === 'object' && emp.id && emp.name)
+          .map(emp => ({
+            id: String(emp.id),
+            name: String(emp.name),
+            canWorkIn: Array.isArray(emp.canWorkIn) ? emp.canWorkIn.map(String) : [],
+            // Autres propriétés d'employé si elles existent
+            ...(emp.color && { color: String(emp.color) }),
+            ...(emp.role && { role: String(emp.role) })
+          })) : [],
+        weeks: shop.weeks && typeof shop.weeks === 'object' ? shop.weeks : {},
+        config: shop.config && typeof shop.config === 'object' ? shop.config : {}
+      }));
+  }
+  
+  // Nettoyer les employés globaux si ils existent
+  if (cleanedData.employees && Array.isArray(cleanedData.employees)) {
+    cleanedData.employees = cleanedData.employees
+      .filter(emp => emp && typeof emp === 'object' && emp.id && emp.name)
+      .map(emp => ({
+        id: String(emp.id),
+        name: String(emp.name),
+        canWorkIn: Array.isArray(emp.canWorkIn) ? emp.canWorkIn.map(String) : [],
+        // Autres propriétés d'employé si elles existent
+        ...(emp.color && { color: String(emp.color) }),
+        ...(emp.role && { role: String(emp.role) })
+      }));
+  }
+  
+  return cleanedData;
 };
 
 // Migration des données

@@ -104,13 +104,20 @@ const EmployeeWeeklyRecapModal = ({
   const calculateWorkHours = (dayIndex) => {
     if (isDayOff(dayIndex)) return { entry: null, pause: null, return: null, exit: null, hours: 0 };
     
+    const day = format(addDays(mondayOfWeek, dayIndex), 'yyyy-MM-dd');
+    const dayPlanning = employeePlanning[selectedEmployeeForWeeklyRecap]?.[day];
+    
+    if (!dayPlanning || dayPlanning.every(slot => !slot)) {
+      return { entry: null, pause: null, return: null, exit: null, hours: 0 };
+    }
+    
+    // Trouver les créneaux sélectionnés
     const selectedSlots = [];
-    for (let i = 0; i < config.timeSlots.length; i++) {
-      if (isSlotSelected(dayIndex, i)) {
+    for (let i = 0; i < dayPlanning.length; i++) {
+      if (dayPlanning[i]) {
         selectedSlots.push({
           index: i,
-          start: config.timeSlots[i].split('-')[0],
-          end: config.timeSlots[i].split('-')[1]
+          time: config.timeSlots[i]
         });
       }
     }
@@ -120,20 +127,34 @@ const EmployeeWeeklyRecapModal = ({
     // Trier par index pour avoir l'ordre chronologique
     selectedSlots.sort((a, b) => a.index - b.index);
     
-    const entry = selectedSlots[0].start;
-    const exit = selectedSlots[selectedSlots.length - 1].end;
+    const entry = selectedSlots[0].time;
     
-    // Détecter les pauses (gaps entre créneaux)
+    // Calculer l'heure de fin (dernier créneau + intervalle)
+    const lastSlotIndex = selectedSlots[selectedSlots.length - 1].index;
+    const lastTime = config.timeSlots[lastSlotIndex];
+    const interval = config.interval || 30;
+    const lastTimeDate = new Date(`2000-01-01T${lastTime}:00`);
+    const endTimeDate = new Date(lastTimeDate.getTime() + interval * 60 * 1000);
+    const exit = format(endTimeDate, 'HH:mm');
+    
+    // Détecter les pauses (gaps dans les créneaux sélectionnés)
     let pause = null;
     let returnTime = null;
     
     for (let i = 0; i < selectedSlots.length - 1; i++) {
-      const currentEnd = selectedSlots[i].end;
-      const nextStart = selectedSlots[i + 1].start;
+      const currentIndex = selectedSlots[i].index;
+      const nextIndex = selectedSlots[i + 1].index;
       
-      if (currentEnd !== nextStart) {
-        pause = currentEnd;
-        returnTime = nextStart;
+      // Si il y a un gap entre les créneaux sélectionnés
+      if (nextIndex > currentIndex + 1) {
+        // L'heure de pause est l'heure de fin du créneau actuel
+        const currentTime = config.timeSlots[currentIndex];
+        const currentTimeDate = new Date(`2000-01-01T${currentTime}:00`);
+        const pauseTimeDate = new Date(currentTimeDate.getTime() + interval * 60 * 1000);
+        pause = format(pauseTimeDate, 'HH:mm');
+        
+        // L'heure de retour est l'heure de début du prochain créneau
+        returnTime = config.timeSlots[nextIndex];
         break;
       }
     }
@@ -376,7 +397,230 @@ const EmployeeWeeklyRecapModal = ({
            </tbody>
          </table>
         
+        {/* Cases de signature */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          marginTop: '30px', 
+          marginBottom: '20px',
+          gap: '20px'
+        }}>
+          {/* Signature de l'employé */}
+          <div style={{ 
+            flex: 1, 
+            border: '2px solid #ddd', 
+            borderRadius: '8px', 
+            padding: '15px',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              fontSize: '14px',
+              color: '#333'
+            }}>
+              Signature de l'employé
+            </div>
+            <div style={{ 
+              height: '60px', 
+              border: '1px dashed #ccc', 
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '12px'
+            }}>
+              {employeeName}
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: '5px',
+              fontSize: '11px',
+              color: '#666'
+            }}>
+              Date: {format(new Date(), 'dd/MM/yyyy')}
+            </div>
+          </div>
+          
+          {/* Signature du responsable */}
+          <div style={{ 
+            flex: 1, 
+            border: '2px solid #ddd', 
+            borderRadius: '8px', 
+            padding: '15px',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              fontSize: '14px',
+              color: '#333'
+            }}>
+              Signature du responsable
+            </div>
+            <div style={{ 
+              height: '60px', 
+              border: '1px dashed #ccc', 
+              borderRadius: '4px',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#999',
+              fontSize: '12px'
+            }}>
+              Responsable {selectedShop}
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: '5px',
+              fontSize: '11px',
+              color: '#666'
+            }}>
+              Date: {format(new Date(), 'dd/MM/yyyy')}
+            </div>
+          </div>
+        </div>
+        
         <div className="button-group" style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
+          <Button className="button-pdf" onClick={() => {
+            // Masquer les boutons avant l'impression
+            const buttonGroup = document.querySelector('.button-group');
+            const modalClose = document.querySelector('.modal-close');
+            if (buttonGroup) {
+              buttonGroup.style.display = 'none';
+            }
+            if (modalClose) {
+              modalClose.style.display = 'none';
+            }
+            
+            // Créer une nouvelle fenêtre pour l'impression
+            const printWindow = window.open('', '_blank');
+            const modalContent = document.querySelector('.modal-content');
+            
+            if (printWindow && modalContent) {
+              printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Récapitulatif hebdomadaire - ${employeeName}</title>
+                  <style>
+                    body {
+                      font-family: 'Roboto', sans-serif;
+                      margin: 0;
+                      padding: 20px;
+                      background-color: white;
+                      color: black;
+                    }
+                    .print-content {
+                      max-width: 100%;
+                      margin: 0 auto;
+                    }
+                    table {
+                      font-family: 'Roboto', sans-serif;
+                      width: 100%;
+                      border-collapse: collapse;
+                      font-size: 12px;
+                      font-weight: bold;
+                    }
+                    th, td {
+                      border: 1px solid #ddd;
+                      padding: 8px;
+                      font-size: 11px;
+                      line-height: 1.2;
+                      font-weight: bold;
+                    }
+                    th {
+                      background-color: #f0f0f0;
+                      font-weight: 700;
+                      font-size: 12px;
+                      padding: 8px;
+                    }
+                    h3, p {
+                      text-align: center;
+                      margin: 10px 0;
+                      font-weight: bold;
+                    }
+                    .signature-section {
+                      display: flex;
+                      justify-content: space-between;
+                      margin-top: 30px;
+                      gap: 20px;
+                    }
+                    .signature-box {
+                      flex: 1;
+                      border: 2px solid #ddd;
+                      border-radius: 8px;
+                      padding: 15px;
+                      background-color: #f9f9f9;
+                    }
+                    .signature-title {
+                      text-align: center;
+                      margin-bottom: 10px;
+                      font-weight: 600;
+                      font-size: 14px;
+                      color: #333;
+                    }
+                    .signature-area {
+                      height: 60px;
+                      border: 1px dashed #ccc;
+                      border-radius: 4px;
+                      background-color: white;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: #999;
+                      font-size: 12px;
+                    }
+                    .signature-date {
+                      text-align: center;
+                      margin-top: 5px;
+                      font-size: 11px;
+                      color: #666;
+                    }
+                    @page {
+                      margin: 10mm;
+                      size: A4 portrait;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="print-content">
+                    ${modalContent.innerHTML}
+                  </div>
+                </body>
+                </html>
+              `);
+              
+              printWindow.document.close();
+              printWindow.focus();
+              
+              // Attendre que le contenu soit chargé puis imprimer
+              printWindow.onload = function() {
+                printWindow.print();
+                printWindow.close();
+              };
+            } else {
+              // Fallback si la nouvelle fenêtre échoue
+              window.print();
+            }
+            
+            // Remettre les boutons après l'impression
+            setTimeout(() => {
+              if (buttonGroup) {
+                buttonGroup.style.display = 'flex';
+              }
+              if (modalClose) {
+                modalClose.style.display = 'block';
+              }
+            }, 1000);
+          }}>
+            Imprimer
+          </Button>
           <Button className="button-pdf" onClick={exportToPDF}>
             Exporter en PDF
           </Button>

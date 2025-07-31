@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Licences - Planning App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .result {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .license-info {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .license-info.show {
+            display: block;
+        }
+
+        .key-display {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e1e5e9;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗝️ Générateur de Licences</h1>
+            <p>Planning App v9 - Nicolas Lefevre</p>
+        </div>
+
+        <div class="content">
+            <!-- Onglets -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('create')">📝 Créer Licence</button>
+                <button class="tab" onclick="showTab('generate')">🔑 Générer Clé</button>
+                <button class="tab" onclick="showTab('info')">ℹ️ Informations</button>
+            </div>
+
+            <!-- Onglet Créer Licence -->
+            <div id="create" class="tab-content active">
+                <div class="form-group">
+                    <label for="licenseType">Type de licence :</label>
+                    <select id="licenseType">
+                        <option value="provisional">Provisoire (7 jours renouvelable)</option>
+                        <option value="unlimited">Illimitée (jusqu'à révocation)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="clientName">Nom du client :</label>
+                    <input type="text" id="clientName" placeholder="Nom complet du client">
+                </div>
+
+                <div class="form-group">
+                    <label for="clientEmail">Email du client :</label>
+                    <input type="email" id="clientEmail" placeholder="email@client.com">
+                </div>
+
+                <button class="btn" onclick="createLicense()">🚀 Créer Licence</button>
+                <button class="btn btn-secondary" onclick="generateKey()">🔑 Générer Clé</button>
+
+                <div id="createResult" class="result"></div>
+            </div>
+
+            <!-- Onglet Générer Clé -->
+            <div id="generate" class="tab-content">
+                <div class="form-group">
+                    <label for="keyType">Type de clé :</label>
+                    <select id="keyType">
+                        <option value="provisional">Provisoire (7 jours)</option>
+                        <option value="unlimited">Illimitée (100 ans)</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="generateKeyOnly()">🔑 Générer Clé</button>
+                <button class="btn btn-success" onclick="generateAllKeys()">🔑 Générer Toutes les Clés</button>
+
+                <div id="generateResult" class="result"></div>
+            </div>
+
+            <!-- Onglet Informations -->
+            <div id="info" class="tab-content">
+                <h3>📋 Instructions d'utilisation</h3>
+                <ul style="margin: 15px 0; line-height: 1.6;">
+                    <li><strong>Créer une licence :</strong> Remplissez les champs et cliquez sur "Créer Licence"</li>
+                    <li><strong>Générer une clé :</strong> Sélectionnez le type et cliquez sur "Générer Clé"</li>
+                    <li><strong>Copier une clé :</strong> Cliquez sur le bouton "📋" à côté de la clé</li>
+                    <li><strong>Envoyer au client :</strong> Copiez la clé et envoyez-la par email/SMS</li>
+                </ul>
+
+                <h3>🎯 Types de licences</h3>
+                <div style="margin: 15px 0;">
+                    <p><strong>Provisoire :</strong> 7 jours, renouvelable, 2 boutiques, 8 employés</p>
+                    <p><strong>Illimitée :</strong> 100 ans, non renouvelable, toutes fonctionnalités</p>
+                </div>
+
+                <button class="btn btn-danger" onclick="clearData()">🗑️ Effacer Toutes les Données</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fonctions utilitaires
+        function showTab(tabName) {
+            // Masquer tous les onglets
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Afficher l'onglet sélectionné
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showStatus(message, type = 'success', elementId = 'createResult') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+            element.classList.add('show');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('📋 Clé copiée dans le presse-papiers !', 'success');
+            });
+        }
+
+        // Génération de clés
+        function generateLicenseKey(type, duration = 7) {
+            const prefix = type === 'unlimited' ? 'UNLIMITED' : 'PROVISIONAL';
+            const durationCode = duration.toString().padStart(3, '0');
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.random().toString().slice(2, 6);
+            
+            return `${prefix}-${durationCode}-${timestamp}-${random}`.toUpperCase();
+        }
+
+        // Créer une licence
+        function createLicense() {
+            const type = document.getElementById('licenseType').value;
+            const clientName = document.getElementById('clientName').value;
+            const clientEmail = document.getElementById('clientEmail').value;
+
+            if (!clientName || !clientEmail) {
+                showStatus('❌ Veuillez remplir le nom et l\'email', 'error');
+                return;
+            }
+
+            const duration = type === 'provisional' ? 7 : 36500;
+            const license = {
+                id: 'LIC-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 5).toUpperCase(),
+                type: type,
+                clientName: clientName,
+                email: clientEmail,
+                issuedDate: new Date().toISOString(),
+                expiryDate: new Date(Date.now() + (duration * 24 * 60 * 60 * 1000)).toISOString(),
+                isActive: true
+            };
+
+            // Sauvegarder dans localStorage
+            localStorage.setItem('planningAppLicense', JSON.stringify(license));
+
+            const result = `
+                <h3>✅ Licence créée avec succès !</h3>
+                <p><strong>Client :</strong> ${license.clientName}</p>
+                <p><strong>Email :</strong> ${license.email}</p>
+                <p><strong>Type :</strong> ${type === 'provisional' ? 'Provisoire' : 'Illimitée'}</p>
+                <p><strong>ID :</strong> ${license.id}</p>
+                <p><strong>Expire le :</strong> ${new Date(license.expiryDate).toLocaleDateString('fr-FR')}</p>
+                <p><strong>Limites :</strong> ${type === 'provisional' ? '2 boutiques, 8 employés' : 'Illimitées'}</p>
+            `;
+
+            document.getElementById('createResult').innerHTML = result;
+            document.getElementById('createResult').classList.add('show');
+
+            // Réinitialiser les champs
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientEmail').value = '';
+        }
+
+        // Générer une clé
+        function generateKey() {
+            const type = document.getElementById('licenseType').value;
+            const duration = type === 'provisional' ? 7 : 36500;
+            const key = generateLicenseKey(type, duration);
+
+            const result = `
+                <h3>🗝️ Clé générée :</h3>
+                <div class="key-display">
+                    ${key}
+                    <button class="copy-btn" onclick="copyToClipboard('${key}')">📋</button>
+                </div>
+                <p><strong>Type :</strong> ${type === 'provisional' ? 'Provisoire (7 jours)' : 'Illimitée (100 ans)'}</p>
+                <p><em>Envoyez cette clé au client pour qu'il puisse activer sa licence.</em></p>
+            `;
+
+            document.getElementById('createResult').innerHTML = result;
+            document.getElementById('createResult').classList.add('show');
+        }
+
+        // Générer une clé seulement
+        function generateKeyOnly() {
+            const type = document.getElementById('keyType').value;
+            const duration = type === 'provisional' ? 7 : 36500;
+            const key = generateLicenseKey(type, duration);
+
+            const result = `
+                <h3>🗝️ Clé générée :</h3>
+                <div class="key-display">
+                    ${key}
+                    <button class="copy-btn" onclick="copyToClipboard('${key}')">📋</button>
+                </div>
+                <p><strong>Type :</strong> ${type === 'provisional' ? 'Provisoire (7 jours)' : 'Illimitée (100 ans)'}</p>
+            `;
+
+            document.getElementById('generateResult').innerHTML = result;
+            document.getElementById('generateResult').classList.add('show');
+        }
+
+        // Générer toutes les clés
+        function generateAllKeys() {
+            const provisionalKey = generateLicenseKey('provisional', 7);
+            const unlimitedKey = generateLicenseKey('unlimited', 36500);
+
+            const result = `
+                <h3>🗝️ Clés générées :</h3>
+                
+                <h4>Provisoire (7 jours) :</h4>
+                <div class="key-display">
+                    ${provisionalKey}
+                    <button class="copy-btn" onclick="copyToClipboard('${provisionalKey}')">📋</button>
+                </div>
+                
+                <h4>Illimitée (100 ans) :</h4>
+                <div class="key-display">
+                    ${unlimitedKey}
+                    <button class="copy-btn" onclick="copyToClipboard('${unlimitedKey}')">📋</button>
+                </div>
+            `;
+
+            document.getElementById('generateResult').innerHTML = result;
+            document.getElementById('generateResult').classList.add('show');
+        }
+
+        // Effacer toutes les données
+        function clearData() {
+            if (confirm('Êtes-vous sûr de vouloir effacer toutes les données ?')) {
+                localStorage.removeItem('planningAppLicense');
+                localStorage.removeItem('planningAppUsedKeys');
+                showStatus('✅ Toutes les données ont été effacées', 'success', 'generateResult');
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Vérifier s'il y a une licence existante
+            const existingLicense = localStorage.getItem('planningAppLicense');
+            if (existingLicense) {
+                const license = JSON.parse(existingLicense);
+                const info = `
+                    <h3>📋 Licence actuelle :</h3>
+                    <p><strong>Client :</strong> ${license.clientName}</p>
+                    <p><strong>Type :</strong> ${license.type === 'provisional' ? 'Provisoire' : 'Illimitée'}</p>
+                    <p><strong>Expire le :</strong> ${new Date(license.expiryDate).toLocaleDateString('fr-FR')}</p>
+                `;
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'license-info show';
+                infoDiv.innerHTML = info;
+                document.querySelector('.content').insertBefore(infoDiv, document.querySelector('.tabs'));
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -14,54 +14,8 @@ import {
 
 const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
   const [licenseKey, setLicenseKey] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
   const [message, setMessage] = useState('');
   const [showKeyActivation, setShowKeyActivation] = useState(false);
-
-  const handleProvisionalLicense = () => {
-    if (!clientName || !clientEmail) {
-      setMessage('Veuillez remplir tous les champs');
-      return;
-    }
-
-    // Créer une licence provisoire de 7 jours
-    const license = createLicense(
-      LICENSE_TYPES.PROVISIONAL,
-      7,
-      clientName,
-      clientEmail
-    );
-
-    if (saveLicense(license)) {
-      setMessage('Licence provisoire activée ! (7 jours renouvelable)');
-      setTimeout(() => {
-        onLicenseValid();
-        onClose();
-      }, 2000);
-    } else {
-      setMessage('Erreur lors de l\'activation de la licence');
-    }
-  };
-
-  const handleRenewLicense = () => {
-    const currentLicense = loadLicense();
-    if (!currentLicense) {
-      setMessage('Aucune licence active à renouveler');
-      return;
-    }
-
-    const result = renewProvisionalLicense(currentLicense);
-    if (result.success) {
-      setMessage(`✅ ${result.message} - Expire le ${result.newExpiryDate}`);
-      setTimeout(() => {
-        onLicenseValid();
-        onClose();
-      }, 2000);
-    } else {
-      setMessage(`❌ ${result.message}`);
-    }
-  };
 
   const handleActivateWithKey = () => {
     if (!licenseKey.trim()) {
@@ -69,20 +23,23 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
       return;
     }
 
-    if (!clientName || !clientEmail) {
-      setMessage('Veuillez remplir votre nom et email');
-      return;
-    }
+    console.log('🔍 Validation de la clé:', licenseKey);
 
     // Valider la clé avec message détaillé
     const validation = validateLicenseKeyWithMessage(licenseKey);
+    console.log('🔍 Résultat validation:', validation);
+    
     if (!validation.valid) {
       setMessage(`❌ ${validation.message}`);
       return;
     }
 
-    // Créer la licence à partir de la clé
-    const license = createLicenseFromKey(licenseKey, clientName, clientEmail);
+    console.log('🔍 Création de licence à partir de la clé...');
+
+    // Créer la licence à partir de la clé (sans nom/email)
+    const license = createLicenseFromKey(licenseKey, 'Client', 'client@planning-app.com');
+    console.log('🔍 Licence créée:', license);
+    
     if (!license) {
       setMessage('Erreur lors de la création de la licence');
       return;
@@ -96,6 +53,26 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
       }, 2000);
     } else {
       setMessage('Erreur lors de l\'activation de la licence');
+    }
+  };
+
+  const handleDemoMode = () => {
+    // Créer une licence démo de 30 jours
+    const demoLicense = createLicense(
+      LICENSE_TYPES.PROVISIONAL,
+      30,
+      'Utilisateur Démo',
+      'demo@planning-app.com'
+    );
+
+    if (saveLicense(demoLicense)) {
+      setMessage('✅ Mode démo activé ! (30 jours)');
+      setTimeout(() => {
+        onLicenseValid();
+        onClose();
+      }, 2000);
+    } else {
+      setMessage('❌ Erreur lors de l\'activation du mode démo');
     }
   };
 
@@ -144,201 +121,63 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
           </div>
         )}
 
-                 <div style={{ marginBottom: '20px' }}>
-           <h3>Activer une Licence</h3>
-           <p style={{ color: '#666', marginBottom: '15px' }}>
-             Pour utiliser l'application complète, veuillez saisir vos informations :
-           </p>
+         <div style={{ marginBottom: '20px' }}>
+            <h3>Activer une Licence</h3>
+            <p style={{ color: '#666', marginBottom: '15px' }}>
+              Pour utiliser l'application complète, saisissez votre clé de licence :
+            </p>
 
-           {/* Onglets pour choisir le mode d'activation */}
-           <div style={{ 
-             display: 'flex', 
-             marginBottom: '20px',
-             borderBottom: '1px solid #ddd'
-           }}>
-             <button
-               onClick={() => setShowKeyActivation(false)}
-               style={{
-                 flex: 1,
-                 padding: '10px',
-                 border: 'none',
-                 backgroundColor: !showKeyActivation ? '#f8f9fa' : 'transparent',
-                 borderBottom: !showKeyActivation ? '2px solid #007bff' : 'none',
-                 cursor: 'pointer',
-                 fontWeight: !showKeyActivation ? 'bold' : 'normal'
-               }}
-             >
-                               📝 Licence Provisoire
-             </button>
-             <button
-               onClick={() => setShowKeyActivation(true)}
-               style={{
-                 flex: 1,
-                 padding: '10px',
-                 border: 'none',
-                 backgroundColor: showKeyActivation ? '#f8f9fa' : 'transparent',
-                 borderBottom: showKeyActivation ? '2px solid #007bff' : 'none',
-                 cursor: 'pointer',
-                 fontWeight: showKeyActivation ? 'bold' : 'normal'
-               }}
-             >
-               🔑 Clé de Licence
-             </button>
-           </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Clé de licence :
+              </label>
+              <input
+                type="text"
+                value={licenseKey}
+                onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '5px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  fontFamily: 'monospace',
+                  letterSpacing: '1px'
+                }}
+                placeholder="XXXX-XXX-XXXXXX-XXXX"
+              />
+            </div>
 
-                     {!showKeyActivation ? (
-             // Mode Licence d'Essai
-             <>
-               <div style={{ marginBottom: '15px' }}>
-                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                   Nom complet :
-                 </label>
-                 <input
-                   type="text"
-                   value={clientName}
-                   onChange={(e) => setClientName(e.target.value)}
-                   style={{
-                     width: '100%',
-                     padding: '10px',
-                     borderRadius: '5px',
-                     border: '1px solid #ddd',
-                     fontSize: '14px'
-                   }}
-                   placeholder="Votre nom complet"
-                 />
-               </div>
+            <button
+              onClick={handleActivateWithKey}
+              style={{
+                backgroundColor: '#9b59b6',
+                color: 'white',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                width: '100%',
+                marginBottom: '10px'
+              }}
+            >
+              🔑 Activer avec la Clé
+            </button>
+         </div>
 
-               <div style={{ marginBottom: '20px' }}>
-                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                   Email :
-                 </label>
-                 <input
-                   type="email"
-                   value={clientEmail}
-                   onChange={(e) => setClientEmail(e.target.value)}
-                   style={{
-                     width: '100%',
-                     padding: '10px',
-                     borderRadius: '5px',
-                     border: '1px solid #ddd',
-                     fontSize: '14px'
-                   }}
-                   placeholder="votre@email.com"
-                 />
-               </div>
-
-                               <button
-                  onClick={handleProvisionalLicense}
-                  style={{
-                    backgroundColor: '#27ae60',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    width: '100%',
-                    marginBottom: '10px'
-                  }}
-                >
-                  🚀 Activer Licence Provisoire (7 jours renouvelable)
-                </button>
-             </>
-           ) : (
-             // Mode Clé de Licence
-             <>
-               <div style={{ marginBottom: '15px' }}>
-                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                   Clé de licence :
-                 </label>
-                 <input
-                   type="text"
-                   value={licenseKey}
-                   onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
-                   style={{
-                     width: '100%',
-                     padding: '10px',
-                     borderRadius: '5px',
-                     border: '1px solid #ddd',
-                     fontSize: '14px',
-                     fontFamily: 'monospace',
-                     letterSpacing: '1px'
-                   }}
-                   placeholder="XXXX-XXX-XXXXXX-XXXX"
-                 />
-               </div>
-
-               <div style={{ marginBottom: '15px' }}>
-                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                   Nom complet :
-                 </label>
-                 <input
-                   type="text"
-                   value={clientName}
-                   onChange={(e) => setClientName(e.target.value)}
-                   style={{
-                     width: '100%',
-                     padding: '10px',
-                     borderRadius: '5px',
-                     border: '1px solid #ddd',
-                     fontSize: '14px'
-                   }}
-                   placeholder="Votre nom complet"
-                 />
-               </div>
-
-               <div style={{ marginBottom: '20px' }}>
-                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                   Email :
-                 </label>
-                 <input
-                   type="email"
-                   value={clientEmail}
-                   onChange={(e) => setClientEmail(e.target.value)}
-                   style={{
-                     width: '100%',
-                     padding: '10px',
-                     borderRadius: '5px',
-                     border: '1px solid #ddd',
-                     fontSize: '14px'
-                   }}
-                   placeholder="votre@email.com"
-                 />
-               </div>
-
-               <button
-                 onClick={handleActivateWithKey}
-                 style={{
-                   backgroundColor: '#9b59b6',
-                   color: 'white',
-                   border: 'none',
-                   padding: '12px 24px',
-                   borderRadius: '5px',
-                   cursor: 'pointer',
-                   fontSize: '14px',
-                   fontWeight: 'bold',
-                   width: '100%',
-                   marginBottom: '10px'
-                 }}
-               >
-                 🔑 Activer avec la Clé
-               </button>
-             </>
-           )}
-        </div>
-
-                 <div style={{ 
+         <div style={{ 
            borderTop: '1px solid #ddd', 
            paddingTop: '20px',
            marginBottom: '20px'
          }}>
-           <h3>Renouveler Licence Provisoire</h3>
+           <h3>Mode Démo</h3>
            <p style={{ color: '#666', marginBottom: '15px' }}>
-             Renouvelez votre licence provisoire de 7 jours supplémentaires :
+             Testez l'application gratuitement pendant 30 jours :
            </p>
            <button
-             onClick={handleRenewLicense}
+             onClick={handleDemoMode}
              style={{
                backgroundColor: '#3498db',
                color: 'white',
@@ -351,7 +190,7 @@ const LicenseModal = ({ isOpen, onClose, error, onLicenseValid }) => {
                width: '100%'
              }}
            >
-             🔄 Renouveler Licence (7 jours supplémentaires)
+             🎯 Mode Démo (30 jours)
            </button>
          </div>
 

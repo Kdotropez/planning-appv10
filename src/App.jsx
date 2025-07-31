@@ -110,47 +110,46 @@ const App = () => {
 
   // Vérification de la licence au démarrage
   useEffect(() => {
-    // Vérifier si l'utilisateur veut accéder au gestionnaire de licences
+    // Check for admin mode first
     const urlParams = new URLSearchParams(window.location.search);
     const adminMode = urlParams.get('admin');
     
     if (adminMode === 'licenses') {
       setShowLicenseManager(true);
-      return;
+      return; // Stop further license checks if in admin mode
     }
 
     const checkLicense = () => {
-      const license = loadLicense();
-      
+      const license = loadLicense(); // Charger la licence existante seulement
+
       if (!license) {
-        // Aucune licence trouvée - mode démo
-        setLicenseError('Aucune licence active. Mode démo limité.');
+        setLicenseError('Aucune licence active. Veuillez activer une licence.');
         setShowLicenseModal(true);
+        setMode('startup'); // Forcer le mode startup si pas de licence
         return;
       }
-
+      
       if (!isLicenseValid(license)) {
-        // Licence expirée
         setLicenseError('Licence expirée. Veuillez renouveler votre licence.');
         setShowLicenseModal(true);
+        setMode('startup'); // Forcer le mode startup si licence expirée
         return;
       }
-
-      // Vérifier les limites de la licence
+      
+      // Vérification des limites
       const limits = checkLicenseLimits(license, planningData);
       if (!limits.valid) {
         setLicenseError(`Limite de licence atteinte: ${limits.message}`);
         setShowLicenseModal(true);
+        setMode('startup'); // Forcer le mode startup si limites atteintes
         return;
       }
-
-      // Licence valide
+      
       setShowLicenseModal(false);
       setLicenseError('');
     };
-
     checkLicense();
-  }, [planningData]);
+  }, []); // Supprimé planningData de la dépendance
 
   // Gestion du démarrage
   const handleNewPlanning = () => {

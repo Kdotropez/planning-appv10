@@ -1,13 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Button from './common/Button';
+import LicenseManager from './admin/LicenseManager';
 
 const StartupScreen = ({ onNewPlanning, onImportPlanning, onExit, onClearLocalStorage }) => {
+  const [showLicenseManager, setShowLicenseManager] = useState(false);
+
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       onImportPlanning(file);
     }
   };
+
+  // Si le gestionnaire de licences est affiché
+  if (showLicenseManager) {
+    console.log('Affichage du gestionnaire de licences');
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        zIndex: 10000,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '20px'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '10px',
+          maxWidth: '800px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          position: 'relative'
+        }}>
+          <button
+            onClick={() => setShowLicenseManager(false)}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              background: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '30px',
+              height: '30px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              zIndex: 10001
+            }}
+          >
+            ×
+          </button>
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+              🗝️ Gestionnaire de Licences
+            </h2>
+            <p style={{ textAlign: 'center', marginBottom: '20px' }}>
+              Le gestionnaire se charge...
+            </p>
+            <LicenseManager />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="startup-screen" style={{
@@ -133,7 +195,7 @@ const StartupScreen = ({ onNewPlanning, onImportPlanning, onExit, onClearLocalSt
 
           {/* Bouton secret pour accéder au gestionnaire de licences */}
           <Button
-            onClick={() => window.location.href = window.location.origin + '?admin=licenses'}
+            onClick={() => setShowLicenseManager(true)}
             style={{
               padding: '10px 20px',
               fontSize: '1rem',

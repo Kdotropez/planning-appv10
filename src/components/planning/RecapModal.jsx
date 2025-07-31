@@ -56,45 +56,68 @@ const RecapModal = ({
     console.log(`RecapModal: Formatting time range for ${employee} on ${dayKey} in shop ${shopId}`, { timeSlots });
     const weekPlanning = loadFromLocalStorage(`planning_${shopId}_${selectedWeek}`, {});
     if (!weekPlanning[employee]?.[dayKey] || weekPlanning[employee][dayKey].every(slot => !slot)) {
-      return { start: 'Congé ☀️', pause: '', resume: '', end: '', hours: '0.0 h', shop: shopName || 'Plage' };
+      return { start: 'Congé ☀️', pause: '-', resume: '-', end: '-', hours: '0.0 h', shop: shopName || 'Plage' };
     }
 
-    let start = null, pause = null, resume = null, end = null;
-    let inShift = false;
-
-    for (let index = 0; index < timeSlots.length; index++) {
-      const isChecked = weekPlanning[employee][dayKey][index];
-      const slot = timeSlots[index];
-      console.log(`RecapModal: Processing slot ${slot} at index ${index}, isChecked: ${isChecked}, inShift: ${inShift}, start: ${start}, pause: ${pause}, resume: ${resume}, end: ${end}`);
+    const slots = weekPlanning[employee][dayKey];
+    
+    // Trouver les créneaux sélectionnés
+    const selectedSlots = [];
+    for (let i = 0; i < slots.length; i++) {
+      if (slots[i]) {
+        selectedSlots.push({
+          index: i,
+          time: timeSlots[i]
+        });
+      }
+    }
+    
+    if (selectedSlots.length === 0) {
+      return { start: 'Congé ☀️', pause: '-', resume: '-', end: '-', hours: '0.0 h', shop: shopName || 'Plage' };
+    }
+    
+    // Trier par index pour avoir l'ordre chronologique
+    selectedSlots.sort((a, b) => a.index - b.index);
+    
+    const start = selectedSlots[0].time;
+    
+    // Calculer l'heure de fin (dernier créneau + intervalle)
+    const lastSlotIndex = selectedSlots[selectedSlots.length - 1].index;
+    const lastTime = timeSlots[lastSlotIndex];
+    const interval = config.interval || 30;
+    const lastTimeDate = new Date(`2000-01-01T${lastTime}:00`);
+    const endTimeDate = new Date(lastTimeDate.getTime() + interval * 60 * 1000);
+    const end = format(endTimeDate, 'HH:mm');
+    
+    // Détecter les pauses (gaps dans les créneaux sélectionnés)
+    let pause = null;
+    let resume = null;
+    
+    for (let i = 0; i < selectedSlots.length - 1; i++) {
+      const currentIndex = selectedSlots[i].index;
+      const nextIndex = selectedSlots[i + 1].index;
       
-      if (isChecked && !inShift && !start) {
-        start = slot ? `${slot} H` : '-';
-        inShift = true;
-      } else if (!isChecked && inShift && !pause) {
-        pause = slot ? `${slot} H` : '-';
-        inShift = false;
-      } else if (isChecked && !inShift && pause && !resume) {
-        resume = slot ? `${slot} H` : '-';
-        inShift = true;
-      } else if (!isChecked && inShift && resume) {
-        end = slot ? `${slot} H` : '-';
-        inShift = false;
-      } else if (isChecked && index === timeSlots.length - 1) {
-        end = format(addMinutes(parse(slot, 'HH:mm', new Date()), config.interval), 'HH:mm') + ' H';
+      // Si il y a un gap entre les créneaux sélectionnés
+      if (nextIndex > currentIndex + 1) {
+        // L'heure de pause est l'heure de fin du créneau actuel
+        const currentTime = timeSlots[currentIndex];
+        const currentTimeDate = new Date(`2000-01-01T${currentTime}:00`);
+        const pauseTimeDate = new Date(currentTimeDate.getTime() + interval * 60 * 1000);
+        pause = format(pauseTimeDate, 'HH:mm');
+        
+        // L'heure de retour est l'heure de début du prochain créneau
+        resume = timeSlots[nextIndex];
+        break;
       }
     }
 
-    if (inShift && !end) {
-      end = format(addMinutes(parse(timeSlots[timeSlots.length - 1], 'HH:mm', new Date()), config.interval), 'HH:mm') + ' H';
-    }
-
     const hours = calculateEmployeeDailyHours(employee, dayKey, weekPlanning, config);
-    console.log(`RecapModal: Time range for ${employee} on ${dayKey} in shop ${shopId}:`, { start, pause, resume: resume || '-', end, hours });
+    console.log(`RecapModal: Time range for ${employee} on ${dayKey} in shop ${shopId}:`, { start, pause, resume, end, hours });
     return {
-      start: start || '-',
-      pause: pause || '-',
-      resume: resume || '-',
-      end: end || '-',
+      start: start ? `${start} H` : '-',
+      pause: pause ? `${pause} H` : '-',
+      resume: resume ? `${resume} H` : '-',
+      end: end ? `${end} H` : '-',
       hours: `${hours.toFixed(1)} h`,
       shop: shopName
     };
@@ -139,8 +162,11 @@ const RecapModal = ({
     days.forEach((day, index) => {
       const dayKey = format(addDays(new Date(selectedWeek), index), 'yyyy-MM-dd');
       let added = false;
-      shops.forEach(shop => {
-        const { start, pause, resume, end, hours, shop: shopName } = formatTimeRange(employee, dayKey, config.timeSlots, shop.id, shop.name);
+      
+      // Ne calculer que pour la boutique actuelle
+      const currentShop = shops.find(shop => shop.id === selectedShop);
+      if (currentShop) {
+        const { start, pause, resume, end, hours, shop: shopName } = formatTimeRange(employee, dayKey, config.timeSlots, currentShop.id, currentShop.name);
         if (hours !== '0.0 h') {
           recapData.push({
             day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
@@ -158,7 +184,8 @@ const RecapModal = ({
           totalWeekHours += parseFloat(hours);
           added = true;
         }
-      });
+      }
+      
       if (!added) {
         recapData.push({
           day: `${day.name} ${format(addDays(new Date(selectedWeek), index), 'dd/MM', { locale: fr })}`,
@@ -169,7 +196,7 @@ const RecapModal = ({
             resume: '',
             end: '',
             hours: '0.0 h',
-            shop: 'Plage'
+            shop: currentShop?.name || 'Plage'
           }],
           dayIndex: index
         });

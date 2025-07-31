@@ -25,6 +25,12 @@ export const calculateEmployeeDailyHours = (employee, dayKey, planning, config) 
     console.warn(`calculateEmployeeDailyHours: Invalid slots for ${employee} on ${dayKey}`, { slots });
     return 0;
   }
+  
+  // Vérifier s'il y a au moins un créneau sélectionné
+  if (!slots.some(slot => slot === true)) {
+    console.log(`calculateEmployeeDailyHours: No selected slots for ${employee} on ${dayKey}`, { slots });
+    return 0;
+  }
   const interval = config.interval || 30;
   let totalMinutes = 0;
   let inShift = false;
@@ -129,14 +135,17 @@ export const getTimeSlotsWithBreaks = (employee, dayKey, weekPlanning, config) =
   return { status: null, ranges, breaks, hours, columns, values };
 };
 
-export const getEmployeeMonthlySummaryData = (employee, selectedWeek, shops, config) => {
-  console.log(`getEmployeeMonthlySummaryData for ${employee}`, { selectedWeek, shops });
+export const getEmployeeMonthlySummaryData = (employee, selectedWeek, shops, config, currentShopId = null) => {
+  console.log(`getEmployeeMonthlySummaryData for ${employee}`, { selectedWeek, shops, currentShopId });
   const start = startOfMonth(new Date(selectedWeek));
   const end = endOfMonth(new Date(selectedWeek));
   let monthlyTotal = 0;
   const weeklySummaries = [];
 
-  shops.forEach(shop => {
+  // Si currentShopId est spécifié, ne calculer que pour cette boutique
+  const shopsToProcess = currentShopId ? shops.filter(shop => shop.id === currentShopId) : shops;
+  
+  shopsToProcess.forEach(shop => {
     const storageKeys = Object.keys(localStorage).filter(key => key.startsWith(`planning_${shop.id}_`));
     storageKeys.forEach(key => {
       const weekKey = key.replace(`planning_${shop.id}_`, '');

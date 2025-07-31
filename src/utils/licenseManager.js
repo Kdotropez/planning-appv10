@@ -63,12 +63,11 @@ export const validateLicenseKey = (key) => {
   const duration = parseInt(durationCode);
   if (isNaN(duration) || duration <= 0) return null;
   
-  // Vérifier le timestamp (doit être récent, max 1 an)
-  const keyDate = new Date(parseInt(timestamp + '000'));
-  const now = new Date();
-  const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
-  
-  if (keyDate < oneYearAgo) return null;
+  // Vérifier le timestamp (simplifié - juste vérifier que c'est un nombre)
+  const keyTimestamp = parseInt(timestamp);
+  if (isNaN(keyTimestamp)) {
+    return null; // Timestamp invalide
+  }
   
   // Vérifier si la clé a déjà été utilisée
   if (isKeyUsed(key)) {
@@ -287,13 +286,10 @@ export const validateLicenseKeyWithMessage = (key) => {
     return { valid: false, message: 'Durée de licence invalide' };
   }
   
-  // Vérifier le timestamp (doit être récent, max 1 an)
-  const keyDate = new Date(parseInt(timestamp + '000'));
-  const now = new Date();
-  const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
-  
-  if (keyDate < oneYearAgo) {
-    return { valid: false, message: 'Clé de licence expirée' };
+  // Vérifier le timestamp (doit être un nombre valide)
+  const keyTimestamp = parseInt(timestamp);
+  if (isNaN(keyTimestamp)) {
+    return { valid: false, message: 'Timestamp de clé invalide' };
   }
   
   // Vérifier si la clé a déjà été utilisée
@@ -370,4 +366,34 @@ export const revokeUnlimitedLicense = (license) => {
   } else {
     return { success: false, message: 'Erreur lors de la révocation' };
   }
+}; 
+
+// Créer une licence démo automatique
+export const createDemoLicense = () => {
+  const demoLicense = createLicense(
+    LICENSE_TYPES.PROVISIONAL,
+    30, // 30 jours pour le démo
+    'Utilisateur Démo',
+    'demo@planning-app.com'
+  );
+  
+  if (saveLicense(demoLicense)) {
+    return demoLicense;
+  }
+  return null;
+};
+
+// Créer une licence spéciale pour Nicolas Lefevre (développeur)
+export const createNicolasLicense = () => {
+  const nicolasLicense = createLicense(
+    LICENSE_TYPES.UNLIMITED,
+    36500, // 100 ans
+    'Nicolas Lefevre',
+    'nicolas@planning-app.com'
+  );
+  
+  if (saveLicense(nicolasLicense)) {
+    return nicolasLicense;
+  }
+  return null;
 }; 

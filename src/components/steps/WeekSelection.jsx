@@ -38,20 +38,13 @@ const WeekSelection = ({ onNext, onBack, onReset, selectedWeek, selectedShop, pl
                     
                     // Vérifier si la semaine a des données de planning
                     if (!isNaN(weekDate.getTime()) && isMonday(weekDate) && weekData && weekData.planning && Object.keys(weekData.planning).length > 0) {
-                        // Vérifier si au moins un employé a des créneaux cochés
-                        const hasPlanningData = Object.values(weekData.planning).some(employeeData => {
-                            return Object.values(employeeData).some(daySlots => 
-                                Array.isArray(daySlots) && daySlots.some(slot => slot === true)
-                            );
-                        });
-                        
-                        if (hasPlanningData) {
-                            return {
-                                key: weekKey,
-                                date: weekDate,
-                                display: `Lundi ${format(weekDate, 'd MMMM', { locale: fr })} au Dimanche ${format(addDays(weekDate, 6), 'd MMMM yyyy', { locale: fr })}`
-                            };
-                        }
+                        // Considérer la semaine comme valide si elle a une structure de données, même sans créneaux cochés
+                        // Une semaine peut être valide même si aucun créneau n'est encore coché
+                        return {
+                            key: weekKey,
+                            date: weekDate,
+                            display: `Lundi ${format(weekDate, 'd MMMM', { locale: fr })} au Dimanche ${format(addDays(weekDate, 6), 'd MMMM yyyy', { locale: fr })}`
+                        };
                     }
                     console.log(`Skipping ${weekKey}: Invalid date or no planning data`);
                     return null;

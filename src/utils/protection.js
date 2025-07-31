@@ -23,16 +23,36 @@ export const enableProtection = () => {
     }
   });
 
-  // Protection contre la copie
+  // Protection contre la copie (avec exception pour les éléments du planning)
   document.addEventListener('copy', (e) => {
-    e.preventDefault();
-    return false;
+    // Permettre la copie si l'élément cliqué est dans le planning
+    const target = e.target;
+    const isPlanningElement = target.closest('.planning-table') || 
+                             target.closest('.copy-paste-section') || 
+                             target.closest('.week-copy-section') ||
+                             target.closest('.planning-right') ||
+                             target.closest('.planning-left');
+    
+    if (!isPlanningElement) {
+      e.preventDefault();
+      return false;
+    }
   });
 
-  // Protection contre la sélection
+  // Protection contre la sélection (avec exception pour les éléments du planning)
   document.addEventListener('selectstart', (e) => {
-    e.preventDefault();
-    return false;
+    // Permettre la sélection si l'élément cliqué est dans le planning
+    const target = e.target;
+    const isPlanningElement = target.closest('.planning-table') || 
+                             target.closest('.copy-paste-section') || 
+                             target.closest('.week-copy-section') ||
+                             target.closest('.planning-right') ||
+                             target.closest('.planning-left');
+    
+    if (!isPlanningElement) {
+      e.preventDefault();
+      return false;
+    }
   });
 
   // Afficher un avertissement si la console est ouverte

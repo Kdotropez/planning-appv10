@@ -72,11 +72,14 @@ const EmployeeMonthlyRecapModal = ({
   const calculateTotalHours = () => {
     let totalHours = 0;
     const weeks = getMonthWeeks(selectedWeek);
-    shops.forEach(shop => {
+    
+    // Ne calculer que pour la boutique actuelle
+    const currentShop = shops.find(shop => shop.id === selectedShop);
+    if (currentShop) {
       weeks.forEach(week => {
         const weekKey = format(week, 'yyyy-MM-dd');
         // Utiliser planningData au lieu de localStorage
-        const shopData = planningData?.shops?.find(s => s.id === shop.id);
+        const shopData = planningData?.shops?.find(s => s.id === currentShop.id);
         if (!shopData?.weeks?.[weekKey]) return;
         
         const weekData = shopData.weeks[weekKey];
@@ -89,7 +92,7 @@ const EmployeeMonthlyRecapModal = ({
           totalHours += hours;
         }
       });
-    });
+    }
     return totalHours.toFixed(1);
   };
 

@@ -4,7 +4,19 @@ import { fr } from 'date-fns/locale';
 import { calculateEmployeeDailyHours } from '../../utils/planningUtils';
 import '../../assets/styles.css';
 
-const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, onToggleSlot, currentDay, currentShopEmployees }) => {
+const PlanningTable = ({ 
+  config, 
+  selectedWeek, 
+  planning, 
+  selectedEmployees, 
+  onToggleSlot, 
+  currentDay, 
+  currentShopEmployees,
+  copyMode = false,
+  pasteMode = false,
+  selectedSlots = [],
+  copiedSlots = null
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragValue, setDragValue] = useState(null);
@@ -89,6 +101,42 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, onTo
     return colors[index % colors.length];
   };
 
+  // Fonction pour déterminer le style d'un créneau selon le mode
+  const getSlotStyle = (employeeId, dayIndex, slotIndex) => {
+    const dayKey = format(addDays(new Date(validWeek), dayIndex), 'yyyy-MM-dd');
+    const slotKey = `${employeeId}_${dayKey}_${slotIndex}`;
+    
+    if (copyMode) {
+      // Mode copie : vérifier si le créneau est sélectionné
+      const isSelected = selectedSlots.some(slot => slot.key === slotKey);
+      if (isSelected) {
+        return {
+          backgroundColor: '#007bff',
+          color: 'white',
+          border: '2px solid #0056b3',
+          cursor: 'pointer'
+        };
+      }
+      return {
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        cursor: 'pointer'
+      };
+    }
+    
+    if (pasteMode) {
+      // Mode collage : style spécial pour indiquer qu'on peut coller
+      return {
+        backgroundColor: '#e8f5e8',
+        border: '2px dashed #28a745',
+        cursor: 'pointer'
+      };
+    }
+    
+    // Mode normal
+    return {};
+  };
+
   console.log('PlanningTable props:', { config, selectedWeek, planning, selectedEmployees, currentDay, currentShopEmployees });
   console.log('PlanningTable - selectedEmployees length:', selectedEmployees?.length);
   console.log('PlanningTable - currentShopEmployees length:', currentShopEmployees?.length);
@@ -134,11 +182,13 @@ const PlanningTable = ({ config, selectedWeek, planning, selectedEmployees, onTo
                 </td>
                 {(config?.timeSlots || []).map((_, slotIndex) => {
                   const isChecked = employeeSlots[slotIndex] === true;
+                  const slotStyle = getSlotStyle(employeeId, currentDay, slotIndex);
                   console.log('Slot check:', { employeeId, slotIndex, isChecked, slotValue: employeeSlots[slotIndex] });
                   return (
                     <td
                       key={slotIndex}
                       className={`scrollable-col ${isChecked ? `clicked-${employeeIndex % 7}` : ''}`}
+                      style={slotStyle}
                       onTouchStart={(e) => handleTouchStart(employeeId, slotIndex, currentDay, e)}
                       onMouseDown={(e) => handleMouseDown(employeeId, slotIndex, currentDay, e)}
                       onMouseMove={(e) => handleMouseMove(employeeId, slotIndex, currentDay, e)}

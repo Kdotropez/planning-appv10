@@ -6,9 +6,6 @@ import NavigationButtons from './NavigationButtons';
 import DayButtons from './DayButtons';
 import RecapButtons from './RecapButtons';
 import PlanningTable from './PlanningTable';
-import CopyPasteToggle from './CopyPasteToggle';
-import CopyPasteSection from './CopyPasteSection';
-import WeekCopySection from './WeekCopySection';
 import ResetModal from './ResetModal';
 import RecapModal from './RecapModal';
 import GlobalDayViewModal from './GlobalDayViewModal';
@@ -43,8 +40,6 @@ const PlanningDisplay = ({
   setFeedback 
 }) => {
   const [currentDay, setCurrentDay] = useState(0);
-  const [showCopyPaste, setShowCopyPaste] = useState(false);
-  const [showWeekCopy, setShowWeekCopy] = useState(false);
   const [showGlobalDayViewModal, setShowGlobalDayViewModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [showRecapModal, setShowRecapModal] = useState(null);
@@ -62,11 +57,46 @@ const PlanningDisplay = ({
 
   const [showCalendarTotals, setShowCalendarTotals] = useState(false);
   const [localFeedback, setLocalFeedback] = useState('');
+  
+  // États pour la protection des données validées
+  const [validatedData, setValidatedData] = useState({});
+  const [showValidationWarning, setShowValidationWarning] = useState(false);
+  const [pendingModification, setPendingModification] = useState(null);
+  
+  // État pour forcer le rafraîchissement de la modale mensuelle
+  const [modalForceRefresh, setModalForceRefresh] = useState(0);
+  
+
 
   // Récupérer la boutique actuelle et sa configuration
   const currentShopData = getShopById(planningData, selectedShop);
   const config = currentShopData?.config || { timeSlots: [] };
-  const shops = planningData?.shops || [];
+  
+  // Validation et nettoyage des données shops
+  const shops = React.useMemo(() => {
+    if (!planningData?.shops || !Array.isArray(planningData.shops)) {
+      return [];
+    }
+    
+    return planningData.shops
+      .filter(shop => shop && typeof shop === 'object' && shop.id && shop.name)
+      .map(shop => ({
+        id: String(shop.id),
+        name: String(shop.name),
+        canWorkIn: Array.isArray(shop.canWorkIn) ? shop.canWorkIn.map(String) : [],
+        employees: Array.isArray(shop.employees) ? shop.employees
+          .filter(emp => emp && typeof emp === 'object' && emp.id && emp.name)
+          .map(emp => ({
+            id: String(emp.id),
+            name: String(emp.name),
+            canWorkIn: Array.isArray(emp.canWorkIn) ? emp.canWorkIn.map(String) : [],
+            ...(emp.color && { color: String(emp.color) }),
+            ...(emp.role && { role: String(emp.role) })
+          })) : [],
+        weeks: shop.weeks && typeof shop.weeks === 'object' ? shop.weeks : {},
+        config: shop.config && typeof shop.config === 'object' ? shop.config : {}
+      }));
+  }, [planningData?.shops]);
   
   // État pour les employés de la boutique actuelle
   const [currentShopEmployees, setCurrentShopEmployees] = useState([]);
@@ -95,10 +125,33 @@ const PlanningDisplay = ({
     }
   }, [selectedEmployees]);
 
+  const validWeek = selectedWeek && !isNaN(new Date(selectedWeek).getTime()) ? selectedWeek : format(new Date(), 'yyyy-MM-dd');
+  
   // Mettre à jour le planning global
   useEffect(() => {
     setGlobalPlanning(planning);
   }, [planning, setGlobalPlanning]);
+
+  // Charger les données validées
+  useEffect(() => {
+    const savedValidatedData = localStorage.getItem(`validated_${selectedShop}_${validWeek}`);
+    if (savedValidatedData) {
+      try {
+        setValidatedData(JSON.parse(savedValidatedData));
+      } catch (error) {
+        console.error('Erreur lors du chargement des données validées:', error);
+      }
+    } else {
+      setValidatedData({});
+    }
+  }, [selectedShop, validWeek]);
+
+  // Sauvegarder les données validées
+  useEffect(() => {
+    if (Object.keys(validatedData).length > 0) {
+      localStorage.setItem(`validated_${selectedShop}_${validWeek}`, JSON.stringify(validatedData));
+    }
+  }, [validatedData, selectedShop, validWeek]);
 
   // Sauvegarder les données quand elles changent (désactivé temporairement pour éviter les boucles)
   // useEffect(() => {
@@ -107,8 +160,6 @@ const PlanningDisplay = ({
   //     setPlanningData(updatedPlanningData);
   //   }
   // }, [planning, localSelectedEmployees, selectedShop, selectedWeek]);
-
-  const validWeek = selectedWeek && !isNaN(new Date(selectedWeek).getTime()) ? selectedWeek : format(new Date(), 'yyyy-MM-dd');
   
   // S'assurer que la semaine commence par lundi
   const getMondayOfWeek = (dateString) => {
@@ -142,6 +193,9 @@ const PlanningDisplay = ({
     setShowEmployeeMonthlyWeeklyModal(false);
     setShowMonthlyDetailModal(false);
     setShowEmployeeWeeklyRecap(false);
+    
+
+    
     setShowEmployeeMonthlyDetail(false);
     setShowRecapModal(null);
     setShowGlobalDayViewModal(false);
@@ -158,8 +212,19 @@ const PlanningDisplay = ({
       const currentShopData = getShopById(planningData, selectedShop);
       const allShopEmployees = currentShopData?.employees || [];
       
+      // Valider et nettoyer les employés
+      const validShopEmployees = allShopEmployees
+        .filter(emp => emp && typeof emp === 'object' && emp.id && emp.name)
+        .map(emp => ({
+          id: String(emp.id),
+          name: String(emp.name),
+          canWorkIn: Array.isArray(emp.canWorkIn) ? emp.canWorkIn.map(String) : [],
+          ...(emp.color && { color: String(emp.color) }),
+          ...(emp.role && { role: String(emp.role) })
+        }));
+      
       // Filtrer les employés qui peuvent travailler dans cette boutique
-      const shopEmployees = allShopEmployees.filter(emp => 
+      const shopEmployees = validShopEmployees.filter(emp => 
         emp.canWorkIn && emp.canWorkIn.includes(selectedShop)
       );
       
@@ -196,8 +261,18 @@ const PlanningDisplay = ({
       setLocalFeedback('Erreur: Configuration des tranches horaires non valide.');
       return;
     }
+    
+    const dayKey = format(addDays(mondayOfWeek, dayIndex), 'yyyy-MM-dd');
+    const validationKey = `${employee}_${dayKey}`;
+    const isSlotValidated = validatedData[validationKey]?.[slotIndex];
+    
+    if (isSlotValidated && forceValue === null) {
+      setShowValidationWarning(true);
+      setPendingModification({ employee, slotIndex, dayIndex });
+      return;
+    }
+    
     setPlanning(prev => {
-      const dayKey = format(addDays(mondayOfWeek, dayIndex), 'yyyy-MM-dd');
       const updatedPlanning = { ...prev };
       if (!updatedPlanning[employee]) {
         updatedPlanning[employee] = {};
@@ -210,7 +285,45 @@ const PlanningDisplay = ({
       );
       return updatedPlanning;
     });
-  }, [config, mondayOfWeek]);
+  }, [config, mondayOfWeek, validatedData]);
+
+  // Fonction pour marquer un créneau comme validé
+  const markAsValidated = useCallback((employee, dayKey, slotIndex) => {
+    const validationKey = `${employee}_${dayKey}`;
+    setValidatedData(prev => ({
+      ...prev,
+      [validationKey]: {
+        ...prev[validationKey],
+        [slotIndex]: true
+      }
+    }));
+  }, []);
+
+  // Fonction pour forcer la modification d'un créneau validé
+  const forceModification = useCallback(() => {
+    if (pendingModification) {
+      const { employee, slotIndex, dayIndex } = pendingModification;
+      toggleSlot(employee, slotIndex, dayIndex, null);
+      setPendingModification(null);
+    }
+    setShowValidationWarning(false);
+  }, [pendingModification, toggleSlot]);
+
+  // Fonction pour annuler la modification
+  const cancelModification = useCallback(() => {
+    setPendingModification(null);
+    setShowValidationWarning(false);
+  }, []);
+
+  // Fonction de sauvegarde forcée
+  const handleManualSave = useCallback(() => {
+    if (selectedShop && selectedWeek) {
+      const updatedPlanningData = saveWeekPlanning(planningData, selectedShop, selectedWeek, planning, localSelectedEmployees);
+      setPlanningData(updatedPlanningData);
+      saveToLocalStorage('planningData', updatedPlanningData);
+      setLocalFeedback('💾 Planning sauvegardé manuellement');
+    }
+  }, [planning, localSelectedEmployees, selectedShop, selectedWeek, planningData, setPlanningData]);
 
   const changeWeek = (direction) => {
     const currentDate = new Date(validWeek);
@@ -257,7 +370,7 @@ const PlanningDisplay = ({
       console.error("Erreur lors de la sauvegarde du planning avant changement de boutique :", e);
     }
     setSelectedShop(newShop);
-    // Fermer toutes les modales
+
     setShowMonthlyRecapModal(false);
     setShowEmployeeMonthlyRecap(false);
     setShowEmployeeWeeklyRecap(false);
@@ -311,6 +424,8 @@ const PlanningDisplay = ({
     }
   };
 
+
+
   if (!currentShopData) {
     return (
       <div style={{ 
@@ -356,31 +471,8 @@ const PlanningDisplay = ({
         </p>
       )}
       
-      {/* Bouton d'urgence pour fermer toutes les modales */}
-      <div style={{
-        position: 'fixed',
-        top: '10px',
-        right: '10px',
-        zIndex: 9999,
-        backgroundColor: '#ff4444',
-        color: 'white',
-        padding: '10px',
-        borderRadius: '5px',
-        cursor: 'pointer'
-      }}
-      onClick={() => {
-        setShowMonthlyRecapModal(false);
-        setShowEmployeeMonthlyRecap(false);
+      
 
-        setShowEmployeeMonthlyWeeklyModal(false);
-        setShowMonthlyDetailModal(false);
-        setShowRecapModal(null);
-        setShowGlobalDayViewModal(false);
-        setShowResetModal(false);
-        setSelectedEmployeeForMonthlyRecap('');
-      }}>
-        🚨 FORCER FERMETURE MODALES
-      </div>
       
 
 
@@ -445,6 +537,27 @@ const PlanningDisplay = ({
             selectedShop={selectedShop}
           />
           
+          {/* Bouton de sauvegarde forcée */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <button
+              onClick={handleManualSave}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#1e7e34'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+            >
+              💾 Sauvegarder maintenant
+            </button>
+          </div>
+
           <RecapButtons
             selectedEmployees={localSelectedEmployees}
             currentWeek={selectedWeek}
@@ -468,31 +581,9 @@ const PlanningDisplay = ({
             planningData={planningData}
           />
 
-          <CopyPasteToggle 
-            showCopyPaste={showCopyPaste} 
-            onToggle={setShowCopyPaste} 
-          />
 
-          {showCopyPaste && (
-            <CopyPasteSection
-              planning={planning}
-              config={config}
-              currentWeek={validWeek}
-              currentShop={selectedShop}
-              setPlanning={setPlanning}
-              setFeedback={setLocalFeedback}
-            />
-          )}
+          
 
-          <WeekCopySection
-            showWeekCopy={showWeekCopy}
-            onToggle={setShowWeekCopy}
-            currentWeek={validWeek}
-            currentShop={selectedShop}
-            planning={planning}
-            setPlanning={setPlanning}
-            setFeedback={setLocalFeedback}
-          />
         </div>
 
         <div className="planning-right">
@@ -508,7 +599,10 @@ const PlanningDisplay = ({
             showCalendarTotals={showCalendarTotals}
             setShowCalendarTotals={setShowCalendarTotals}
             currentShopEmployees={currentShopEmployees}
+            validatedData={validatedData}
+            onMarkAsValidated={markAsValidated}
           />
+          
         </div>
       </div>
 
@@ -544,28 +638,28 @@ const PlanningDisplay = ({
       />
 
       {showMonthlyRecapModal && (
-        <MonthlyRecapModals
-          showMonthlyRecapModal={showMonthlyRecapModal}
-          setShowMonthlyRecapModal={setShowMonthlyRecapModal}
-          config={config}
-          selectedShop={selectedShop}
-          selectedWeek={validWeek}
-          selectedEmployees={localSelectedEmployees}
-          shops={shops}
-        />
+      <MonthlyRecapModals
+        showMonthlyRecapModal={showMonthlyRecapModal}
+        setShowMonthlyRecapModal={setShowMonthlyRecapModal}
+        config={config}
+        selectedShop={selectedShop}
+        selectedWeek={validWeek}
+        selectedEmployees={localSelectedEmployees}
+        shops={shops}
+      />
       )}
 
       {/* Temporairement désactivé pour éviter les problèmes d'affichage */}
       {false && (
-        <MonthlyDetailModal
-          show={showMonthlyDetailModal}
-          onClose={() => setShowMonthlyDetailModal(false)}
-          planning={planning}
-          config={config}
-          currentWeek={validWeek}
-          currentShop={selectedShop}
-          employees={currentShopEmployees}
-        />
+      <MonthlyDetailModal
+        show={showMonthlyDetailModal}
+        onClose={() => setShowMonthlyDetailModal(false)}
+        planning={planning}
+        config={config}
+        currentWeek={validWeek}
+        currentShop={selectedShop}
+        employees={currentShopEmployees}
+      />
       )}
 
 
@@ -623,7 +717,74 @@ const PlanningDisplay = ({
           shops={shops}
           employees={currentShopEmployees}
           planningData={planningData}
+          forceRefresh={modalForceRefresh}
+          onForceRefresh={() => setModalForceRefresh(prev => prev + 1)}
         />
+      )}
+
+      {/* Modale d'avertissement pour les données validées */}
+      {showValidationWarning && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            maxWidth: '500px',
+            textAlign: 'center',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h3 style={{ color: '#dc3545', marginBottom: '20px' }}>
+              ⚠️ ATTENTION - Données Validées
+            </h3>
+            <p style={{ marginBottom: '20px', fontSize: '16px' }}>
+              Vous tentez de modifier des données qui ont été marquées comme validées.
+            </p>
+            <p style={{ marginBottom: '25px', fontSize: '14px', color: '#666' }}>
+              Cette action pourrait compromettre l'intégrité des données sauvegardées.
+            </p>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button
+                onClick={cancelModification}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ❌ Annuler
+              </button>
+              <button
+                onClick={forceModification}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ⚠️ Forcer la modification
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

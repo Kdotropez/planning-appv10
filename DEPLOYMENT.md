@@ -4,13 +4,13 @@
 
 ### URL Principale (Stable)
 - **URL** : https://planning-appv9-stable.vercel.app
-- **Déploiement** : planning-appv9-6rb152yh3-nicolas-projects-0446a58d.vercel.app
-- **Date** : 31 juillet 2025 (déploiement stable d'hier)
-- **Statut** : ✅ Fonctionnel avec licence
+- **Déploiement** : planning-appv9-aytb1d1zd-nicolas-projects-0446a58d.vercel.app
+- **Date** : 31 juillet 2025 (déploiement le plus récent avec toutes les améliorations)
+- **Statut** : ✅ Fonctionnel avec licence, nouvelle interface, bug 20/07 corrigé
 
 ### URL Alternative
 - **URL** : https://planning-appv9.vercel.app
-- **Redirige vers** : planning-appv9-6rb152yh3-nicolas-projects-0446a58d.vercel.app
+- **Redirige vers** : planning-appv9-aytb1d1zd-nicolas-projects-0446a58d.vercel.app
 - **Statut** : ✅ Alias configuré
 
 ## 🔧 Configuration Vercel
@@ -21,16 +21,16 @@
 - **Repository** : https://github.com/Kdotropez/planning-appv9.git
 
 ### Déploiements Disponibles
-- **Plus récent** : planning-appv9-aytb1d1zd-nicolas-projects-0446a58d.vercel.app (19h)
-- **Stable** : planning-appv9-6rb152yh3-nicolas-projects-0446a58d.vercel.app (1j)
+- **Plus récent (Stable)** : planning-appv9-aytb1d1zd-nicolas-projects-0446a58d.vercel.app (20h)
+- **Ancien stable** : planning-appv9-6rb152yh3-nicolas-projects-0446a58d.vercel.app (1j)
 - **Historique** : Plusieurs déploiements disponibles
 
 ## 📝 Notes Importantes
 
 ### Problème Résolu (31 juillet 2025)
-- **Problème** : Confusion entre v8 et v9, déploiement instable
-- **Solution** : Alias stable configuré vers le déploiement fonctionnel d'hier
-- **Résultat** : Application accessible et stable
+- **Problème** : Confusion entre v8 et v9, déploiement instable, version obsolète
+- **Solution** : Alias stable configuré vers le déploiement le plus récent avec toutes les améliorations
+- **Résultat** : Application accessible et stable avec nouvelle interface et bug 20/07 corrigé
 
 ### Commandes Utiles
 ```bash

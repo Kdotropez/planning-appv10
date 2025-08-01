@@ -1,0 +1,52 @@
+# Dossiers de sauvegarde
+backup_*/
+backup_2025*/
+
+# Fichiers de développement
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dossiers de dépendances (seront installés sur Vercel)
+node_modules/
+
+# Fichiers de configuration de développement
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Fichiers de cache
+.cache/
+.parcel-cache/
+
+# Fichiers de test
+coverage/
+*.test.js
+*.spec.js
+
+# Fichiers de documentation
+README.md
+MANUEL_UTILISATION.md
+GUIDE_INSTALLATION.md
+LICENSE*
+
+# Fichiers de capture d'écran
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Fichiers temporaires
+*.tmp
+*.temp
+
+# Fichiers de données de test
+planning_*.json
+
+# Fichiers de licence générateur
+license-generator*.html
+
+# Fichiers de statut
+tatus 

@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vercel --prod",
+    "deploy:staging": "vercel"
   },
   "dependencies": {
     "date-fns": "^3.6.0",

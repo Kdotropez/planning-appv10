@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { loadFromLocalStorage, saveToLocalStorage } from '../../utils/localStorage';
-import NavigationButtons from './NavigationButtons';
+import PlanningMenuBar from './PlanningMenuBar';
 import DayButtons from './DayButtons';
-import RecapButtons from './RecapButtons';
 import PlanningTable from './PlanningTable';
 import ResetModal from './ResetModal';
 import RecapModal from './RecapModal';
@@ -17,6 +16,7 @@ import EmployeeMonthlyRecapModal from './EmployeeMonthlyRecapModal';
 import EmployeeWeeklyRecapModal from './EmployeeWeeklyRecapModal';
 import EmployeeMonthlyDetailModal from './EmployeeMonthlyDetailModal';
 import { getShopById, getWeekPlanning, saveWeekPlanning, saveWeekPlanningForEmployee } from '../../utils/planningDataManager';
+import { calculateEmployeeDailyHours } from '../../utils/planningUtils';
 import '@/assets/styles.css';
 
 const PlanningDisplay = ({ 
@@ -476,21 +476,120 @@ const PlanningDisplay = ({
       
 
 
-      <NavigationButtons
-        shops={shops}
+      <PlanningMenuBar
         currentShop={selectedShop}
+        shops={shops}
         currentWeek={selectedWeek}
-        changeShop={changeShop}
         changeWeek={changeWeek}
+        changeShop={changeShop}
         changeMonth={changeMonth}
         onBack={onBackToEmployees}
         onBackToShop={onBackToShopSelection}
         onBackToWeek={onBackToWeekSelection}
         onBackToConfig={onBackToConfig}
+        onBackToStartup={onBackToStartup}
         onExport={onExport}
         onReset={() => setShowResetModal(true)}
-        onBackToStartup={onBackToStartup}
         setShowGlobalDayViewModal={setShowGlobalDayViewModal}
+        handleManualSave={handleManualSave}
+        selectedEmployees={localSelectedEmployees}
+        currentShopEmployees={currentShopEmployees}
+        setShowRecapModal={setShowRecapModal}
+        setShowMonthlyRecapModal={setShowMonthlyRecapModal}
+        setShowEmployeeMonthlyRecap={setShowEmployeeMonthlyRecap}
+        setShowEmployeeWeeklyRecap={setShowEmployeeWeeklyRecap}
+        setShowMonthlyDetailModal={setShowMonthlyDetailModal}
+        setShowEmployeeMonthlyDetail={setShowEmployeeMonthlyDetail}
+        setSelectedEmployeeForMonthlyRecap={setSelectedEmployeeForMonthlyRecap}
+        setSelectedEmployeeForWeeklyRecap={setSelectedEmployeeForWeeklyRecap}
+        setSelectedEmployeeForMonthlyDetail={setSelectedEmployeeForMonthlyDetail}
+        calculateEmployeeDayHours={(employeeId) => {
+          if (!selectedWeek || !selectedShop || !planning) return '0.0';
+          const dayKey = format(addDays(new Date(selectedWeek), currentDay || 0), 'yyyy-MM-dd');
+          const hours = calculateEmployeeDailyHours(employeeId, dayKey, planning, config);
+          return hours.toFixed(1);
+        }}
+        calculateEmployeeWeekHours={(employeeId) => {
+          if (!selectedWeek || !selectedShop || !planning) return '0.0';
+          let totalHours = 0;
+          for (let i = 0; i < 7; i++) {
+            const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+            const hours = calculateEmployeeDailyHours(employeeId, dayKey, planning, config);
+            totalHours += hours;
+          }
+          return totalHours.toFixed(1);
+        }}
+        calculateEmployeeMonthHours={(employeeId) => {
+          if (!selectedWeek || !planningData) return '0.0';
+          // Pour l'instant, on utilise seulement la semaine actuelle
+          if (!selectedWeek || !selectedShop || !planning) return '0.0';
+          let totalHours = 0;
+          for (let i = 0; i < 7; i++) {
+            const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+            const hours = calculateEmployeeDailyHours(employeeId, dayKey, planning, config);
+            totalHours += hours;
+          }
+          return totalHours.toFixed(1);
+        }}
+        calculateShopWeekHours={() => {
+          if (!selectedWeek || !selectedShop || !planning || !localSelectedEmployees) return '0.0';
+          let totalHours = 0;
+          localSelectedEmployees.forEach(employee => {
+            for (let i = 0; i < 7; i++) {
+              const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+              const hours = calculateEmployeeDailyHours(employee, dayKey, planning, config);
+              totalHours += hours;
+            }
+          });
+          return totalHours.toFixed(1);
+        }}
+        calculateGlobalMonthHours={() => {
+          if (!selectedWeek || !planningData || !selectedShop) return '0.0';
+          // Pour l'instant, on utilise seulement la semaine actuelle
+          if (!selectedWeek || !selectedShop || !planning || !localSelectedEmployees) return '0.0';
+          let totalHours = 0;
+          localSelectedEmployees.forEach(employee => {
+            for (let i = 0; i < 7; i++) {
+              const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+              const hours = calculateEmployeeDailyHours(employee, dayKey, planning, config);
+              totalHours += hours;
+            }
+          });
+          return totalHours.toFixed(1);
+        }}
+        calculateTotalSelectedEmployeesHours={() => {
+          if (!localSelectedEmployees || localSelectedEmployees.length === 0) return '0.0';
+          let totalHours = 0;
+          localSelectedEmployees.forEach(employeeId => {
+            if (!selectedWeek || !selectedShop || !planning) return;
+            let weekHours = 0;
+            for (let i = 0; i < 7; i++) {
+              const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+              const hours = calculateEmployeeDailyHours(employeeId, dayKey, planning, config);
+              weekHours += hours;
+            }
+            totalHours += weekHours;
+          });
+          return totalHours.toFixed(1);
+        }}
+        calculateTotalShopEmployeesHours={() => {
+          if (!currentShopEmployees || currentShopEmployees.length === 0 || !planning) return '0.0';
+          let totalHours = 0;
+          currentShopEmployees.forEach(employee => {
+            if (!selectedWeek || !selectedShop || !planning) return;
+            let weekHours = 0;
+            for (let i = 0; i < 7; i++) {
+              const dayKey = format(addDays(new Date(selectedWeek), i), 'yyyy-MM-dd');
+              const hours = calculateEmployeeDailyHours(employee.id, dayKey, planning, config);
+              weekHours += hours;
+            }
+            totalHours += weekHours;
+          });
+          return totalHours.toFixed(1);
+        }}
+        getSelectedEmployeesCount={() => localSelectedEmployees?.length || 0}
+        getTotalShopEmployeesCount={() => currentShopEmployees?.length || 0}
+        showCalendarTotals={showCalendarTotals}
       />
 
       <div className="planning-content">
@@ -537,49 +636,7 @@ const PlanningDisplay = ({
             selectedShop={selectedShop}
           />
           
-          {/* Bouton de sauvegarde forcée */}
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <button
-              onClick={handleManualSave}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#1e7e34'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
-            >
-              💾 Sauvegarder maintenant
-            </button>
-          </div>
 
-          <RecapButtons
-            selectedEmployees={localSelectedEmployees}
-            currentWeek={selectedWeek}
-            currentShop={selectedShop}
-            config={config}
-            shops={shops}
-            currentDay={currentDay}
-            showCalendarTotals={showCalendarTotals}
-            setShowRecapModal={setShowRecapModal}
-            setShowMonthlyRecapModal={setShowMonthlyRecapModal}
-            setShowEmployeeMonthlyRecap={setShowEmployeeMonthlyRecap}
-            setShowEmployeeWeeklyRecap={setShowEmployeeWeeklyRecap}
-            setShowMonthlyDetailModal={setShowMonthlyDetailModal}
-            setShowEmployeeMonthlyDetail={setShowEmployeeMonthlyDetail}
-    
-            setSelectedEmployeeForMonthlyRecap={setSelectedEmployeeForMonthlyRecap}
-            setSelectedEmployeeForWeeklyRecap={setSelectedEmployeeForWeeklyRecap}
-            setSelectedEmployeeForMonthlyDetail={setSelectedEmployeeForMonthlyDetail}
-            currentShopEmployees={currentShopEmployees}
-            planning={planning}
-            planningData={planningData}
-          />
 
 
           

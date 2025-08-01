@@ -137,9 +137,7 @@ const PlanningTable = ({
     return {};
   };
 
-  console.log('PlanningTable props:', { config, selectedWeek, planning, selectedEmployees, currentDay, currentShopEmployees });
-  console.log('PlanningTable - selectedEmployees length:', selectedEmployees?.length);
-  console.log('PlanningTable - currentShopEmployees length:', currentShopEmployees?.length);
+
 
   return (
     <div className="table-container" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
@@ -174,7 +172,7 @@ const PlanningTable = ({
             const employee = currentShopEmployees?.find(emp => emp.id === employeeId);
             const employeeName = employee?.name || employeeId;
             
-            console.log('Rendering employee:', { employeeId, employeeName, dayKey, employeeSlots, hours, configInterval: config?.interval });
+
             return (
               <tr key={employeeId}>
                 <td className={`fixed-col employee ${getEmployeeColorClass(employeeIndex)}`}>
@@ -183,7 +181,7 @@ const PlanningTable = ({
                 {(config?.timeSlots || []).map((_, slotIndex) => {
                   const isChecked = employeeSlots[slotIndex] === true;
                   const slotStyle = getSlotStyle(employeeId, currentDay, slotIndex);
-                  console.log('Slot check:', { employeeId, slotIndex, isChecked, slotValue: employeeSlots[slotIndex] });
+
                   return (
                     <td
                       key={slotIndex}

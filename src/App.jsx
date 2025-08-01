@@ -597,6 +597,7 @@ const App = () => {
              planning={planning}
              setPlanning={setPlanning}
              onExport={handleExport}
+             onImport={handleImportPlanning}
              onReset={handleReset}
              onBackToStartup={handleBackToStartup}
              onBackToEmployees={handleBackToEmployees}

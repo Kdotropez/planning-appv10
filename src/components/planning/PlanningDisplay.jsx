@@ -31,6 +31,7 @@ const PlanningDisplay = ({
   planning: initialPlanning, 
   setPlanning: setGlobalPlanning,
   onExport,
+  onImport,
   onReset,
   onBackToStartup,
   onBackToEmployees,
@@ -489,6 +490,7 @@ const PlanningDisplay = ({
         onBackToConfig={onBackToConfig}
         onBackToStartup={onBackToStartup}
         onExport={onExport}
+        onImport={onImport}
         onReset={() => setShowResetModal(true)}
         setShowGlobalDayViewModal={setShowGlobalDayViewModal}
         handleManualSave={handleManualSave}

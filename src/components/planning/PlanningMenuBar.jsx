@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FaDownload, FaChevronDown, FaChevronUp, FaCog, FaChartBar, FaArrowLeft, FaTools } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -21,6 +21,7 @@ const PlanningMenuBar = ({
   
   // Actions
   onExport,
+  onImport,
   onReset,
   setShowGlobalDayViewModal,
   handleManualSave,
@@ -51,11 +52,11 @@ const PlanningMenuBar = ({
   showCalendarTotals
 }) => {
   const [openMenus, setOpenMenus] = useState({
-    navigation: false,
     actions: false,
-    recaps: false,
     tools: false
   });
+  
+  const fileInputRef = useRef(null);
 
   const toggleMenu = (menuName) => {
     setOpenMenus(prev => ({
@@ -66,11 +67,22 @@ const PlanningMenuBar = ({
 
   const closeAllMenus = () => {
     setOpenMenus({
-      navigation: false,
       actions: false,
-      recaps: false,
       tools: false
     });
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file && onImport) {
+      onImport(file);
+    }
+    // Reset the input
+    event.target.value = '';
   };
 
   const MenuButton = ({ icon, label, isOpen, onClick, children }) => (
@@ -148,10 +160,9 @@ const PlanningMenuBar = ({
     <div 
       style={{ 
         display: 'flex', 
-        justifyContent: 'center', 
+        flexDirection: 'column',
         gap: '10px', 
-        marginBottom: '15px',
-        flexWrap: 'wrap'
+        marginBottom: '15px'
       }}
       onClick={(e) => {
         // Fermer les menus si on clique en dehors
@@ -161,29 +172,85 @@ const PlanningMenuBar = ({
         }
       }}
     >
-      {/* Menu Navigation */}
-      <MenuButton
-        icon={<FaArrowLeft />}
-        label="Navigation"
-        isOpen={openMenus.navigation}
-        onClick={() => toggleMenu('navigation')}
-      >
-        <MenuItem onClick={() => changeWeek('prev')}>
+      {/* Navigation Principale - Directement Visible */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '10px', 
+        flexWrap: 'wrap',
+        alignItems: 'center'
+      }}>
+        {/* Boutons de navigation semaine */}
+        <Button
+          className="button-primary"
+          onClick={() => changeWeek('prev')}
+          style={{
+            backgroundColor: '#2196f3',
+            color: 'white',
+            padding: '8px 16px',
+            fontSize: '14px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
           ← Semaine précédente
-        </MenuItem>
-        <MenuItem onClick={() => changeWeek('next')}>
+        </Button>
+
+        <Button
+          className="button-primary"
+          onClick={() => changeWeek('next')}
+          style={{
+            backgroundColor: '#2196f3',
+            color: 'white',
+            padding: '8px 16px',
+            fontSize: '14px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
           Semaine suivante →
-        </MenuItem>
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid #f0f0f0' }}>
+        </Button>
+
+        {/* Sélecteur de boutique */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Boutique:</label>
+          <select
+            value={currentShop}
+            onChange={(e) => changeShop(e.target.value)}
+            style={{ 
+              padding: '8px 12px',
+              fontSize: '14px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              minWidth: '150px'
+            }}
+          >
+            {shops.map(shop => (
+              <option key={shop.id} value={shop.id}>{shop.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sélecteur de mois */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Mois:</label>
           <select
             value={currentWeek ? format(new Date(currentWeek), 'yyyy-MM') : ''}
             onChange={(e) => changeMonth(e.target.value)}
             style={{ 
-              width: '100%',
-              padding: '6px',
+              padding: '8px 12px',
               fontSize: '14px',
               border: '1px solid #ccc',
-              borderRadius: '4px'
+              borderRadius: '4px',
+              minWidth: '150px'
             }}
           >
             {(() => {
@@ -205,149 +272,267 @@ const PlanningMenuBar = ({
             })()}
           </select>
         </div>
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid #f0f0f0' }}>
-          <select
-            value={currentShop}
-            onChange={(e) => changeShop(e.target.value)}
-            style={{ 
-              width: '100%',
-              padding: '6px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px'
-            }}
-          >
-            {shops.map(shop => (
-              <option key={shop.id} value={shop.id}>{shop.name}</option>
-            ))}
-          </select>
+
+        {/* Bouton sauvegarde */}
+        <Button
+          className="button-validate"
+          onClick={handleManualSave}
+          style={{
+            backgroundColor: '#4caf50',
+            color: 'white',
+            padding: '8px 16px',
+            fontSize: '14px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          💾 Sauvegarder
+        </Button>
+      </div>
+
+      {/* Récapitulatifs des Employés - Directement Visibles */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '8px', 
+        flexWrap: 'wrap',
+        padding: '10px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+        border: '1px solid #e9ecef'
+      }}>
+        <div style={{ 
+          fontSize: '14px', 
+          fontWeight: 'bold', 
+          color: '#495057',
+          marginBottom: '8px',
+          width: '100%',
+          textAlign: 'center'
+        }}>
+          Récapitulatifs Employés
         </div>
-        <MenuItem onClick={onBack}>
-          ← Retour Employés
-        </MenuItem>
-        <MenuItem onClick={onBackToShop}>
-          ← Retour Boutique
-        </MenuItem>
-        <MenuItem onClick={onBackToWeek}>
-          ← Retour Semaine
-        </MenuItem>
-        <MenuItem onClick={onBackToConfig}>
-          ← Retour Configuration
-        </MenuItem>
-        <MenuItem onClick={onBackToStartup}>
-          ← Retour au démarrage
-        </MenuItem>
-      </MenuButton>
-
-      {/* Menu Actions */}
-      <MenuButton
-        icon={<FaCog />}
-        label="Actions"
-        isOpen={openMenus.actions}
-        onClick={() => toggleMenu('actions')}
-      >
-        <MenuItem onClick={handleManualSave}>
-          💾 Sauvegarder maintenant
-        </MenuItem>
-        <MenuItem onClick={onExport}>
-          <FaDownload /> Exporter les données
-        </MenuItem>
-        <MenuItem onClick={onReset}>
-          🔄 Réinitialiser
-        </MenuItem>
-        <MenuItem onClick={() => setShowGlobalDayViewModal(true)}>
-          📊 Vue globale par jour
-        </MenuItem>
-      </MenuButton>
-
-      {/* Menu Récapitulatifs */}
-      <MenuButton
-        icon={<FaChartBar />}
-        label="Récapitulatifs"
-        isOpen={openMenus.recaps}
-        onClick={() => toggleMenu('recaps')}
-      >
-        {/* Récaps par employé */}
+        
         {selectedEmployees?.map((employeeId) => {
           const employee = currentShopEmployees?.find(emp => emp.id === employeeId);
           const employeeName = employee?.name || employeeId;
           
           return (
-            <div key={employeeId} style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <div key={employeeId} style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              padding: '8px 12px',
+              backgroundColor: 'white',
+              borderRadius: '6px',
+              border: '1px solid #dee2e6',
+              minWidth: '120px',
+              textAlign: 'center'
+            }}>
               <div style={{ 
-                padding: '8px 16px', 
-                backgroundColor: '#f8f9fa', 
+                fontSize: '12px', 
                 fontWeight: 'bold',
-                fontSize: '13px'
+                color: '#495057',
+                marginBottom: '4px'
               }}>
                 {employeeName}
               </div>
-              <MenuItem onClick={() => setShowRecapModal(employeeId)}>
+              
+              <Button
+                onClick={() => setShowRecapModal(employeeId)}
+                style={{
+                  backgroundColor: '#17a2b8',
+                  color: 'white',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  marginBottom: '2px'
+                }}
+                title="Récapitulatif journalier"
+              >
                 📅 Jour: {calculateEmployeeDayHours(employeeId)}h
-              </MenuItem>
-              <MenuItem onClick={() => {
-                setSelectedEmployeeForWeeklyRecap(employeeId);
-                setShowEmployeeWeeklyRecap(true);
-              }}>
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  setSelectedEmployeeForWeeklyRecap(employeeId);
+                  setShowEmployeeWeeklyRecap(true);
+                }}
+                style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  marginBottom: '2px'
+                }}
+                title="Récapitulatif hebdomadaire"
+              >
                 📊 Semaine: {calculateEmployeeWeekHours(employeeId)}h
-              </MenuItem>
-              <MenuItem onClick={() => {
-                setSelectedEmployeeForMonthlyRecap(employeeId);
-                setShowEmployeeMonthlyRecap(true);
-              }}>
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  setSelectedEmployeeForMonthlyRecap(employeeId);
+                  setShowEmployeeMonthlyRecap(true);
+                }}
+                style={{
+                  backgroundColor: '#ffc107',
+                  color: '#212529',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  marginBottom: '2px'
+                }}
+                title="Récapitulatif mensuel"
+              >
                 📈 Mois: {calculateEmployeeMonthHours(employeeId)}h
-              </MenuItem>
-              <MenuItem onClick={() => {
-                setSelectedEmployeeForMonthlyDetail(employeeId);
-                setShowEmployeeMonthlyDetail(true);
-              }}>
-                📋 Mois détail
-              </MenuItem>
+              </Button>
+              
+              <Button
+                onClick={() => {
+                  setSelectedEmployeeForMonthlyDetail(employeeId);
+                  setShowEmployeeMonthlyDetail(true);
+                }}
+                style={{
+                  backgroundColor: '#6f42c1',
+                  color: 'white',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer'
+                }}
+                title="Détail mensuel complet"
+              >
+                📋 Détail mensuel
+              </Button>
             </div>
           );
         })}
-        
-        {/* Récaps globaux */}
-        <div style={{ 
-          padding: '8px 16px', 
-          backgroundColor: '#e3f2fd', 
-          fontWeight: 'bold',
-          fontSize: '13px',
-          borderTop: '2px solid #1e88e5'
-        }}>
-          {currentShop} ({getSelectedEmployeesCount()}/{getTotalShopEmployeesCount()} emp)
-        </div>
-        <MenuItem onClick={() => setShowRecapModal('week')}>
-          📊 Semaine: {calculateShopWeekHours()}h
-        </MenuItem>
-        <MenuItem onClick={() => setShowMonthlyRecapModal(true)}>
-          📈 Mois global: {calculateGlobalMonthHours()}h
-        </MenuItem>
-        <MenuItem onClick={() => {}}>
-          📋 Total sélectionnés: {calculateTotalSelectedEmployeesHours()}h
-        </MenuItem>
-        <MenuItem onClick={() => {}}>
-          📊 Total boutique: {calculateTotalShopEmployeesHours()}h
-        </MenuItem>
-      </MenuButton>
+      </div>
 
-      {/* Menu Outils */}
-      <MenuButton
-        icon={<FaTools />}
-        label="Outils"
-        isOpen={openMenus.tools}
-        onClick={() => toggleMenu('tools')}
-      >
-        <MenuItem onClick={() => {}}>
-          🔧 Diagnostic données
-        </MenuItem>
-        <MenuItem onClick={() => {}}>
-          🧹 Nettoyer cache
-        </MenuItem>
-        <MenuItem onClick={() => {}}>
-          📋 Logs système
-        </MenuItem>
-      </MenuButton>
+             {/* Récapitulatifs Globaux - Dans Menu */}
+       <div style={{ 
+         display: 'flex', 
+         justifyContent: 'center', 
+         gap: '8px', 
+         flexWrap: 'wrap',
+         padding: '8px',
+         backgroundColor: '#e3f2fd',
+         borderRadius: '8px',
+         border: '1px solid #bbdefb'
+       }}>
+         <div style={{ 
+           fontSize: '13px', 
+           fontWeight: 'bold', 
+           color: '#1565c0',
+           marginBottom: '4px',
+           width: '100%',
+           textAlign: 'center'
+         }}>
+           {currentShop} - {getSelectedEmployeesCount()}/{getTotalShopEmployeesCount()} employés
+         </div>
+         
+         <div style={{
+           padding: '6px 12px',
+           backgroundColor: 'white',
+           borderRadius: '4px',
+           border: '1px solid #dee2e6',
+           fontSize: '12px',
+           color: '#495057',
+           fontWeight: 'bold'
+         }}
+         title="Total des heures des employés sélectionnés"
+         >
+           📋 Sélectionnés: {calculateTotalSelectedEmployeesHours()}h
+         </div>
+         
+         <div style={{
+           padding: '6px 12px',
+           backgroundColor: 'white',
+           borderRadius: '4px',
+           border: '1px solid #dee2e6',
+           fontSize: '12px',
+           color: '#495057',
+           fontWeight: 'bold'
+         }}
+         title="Total des heures de tous les employés de la boutique"
+         >
+           📊 Total boutique: {calculateTotalShopEmployeesHours()}h
+         </div>
+       </div>
+
+      {/* Menus Secondaires */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: '10px', 
+        flexWrap: 'wrap'
+      }}>
+                 {/* Menu Actions */}
+         <MenuButton
+           icon={<FaCog />}
+           label="Actions"
+           isOpen={openMenus.actions}
+           onClick={() => toggleMenu('actions')}
+         >
+           <MenuItem onClick={onExport}>
+             <FaDownload /> Exporter les données
+           </MenuItem>
+           <MenuItem onClick={handleImportClick}>
+             📥 Importer les données
+           </MenuItem>
+           <MenuItem onClick={onReset}>
+             🔄 Réinitialiser
+           </MenuItem>
+           <MenuItem onClick={() => setShowGlobalDayViewModal(true)}>
+             📊 Vue globale par jour
+           </MenuItem>
+           <MenuItem onClick={() => setShowRecapModal('week')}>
+             📊 Récap hebdomadaire boutique ({calculateShopWeekHours()}h)
+           </MenuItem>
+           <MenuItem onClick={() => setShowMonthlyRecapModal(true)}>
+             📈 Récap mensuel boutique ({calculateGlobalMonthHours()}h)
+           </MenuItem>
+         </MenuButton>
+
+        {/* Menu Outils */}
+        <MenuButton
+          icon={<FaTools />}
+          label="Outils"
+          isOpen={openMenus.tools}
+          onClick={() => toggleMenu('tools')}
+        >
+          <MenuItem onClick={() => {}}>
+            🔧 Diagnostic données
+          </MenuItem>
+          <MenuItem onClick={() => {}}>
+            🧹 Nettoyer cache
+          </MenuItem>
+          <MenuItem onClick={() => {}}>
+            📋 Logs système
+          </MenuItem>
+        </MenuButton>
+      </div>
+      
+      {/* Input file caché pour l'import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 };

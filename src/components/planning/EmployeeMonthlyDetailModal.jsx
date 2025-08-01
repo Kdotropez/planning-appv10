@@ -956,6 +956,204 @@ const EmployeeMonthlyDetailModal = ({
              <Button className="button-pdf" onClick={() => exportAsImagePdf()}>
                Exporter en PDF (image fidèle)
              </Button>
+             
+             {/* Boutons de debug pour Benedicte Saint-Tropez 20/07 */}
+             {console.log('EmployeeMonthlyDetailModal: employeeName =', employeeName, 'selectedEmployeeForMonthlyDetail =', selectedEmployeeForMonthlyDetail)}
+             {/* Boutons de debug pour TOUS les employés temporairement */}
+             {true && (
+               <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
+                 <div style={{ 
+                   backgroundColor: '#17a2b8', 
+                   color: 'white', 
+                   padding: '5px 10px', 
+                   fontSize: '10px', 
+                   borderRadius: '3px',
+                   marginBottom: '5px'
+                 }}>
+                   DEBUG: {employeeName} ({selectedEmployeeForMonthlyDetail})
+                 </div>
+                 <Button
+                   style={{
+                     backgroundColor: '#dc3545',
+                     color: 'white',
+                     padding: '5px 10px',
+                     fontSize: '10px',
+                     border: 'none',
+                     borderRadius: '3px',
+                     cursor: 'pointer'
+                   }}
+                                        onClick={() => {
+                       console.log('🧹 Nettoyer - Suppression des données', employeeName, '20/07');
+                       
+                       // Supprimer les données de l'employé pour le 20/07 dans toutes les boutiques
+                       if (planningData?.shops) {
+                         const updatedPlanningData = {
+                           ...planningData,
+                           shops: planningData.shops.map(shop => {
+                             if (shop.weeks) {
+                               const updatedWeeks = { ...shop.weeks };
+                               Object.keys(updatedWeeks).forEach(weekKey => {
+                                 const weekData = updatedWeeks[weekKey];
+                                 if (weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
+                                   // Supprimer spécifiquement le 20/07
+                                   delete weekData.planning[selectedEmployeeForMonthlyDetail]['2025-07-20'];
+                                   console.log(`Supprimé 2025-07-20 pour ${employeeName} dans ${shop.name}`);
+                                 }
+                               });
+                               return { ...shop, weeks: updatedWeeks };
+                             }
+                             return shop;
+                           })
+                         };
+                       
+                       // Sauvegarder dans localStorage
+                       localStorage.setItem('planningData', JSON.stringify(updatedPlanningData));
+                       console.log('Données mises à jour dans localStorage');
+                       
+                       // Forcer le rafraîchissement
+                       setLocalForceRefresh(prev => prev + 1);
+                       if (onForceRefresh) {
+                         onForceRefresh();
+                       }
+                       
+                                                alert(`Données ${employeeName} 20/07 supprimées !`);
+                     }
+                   }}
+                                    >
+                     🧹 Nettoyer {employeeName} 20/07
+                   </Button>
+                 
+                 <Button
+                   style={{
+                     backgroundColor: '#fd7e14',
+                     color: 'white',
+                     padding: '5px 10px',
+                     fontSize: '10px',
+                     border: 'none',
+                     borderRadius: '3px',
+                     cursor: 'pointer'
+                   }}
+                                        onClick={() => {
+                       console.log('💥 Supprimer 20/07 - Suppression forcée pour', employeeName);
+                       
+                       // Supprimer toutes les données du 20/07 pour l'employé
+                       if (planningData?.shops) {
+                         const updatedPlanningData = {
+                           ...planningData,
+                           shops: planningData.shops.map(shop => {
+                             if (shop.weeks) {
+                               const updatedWeeks = { ...shop.weeks };
+                               Object.keys(updatedWeeks).forEach(weekKey => {
+                                 const weekData = updatedWeeks[weekKey];
+                                 if (weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
+                                   // Supprimer complètement les données du 20/07
+                                   const updatedPlanning = { ...weekData.planning };
+                                   if (updatedPlanning[selectedEmployeeForMonthlyDetail]) {
+                                     delete updatedPlanning[selectedEmployeeForMonthlyDetail]['2025-07-20'];
+                                     console.log(`Supprimé 2025-07-20 pour ${employeeName} dans ${shop.name}`);
+                                   }
+                                   updatedWeeks[weekKey] = { ...weekData, planning: updatedPlanning };
+                                 }
+                               });
+                               return { ...shop, weeks: updatedWeeks };
+                             }
+                             return shop;
+                           })
+                         };
+                       
+                       // Sauvegarder dans localStorage
+                       localStorage.setItem('planningData', JSON.stringify(updatedPlanningData));
+                       console.log('Données mises à jour dans localStorage');
+                       
+                       // Forcer le rafraîchissement
+                       setLocalForceRefresh(prev => prev + 1);
+                       if (onForceRefresh) {
+                         onForceRefresh();
+                       }
+                       
+                                                alert(`Suppression forcée 20/07 effectuée pour ${employeeName} !`);
+                     }
+                   }}
+                 >
+                   💥 Supprimer 20/07
+                 </Button>
+                 
+                 <Button
+                   style={{
+                     backgroundColor: '#6f42c1',
+                     color: 'white',
+                     padding: '5px 10px',
+                     fontSize: '10px',
+                     border: 'none',
+                     borderRadius: '3px',
+                     cursor: 'pointer'
+                   }}
+                                        onClick={() => {
+                       console.log('🧨 Nettoyer', employeeName, '- Suppression complète');
+                       
+                       // Supprimer toutes les données de l'employé
+                       if (planningData?.shops) {
+                         const updatedPlanningData = {
+                           ...planningData,
+                           shops: planningData.shops.map(shop => {
+                             if (shop.weeks) {
+                               const updatedWeeks = { ...shop.weeks };
+                               Object.keys(updatedWeeks).forEach(weekKey => {
+                                 const weekData = updatedWeeks[weekKey];
+                                 if (weekData.planning && weekData.planning[selectedEmployeeForMonthlyDetail]) {
+                                   // Supprimer complètement l'employé
+                                   const updatedPlanning = { ...weekData.planning };
+                                   delete updatedPlanning[selectedEmployeeForMonthlyDetail];
+                                   console.log(`Supprimé ${employeeName} complètement dans ${shop.name}`);
+                                   updatedWeeks[weekKey] = { ...weekData, planning: updatedPlanning };
+                                 }
+                               });
+                               return { ...shop, weeks: updatedWeeks };
+                             }
+                             return shop;
+                           })
+                         };
+                       
+                       // Sauvegarder dans localStorage
+                       localStorage.setItem('planningData', JSON.stringify(updatedPlanningData));
+                       console.log('Données mises à jour dans localStorage');
+                       
+                       // Forcer le rafraîchissement
+                       setLocalForceRefresh(prev => prev + 1);
+                       if (onForceRefresh) {
+                         onForceRefresh();
+                       }
+                       
+                                                alert(`Nettoyage complet ${employeeName} effectué !`);
+                     }
+                   }}
+                                    >
+                     🧨 Nettoyer {employeeName}
+                   </Button>
+               </div>
+             )}
+             
+             {/* Bouton de debug temporaire pour tous les employés */}
+             <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
+               <Button
+                 style={{
+                   backgroundColor: '#28a745',
+                   color: 'white',
+                   padding: '5px 10px',
+                   fontSize: '10px',
+                   border: 'none',
+                   borderRadius: '3px',
+                   cursor: 'pointer'
+                 }}
+                 onClick={() => {
+                   console.log('DEBUG: Employé actuel =', employeeName, 'ID =', selectedEmployeeForMonthlyDetail);
+                   alert(`DEBUG: Employé = ${employeeName} (ID: ${selectedEmployeeForMonthlyDetail})`);
+                 }}
+               >
+                 🔍 Debug: {employeeName}
+               </Button>
+             </div>
+             
         <Button
                className="button-retour"
           onClick={() => { 
